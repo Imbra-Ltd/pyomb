@@ -1,0 +1,27 @@
+# The editor-side half of the line-ending rule; .gitattributes is the git-side
+# guarantee. Together they keep a contributor whose editor has no EditorConfig
+# plugin from being the one who commits CRLF.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+# 120 is where the ruff gate refuses, so the editor draws the line CI draws.
+# 80 stays the recommendation for new code, which the rulers in
+# .vscode/settings.json show alongside it.
+[*.py]
+indent_size = 4
+max_line_length = 120
+
+[*.{yml,yaml,json,toml}]
+indent_size = 2
+
+# Two trailing spaces are a hard line break in Markdown, so trimming them
+# changes what the document renders as.
+[*.md]
+indent_size = 2
+trim_trailing_whitespace = false

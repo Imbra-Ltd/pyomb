@@ -1,0 +1,194 @@
+# Hatchling 1.27 is the floor because the license fields below use the PEP 639
+# SPDX form, which earlier releases reject.
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyomb"
+description = "Open Modbus protocol library for Python"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "Imbra Ltd" }]
+keywords = ["modbus", "modbus-tcp", "modbus-rtu", "protocol", "scada"]
+
+# The codec, the transport and the simulators are all standard library only.
+# A Modbus library that pulls in dependencies cannot be dropped into the
+# locked-down environments this one is written to test.
+dependencies = []
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Communications",
+    "Topic :: Software Development :: Testing",
+]
+
+# Read from src/pyomb/__init__.py so the version has one home.
+dynamic = ["version"]
+
+[project.urls]
+Repository = "https://github.com/Imbra-Ltd/pyomb"
+Issues = "https://github.com/Imbra-Ltd/pyomb/issues"
+
+[project.optional-dependencies]
+
+# What CI installs. Kept to what the gates need, so a gate cannot pass on a
+# tool the workflow forgot to declare.
+#
+# Both checkers are pinned to a minor range, because each carries a freeze
+# recording one version's findings: the per-file-ignores table below for ruff,
+# the per-module error codes for mypy. A release that adds a rule to an
+# already-selected family, changes what the formatter emits, or reports a new
+# error code would fail a gate on untouched legacy code. That is a bump to
+# take deliberately rather than on the next CI run.
+test = ["pytest", "pytest-cov", "ruff>=0.16,<0.17", "mypy>=2.3,<2.4"]
+
+# What a contributor installs. Adds the hook runner and the release tooling,
+# which the gates do not need but a contributor does.
+dev = ["pyomb[test]", "pre-commit", "build", "twine"]
+
+[tool.hatch.version]
+path = "src/pyomb/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pyomb"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/pyomb", "tests", "README.md", "LICENSE"]
+
+[tool.ruff]
+
+# The ceiling CONTRIBUTING sets. 80 stays the recommendation for new prose and
+# new code; this is the point at which the gate refuses.
+line-length = 120
+
+target-version = "py310"
+extend-exclude = ["docs/solid-ai-templates"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "D", "UP", "B", "A", "C4", "SIM", "TRY",
+          "BLE", "RUF"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+
+# A test's name carries its intent, so a docstring on top of it is the busywork
+# the quality-gates template rules out.
+"tests/**" = ["D"]
+
+# Everything below freezes the violations that existed when ruff replaced
+# flake8. It is generated, not curated: a file is listed with exactly the rules
+# it broke that day, so a new file is gated on the whole rule set and an
+# existing one cannot get worse. Shrinking it is the migration -- delete a
+# line, fix what ruff then reports, and the gate holds the gain.
+#
+# To regenerate after a cleanup, empty this block first. With the entries in
+# place ruff suppresses exactly the findings the block has to be rebuilt from,
+# so the command below reports nothing and the table would rebuild as empty.
+# Then group the output by filename and rule code and paste it back.
+#
+#   ruff check src tests scripts --output-format=json
+
+"scripts/demo_metaclass.py" = ["D100", "D101", "D102", "D105", "D107", "UP004", "UP008"]
+"scripts/demo_modbus_crc.py" = ["D202", "D205", "D212", "D415", "UP030", "UP032"]
+"scripts/demo_stream.py" = ["D100", "D101", "D202", "D415", "I001", "RUF059", "UP004", "UP030"]
+"scripts/demo_validation.py" = ["C419", "D100", "D103", "TRY003", "TRY004"]
+"scripts/factory.py" = ["D100", "D101", "D102", "D107", "N804", "UP004"]
+"scripts/gen_test_certs.py" = ["D103", "D202", "I001", "SIM115", "UP009", "UP010", "UP030", "UP032"]
+"scripts/pack_unpack.py" = ["B904", "BLE001", "D100", "D103", "TRY002", "UP030", "UP032"]
+"src/pyomb/__init__.py" = ["I001", "RUF022", "UP009"]
+"src/pyomb/defines.py" = ["D100", "I001", "UP009", "UP010"]
+"src/pyomb/errors.py" = ["D105", "D107", "D202", "D205", "D212", "D412", "D415", "I001", "N818", "RUF002", "SIM108", "UP008", "UP009", "UP010", "UP030", "UP032"]
+"src/pyomb/logger.py" = ["D100", "D102", "D107", "D202", "I001", "UP008", "UP009", "UP010", "UP018"]
+"src/pyomb/omb_client.py" = ["D100", "D103", "D107", "D202", "D415", "N802", "N803", "SIM108", "TRY201", "TRY203", "UP004", "UP009", "UP010", "UP024", "UP030", "UP032"]
+"src/pyomb/omb_server.py" = ["B904", "BLE001", "D100", "D102", "D107", "D202", "D415", "N802", "N803", "N806", "RUF059", "SIM105", "SIM300", "TRY002", "TRY003", "UP004", "UP008", "UP009", "UP010", "UP018", "UP024", "UP030", "UP032"]
+"src/pyomb/packets.py" = ["B904", "BLE001", "D105", "D107", "D202", "D214", "D415", "RUF005", "RUF012", "UP008", "UP009", "UP010", "UP030", "UP032"]
+"src/pyomb/stream.py" = ["B008", "B904", "BLE001", "D107", "D202", "D415", "I001", "TRY300", "TRY301", "UP009", "UP010", "UP030", "UP032"]
+"tests/stub_socket.py" = ["UP004"]
+"tests/test_client_requests.py" = ["C408", "I001"]
+"tests/test_client_timeout.py" = ["SIM105", "UP004"]
+"tests/test_client_transaction_id.py" = ["I001"]
+"tests/test_client_value_errors.py" = ["I001"]
+"tests/test_fragmenter.py" = ["I001"]
+"tests/test_mbap_length.py" = ["I001"]
+"tests/test_mbap_length_convention.py" = ["I001", "UP030", "UP032"]
+"tests/test_modbus_header.py" = ["I001"]
+"tests/test_modbus_pdu.py" = ["I001"]
+"tests/test_modbus_receiver.py" = ["I001"]
+"tests/test_modbus_rtu.py" = ["I001"]
+"tests/test_modbus_sender.py" = ["I001"]
+"tests/test_modbus_stream.py" = ["I001"]
+"tests/test_modbus_tcp.py" = ["I001"]
+"tests/test_pdu_error.py" = ["I001"]
+"tests/test_pdu_fc1.py" = ["I001"]
+"tests/test_pdu_fc15.py" = ["I001"]
+"tests/test_pdu_fc16.py" = ["I001"]
+"tests/test_pdu_fc2.py" = ["I001"]
+"tests/test_pdu_fc23.py" = ["I001"]
+"tests/test_pdu_fc3.py" = ["I001"]
+"tests/test_pdu_fc4.py" = ["I001"]
+"tests/test_pdu_fc43.py" = ["I001"]
+"tests/test_pdu_fc5.py" = ["I001"]
+"tests/test_pdu_fc6.py" = ["I001"]
+"tests/test_pdu_fc7.py" = ["I001"]
+"tests/test_pdu_fc8.py" = ["I001"]
+"tests/test_pdu_fc_22.py" = ["I001"]
+"tests/test_pdu_parser.py" = ["I001"]
+"tests/test_response_factory.py" = ["I001"]
+"tests/test_rtu_crc.py" = ["I001", "UP030", "UP032"]
+"tests/test_segmented_receive.py" = ["UP004", "UP030", "UP032"]
+"tests/test_server_connections.py" = ["B017", "SIM105", "UP004", "UP030", "UP032"]
+"tests/test_server_dispatch.py" = ["I001", "TRY003", "UP004"]
+"tests/test_server_inactivity.py" = ["SIM105", "UP004", "UP030", "UP032"]
+"tests/test_server_resilience.py" = ["I001", "UP004"]
+"tests/test_stream_locks.py" = ["B017", "I001"]
+"tests/test_tls_integration.py" = ["C408", "I001", "SIM105"]
+
+[tool.mypy]
+
+# strict is the end state CLAUDE.md names, and it is on globally so a module
+# added from here is held to it from its first commit. The overrides below
+# freeze the modules that predate the gate, in the same shape as the ruff
+# per-file-ignores table above: each is listed with exactly the error codes it
+# emits today, so an existing module cannot get worse and shrinking a list is
+# the migration.
+strict = true
+files = ["src"]
+
+# 711 findings across six modules, and only four distinct codes.
+# no-untyped-def and no-untyped-call are the annotations the tree does not yet
+# carry. The other two are real findings rather than missing annotations, and
+# are filed rather than left to be rediscovered: serialize and deserialize
+# diverge from their supertype signatures across the PDU hierarchy, and the
+# client assigns None to an attribute inferred as socket.
+[[tool.mypy.overrides]]
+module = ["pyomb.errors", "pyomb.logger", "pyomb.omb_server"]
+disable_error_code = ["no-untyped-call", "no-untyped-def"]
+
+[[tool.mypy.overrides]]
+module = ["pyomb.omb_client"]
+disable_error_code = ["assignment", "no-untyped-call", "no-untyped-def"]
+
+[[tool.mypy.overrides]]
+module = ["pyomb.packets", "pyomb.stream"]
+disable_error_code = ["no-untyped-call", "no-untyped-def", "override"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# tests/ deliberately has no __init__.py: the default prepend import mode puts
+# each test module's own directory on sys.path, which is what resolves
+# `from stub_socket import ...`. Making tests/ a package breaks those imports.
+addopts = "--import-mode=prepend"
+
+[tool.coverage.run]
+source = ["pyomb"]

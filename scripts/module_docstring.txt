@@ -1,0 +1,34 @@
+""" Modbus Packet Classes
+
+This module contains the classes for the Modbus Packets following the original
+Modbus Application Protocol Specification. The module covers both Modbus TCP and
+Modbus RTU messages.
+
+Each Modbus Packet class is responsible for serializing and deserializing the
+packet to and from a stream of bytes. The ModbusPduParser class is responsible
+for parsing the Modbus Protocol Data Unit (PDU) based on the function code.
+
+The module also contains the ModbusPdu class, which is the base class for all
+Modbus Protocol Data Units (PDU). Each concrete PDU class should define the
+function code, the format string for the data and a unique PDU-ID.
+
+The PDU-ID is used to register the PDU class with the ModbusPduParser class.
+Requests have a PDU ID in the range 0x0000 to 0x7FFF, while responses have a
+PDU ID in the range 0x8000 to 0xFFFF.
+
+Examples:
+
+    The following example demonstrates how to create a Modbus Request PDU and
+    serialize it to a stream of bytes.
+
+    >>> pdu = ModbusRequestFC1(starting_address=0x0000, quantity=0x0001)
+    >>> pdu.serialize()
+
+    The following example demonstrates how to deserialize a stream of bytes
+    into a Modbus Request PDU.
+
+    >>> stream = b'\x01\x00\x00\x00\x01'
+    >>> ModbusPduParser.parse_request(stream)
+
+
+"""

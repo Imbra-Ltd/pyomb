@@ -1,0 +1,56 @@
+# Layer 2 of the three-layer gate model: what runs before a commit lands, so a
+# red pipeline is not the first a contributor hears of a formatting or typing
+# slip. CI repeats every check here, because a hook is skippable with
+# --no-verify.
+#
+# Install once, after pip install -e ".[dev]":
+#   pre-commit install
+repos:
+  # Pinned to the release CI resolves from the ruff range in pyproject.toml. A
+  # hook that formats differently from the gate is worse than no hook, because
+  # it makes the two disagree on a file nobody edited.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.3
+    hooks:
+      - id: ruff-check
+      - id: ruff-format
+
+  # Pinned to the release the CI secrets job downloads, for the same reason.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # Two trailing spaces are a hard line break in Markdown, so the
+      # extension is exempted rather than have the hook change what a
+      # document renders as.
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: check-toml
+      - id: check-yaml
+
+  # mypy gets its own hook environment rather than the contributor's, so the
+  # hook does not depend on python or mypy being on PATH. It can afford to:
+  # the library has no third-party dependencies to resolve, and the strict
+  # settings and the per-module freeze are read from pyproject.toml either
+  # way. Pinned to a minor range for the reason ruff is -- a release that
+  # emits a new error code would fail the gate on frozen, untouched modules.
+  #
+  # pass_filenames is off because the freeze is keyed by module: mypy is given
+  # the file set from its own files setting, not the staged paths.
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: mypy
+        language: python
+        additional_dependencies: ["mypy>=2.3,<2.4"]
+        types: [python]
+        pass_filenames: false

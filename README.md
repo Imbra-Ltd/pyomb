@@ -1,0 +1,236 @@
+# pyomb
+
+[![CI](https://github.com/Imbra-Ltd/pyomb/actions/workflows/ci.yml/badge.svg)](https://github.com/Imbra-Ltd/pyomb/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+_A Modbus library built for testing other Modbus implementations._
+
+Testing a Modbus device means sending it frames a well-behaved library will not
+send: a response split across three packets, a length field that disagrees with
+the payload, a checksum that does not match the bytes it covers.
+
+General-purpose Modbus libraries hide the wire. They assemble frames correctly,
+retry on your behalf, and give you back parsed values — which is what you want
+in production and exactly what you cannot use when the device under test is the
+thing you are trying to break.
+
+pyomb exposes the wire. It is a Modbus TCP and RTU codec, a length-driven
+stream transport with explicit fragmentation control, and a scriptable
+server/client pair, for engineers who need to drive another implementation
+through cases a compliant peer would never produce.
+
+## Features
+
+- Encode and decode Modbus TCP and RTU frames, with the checksum computed from
+  the bytes on the wire rather than read from a stored field
+- Send a message in fragments of a chosen size, to exercise a peer's
+  reassembly
+- Reassemble a fragmented message by its declared length, rather than trusting
+  one socket read to deliver one frame
+- Run a scriptable server simulator that answers requests over plain TCP or TLS
+- Drive a client simulator that matches responses to requests by transaction
+  identifier and discards anything else
+- Raise Modbus exception codes as a Python exception hierarchy
+- Depend on nothing outside the standard library
+
+## Quick start
+
+Prerequisites: Python 3.10 or newer.
+
+pyomb is not yet published to PyPI, so install it from source:
+
+```bash
+git clone https://github.com/Imbra-Ltd/pyomb.git
+cd pyomb
+pip install .
+```
+
+Build a Modbus TCP request, serialize it, and read it back:
+
+```python
+from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest
+
+pdu = ModbusRequestFC1(start_addr=0, quantity=1)
+header = ModbusHeader(unit_id=1, length=len(pdu) + 1)  # +1 for the unit id
+packet = ModbusTcpRequest(header=header, pdu=pdu)
+
+print(packet.serialize().hex())
+```
+
+This prints the twelve bytes of the frame:
+
+```text
+000000000006010100000001
+```
+
+Reading them in order: transaction identifier `0000`, protocol identifier
+`0000`, length `0006`, unit identifier `01`, function code `01`, start address
+`0000`, quantity `0001`.
+
+## Usage
+
+The simulators log to standard output, so the runs below print protocol
+description lines alongside the values shown.
+
+### Serialize and deserialize a packet
+
+```python
+from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest
+
+pdu = ModbusRequestFC1(start_addr=0, quantity=1)
+header = ModbusHeader(unit_id=1, length=len(pdu) + 1)
+packet = ModbusTcpRequest(header=header, pdu=pdu)
+
+packet_bytes = packet.serialize()
+restored = ModbusTcpRequest.deserialize(packet_bytes)
+print(restored)
+```
+
+The round trip reproduces the original frame:
+
+```text
+MODBUS TCP REQ -> | HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 6, Unit-ID: 1) | PDU: (FC: 01, Data: (0, 1))
+```
+
+### Send a fragmented message
+
+`frag_size` is the point of this example: the request leaves in 8-byte pieces,
+and the response is reassembled from however many pieces arrive, by its
+declared length rather than by one socket read. This needs a Modbus server
+listening on port 502 — the server simulator below is one.
+
+```python
+import socket
+
+from pyomb.packets import ModbusHeader, ModbusRequestFC1
+from pyomb.packets import ModbusTcpRequest, ModbusTcpResponse
+from pyomb.stream import ModbusTcpStream
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.connect(("localhost", 502))
+
+pdu = ModbusRequestFC1(start_addr=0, quantity=1)
+header = ModbusHeader(unit_id=1, length=len(pdu) + 1)
+request = ModbusTcpRequest(header=header, pdu=pdu)
+
+stream = ModbusTcpStream(sock=sock, frag_size=8)
+stream.send(request.serialize())
+
+response = ModbusTcpResponse.deserialize(stream.receive())
+print(response)
+```
+
+The reassembled response carries one byte of coil data:
+
+```text
+MODBUS TCP RSP -> | HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 4, Unit-ID: 1) | PDU: (FC: 01, Data: (1, 255))
+```
+
+### Run the server and client simulators
+
+```python
+from pyomb.omb_client import OmbClientSim
+from pyomb.omb_server import OmbServerSim
+
+server = OmbServerSim(port=502)
+server.start()
+
+client = OmbClientSim(port=502)
+client.connect()
+
+header, pdu = client.request(fc=1, readAddress=0, readCount=10)
+print(header)
+print(pdu)
+
+client.disconnect()
+server.stop()
+```
+
+Reading 10 coils returns two data bytes:
+
+```text
+HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 5, Unit-ID: 1)
+PDU: (FC: 01, Data: (2, 255, 255))
+```
+
+## Project structure
+
+```text
+src/pyomb/              # The library
+  packets.py            # Codec: MBAP header, PDU classes, parser, frame wrappers
+  stream.py             # Transport: length-driven framing and fragmentation
+  omb_client.py         # Client simulator and request builder
+  omb_server.py         # Server simulator, select loop and response factory
+  errors.py             # Modbus exception codes as a Python hierarchy
+  logger.py             # Logger that writes to stdout and optionally a file
+  defines.py            # Protocol constants
+tests/                  # One module per source module, plus regression modules
+scripts/                # Certificate generation and standalone demos
+docs/                   # Specifications, tutorial, decisions, journal
+assets/                 # Generated test certificates (gitignored)
+pyproject.toml          # Packaging metadata and tool configuration
+```
+
+MBAP expands to Modbus Application Protocol, the header that precedes every
+Modbus TCP protocol data unit (PDU).
+
+## Development setup
+
+```bash
+git clone https://github.com/Imbra-Ltd/pyomb.git
+cd pyomb
+pip install -e ".[dev]"
+pre-commit install
+pytest
+```
+
+The `test` extra carries what the gates need — pytest, pytest-cov, ruff and
+mypy — and is what CI installs. The `dev` extra adds the hook runner and the
+build tools on top of it. `pre-commit install` is a one-off that puts the same
+checks in front of every commit.
+
+The TLS tests need a certificate chain, which is generated rather than
+committed:
+
+```bash
+python scripts/gen_test_certs.py
+```
+
+No external service, database or broker is required. The full check set is
+documented in [docs/PLAYBOOK.md](docs/PLAYBOOK.md).
+
+## Configuration reference
+
+pyomb reads no environment variables and no configuration file. Every setting
+is a constructor argument on the object it affects — the port and TLS material
+on the simulators, the fragment size on the stream.
+
+The transport defaults are secure: the interpreter's default cipher suite, peer
+certificates required, and hostname verification on the client. Weakening any
+of them is an explicit argument, intended for interoperability testing on a
+test network.
+
+Both endpoints are simulators for testing Modbus implementations. They are not
+hardened for production control networks.
+
+## Links
+
+| Document | What it covers |
+| --- | --- |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to propose a change |
+| [SECURITY.md](SECURITY.md) | How to report a vulnerability |
+| [docs/ONBOARDING.md](docs/ONBOARDING.md) | Setup, verification and key files |
+| [docs/PLAYBOOK.md](docs/PLAYBOOK.md) | Git, quality checks, maintenance, release |
+| [docs/Open_Modbus_Tutorial.md](docs/Open_Modbus_Tutorial.md) | Protocol introduction |
+| [docs/decisions/](docs/decisions/) | Architecture decision records |
+| [docs/dev-journal.md](docs/dev-journal.md) | Session history and post-mortems |
+| [CLAUDE.md](CLAUDE.md) | Conventions, and the shape the rewrite targets |
+
+The Modbus specifications this library implements are in [docs/](docs/) as
+published PDFs.
+
+## License
+
+MIT — see [LICENSE](LICENSE) for the full text.

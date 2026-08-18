@@ -1,0 +1,8 @@
+# Normalise every text file to LF in the index, whatever core.autocrlf does in
+# a contributor's working tree. Content detection decides what counts as text;
+# the entry below covers the one case where a wrong guess corrupts the file.
+* text=auto
+
+# The Modbus specifications. Binary, and a normalisation pass would corrupt
+# them.
+*.pdf binary

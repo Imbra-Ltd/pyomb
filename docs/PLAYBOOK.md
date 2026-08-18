@@ -1,0 +1,318 @@
+# Playbook
+
+Operational reference for common tasks. Setup lives in
+`docs/ONBOARDING.md`; the conventions these steps enforce live in `CLAUDE.md`.
+
+## 1. Git workflow
+
+### 1.1 Branch
+
+Work on a branch; never commit to `main`. Naming: `feat/<scope>`,
+`fix/<scope>`, `docs/<scope>`, `chore/<scope>`.
+
+```bash
+git switch -c fix/rtu-checksum
+```
+
+### 1.2 Commit
+
+`<type>(<scope>): <summary>` in the imperative, subject under 80 characters.
+Types: `feat`, `fix`, `chore`, `docs`, `refactor`, `style`, `test`.
+
+### 1.3 Pull request
+
+One concern per PR. Repeat the closing keyword before every issue number —
+`Closes #22, closes #23` closes both, `Closes #22, #23` closes only the first.
+Never put a closing keyword next to an issue the change does not resolve; the
+match is on the bare substring and fires even when negated.
+
+```bash
+gh pr create --fill
+gh run list --limit 1        # CI must be green before merge
+```
+
+Before opening it, list every closing keyword the body actually contains and
+check each against what the change resolves:
+
+```bash
+gh pr view <N> --json body --jq .body | grep -inE '(close[sd]?|fix(e[sd])?|resolve[sd]?) +#[0-9]+'
+```
+
+Every line it prints closes that issue on merge. A sentence written to
+*exclude* an issue prints here too, and closes it just the same — a negated
+keyword is still a keyword, and that phrasing has already cost this repository
+one wrongly closed issue. Write "part of #N" or the bare number instead.
+
+After merging, confirm what actually closed. A negated keyword closes silently,
+so the merge output never reports it:
+
+```bash
+gh issue list --state closed --limit 100 --json number,title,closedAt \
+  --jq 'sort_by(.closedAt) | reverse | .[:6] | .[] | "\(.number)  \(.closedAt)  \(.title)"'
+```
+
+Sort by `closedAt` and do not shorten the `--limit`. A plain
+`gh issue list --state closed --limit 10` orders by issue number, so an old
+issue closed a minute ago does not appear anywhere in it — which is precisely
+the case this check exists to catch, since the issue wrongly closed by a
+negated keyword is usually an old one the change merely mentioned.
+
+### 1.4 Force-push
+
+Do not. A deny rule in the maintainer's environment blocks every form
+including `--force-with-lease`. When a branch is behind `main`, merge `main`
+into it or use `gh pr update-branch <N>`.
+
+### 1.5 Merge a stack
+
+This repository does **not** delete the head branch on merge. That single
+setting decides whether a stacked pull request survives.
+
+Merge bottom-up, and for each pair:
+
+1. Merge the lower pull request. Do not pass a delete-branch flag.
+2. Retarget the upper one onto `main` with `gh pr edit <N> --base main`.
+3. Only then delete the lower branch.
+
+Deleting first closes the upper pull request, and it cannot be reopened,
+because reopening needs its base ref to exist. Automatic head-branch deletion
+would retarget it instead — this repository has that turned off, so the
+retarget is manual.
+
+After the lower one merges, the upper one's diff will double-count it: the
+merge base is still the old `main`. Merge `main` into the upper branch and push
+— never rebase, since the branch is already pushed and force-push is denied.
+When the lower one was rebase-merged, the content is identical on both sides,
+so the resolution is the branch's own version throughout, and
+`git diff --stat HEAD` after resolving MUST be empty. Anything else means the
+merge brought in something the branch did not already have, which is worth
+reading before committing.
+
+## 2. Domain operations
+
+### 2.1 Add a function code
+
+1. Add the request and response PDU classes to `src/pyomb/packets.py`, following
+   the existing pairs — `PDU_FORMAT`, `PDU_ID`, `serialize`, `deserialize`.
+2. Register both at the bottom of the module, where every other class is
+   registered.
+3. Add a builder to `RequestFactory` in `src/pyomb/omb_client.py` and a
+   branch to `sendRequest`.
+4. Add a responder to `ResponseFactory` in `src/pyomb/omb_server.py` and a
+   branch to `on_data`.
+5. Add the code to the tables in `tests/test_server_dispatch.py` and
+   `tests/test_client_requests.py`; both iterate a table, so one row each.
+6. Assert the wire bytes against a vector from the specification in `docs/`,
+   never against this library's own output.
+
+### 2.2 Regenerate the TLS chain
+
+```bash
+python scripts/gen_test_certs.py
+```
+
+Certificates last 365 days. When the mutual-TLS tests start failing on expiry
+rather than on behaviour, rerun this.
+
+## 3. Quality
+
+Run all of these before pushing.
+
+### 3.1 Tests (pytest)
+
+```bash
+python -m pytest -q
+```
+
+### 3.2 Tests from VS Code
+
+`.vscode/settings.json` enables pytest discovery against `tests/`. Open the
+Testing panel (the flask icon in the activity bar) and press Run Tests, or use
+Ctrl+Shift+P and "Test: Run All Tests".
+
+If the panel shows no tests or reports import errors, the cause is almost
+always the interpreter. `pyomb` resolves through the editable install, so VS
+Code must be pointed at the environment where `pip install -e ".[dev]"` ran:
+Ctrl+Shift+P, "Python: Select Interpreter". Confirm with "Python: Show Output"
+and check the path matches `python -c "import sys; print(sys.executable)"`.
+
+The mutual-TLS tests skip until the chain exists — see 2.2. The integration
+tests bind real ports and sleep through timeouts, so a full run takes about 25
+seconds and the run appears to stall part way; that is the inactivity sweep, not
+a hang. Teardown prints `ValueError: I/O operation on closed file` from the
+server's logger, which is noise, not a failure.
+
+### 3.3 Coverage (pytest-cov)
+
+```bash
+python -m pytest -q --cov=pyomb --cov-report=term-missing --cov-fail-under=80
+```
+
+CI enforces the floor, and it is the 80% `CLAUDE.md` asks for. The measured
+figure sits above it; read it from the run rather than from here, since a
+number written down in a document goes stale without anyone editing it.
+
+### 3.4 Lint and format (ruff)
+
+```bash
+python -m ruff check src tests scripts
+python -m ruff format src tests scripts
+```
+
+Configuration is in `pyproject.toml`. The `per-file-ignores` table freezes the
+violations that existed when ruff replaced flake8: a new file is checked
+against the whole rule set, an existing one cannot get worse, and shrinking the
+table is the migration. To take a rule family on, delete the entries naming it,
+fix what ruff then reports, and commit both together — the gate holds the gain.
+
+Never add a file to that table to make the gate pass. Regenerate it only after
+a cleanup, and empty the block before you do: with the entries in place ruff
+suppresses exactly the findings the table has to be rebuilt from, so
+`ruff check src tests scripts --output-format=json` reports nothing and the
+table would come back empty.
+
+ruff is pinned to a minor range in `pyproject.toml`, because a release that
+adds rules to an already-selected family, or that changes what the formatter
+emits, would fail a gate on untouched code. Bump it deliberately, not on the
+next CI run, and expect a bump to need a re-format commit.
+
+CI runs the formatter as `ruff format --check`, which reports and never
+rewrites, so a red run names the file rather than editing it. Run the plain
+command above before pushing and the check has nothing to say. Formatting is
+therefore not reviewable material — the formatter has already settled it, and
+a pull request cannot carry the argument. ADR-004 records the adoption.
+
+### 3.5 Type checking (mypy)
+
+```bash
+python -m mypy
+```
+
+No arguments: the scope, the strict setting and the per-module freeze all live
+in `pyproject.toml`, so a local run and the gate cannot resolve to different
+checks. `mypy src/ --strict`, the command `CLAUDE.md` documents, reports the
+same thing — the overrides apply on top of it.
+
+`strict` is on globally, so a module added from here is held to all of it from
+its first commit. The six modules that predate the gate are frozen by error
+code in `[[tool.mypy.overrides]]`, each listing exactly what it emits today.
+The two rules are the ones the lint freeze carries: never add a module to make
+the gate pass, and never widen an entry. ADR-005 records why, and #51 tracks
+the two findings in that freeze that are real defects rather than missing
+annotations.
+
+mypy is pinned to a minor range for the reason ruff is: the freeze records one
+version's error codes, and a release reporting a new one would fail the gate
+on untouched modules.
+
+### 3.6 Pre-commit hooks (pre-commit)
+
+```bash
+pre-commit install
+pre-commit run --all-files
+```
+
+The first command is a one-off after `pip install -e ".[dev]"`; from then on
+the hooks run on staged files at every commit. The second runs them across the
+whole tree, which is the audit rather than the commit path.
+
+The hooks are ruff check, ruff format, gitleaks, file hygiene and mypy — every
+one of which CI also runs, because a hook is skippable with `--no-verify`. The
+ruff and gitleaks revisions are pinned to the releases CI resolves; a hook that
+formats differently from the gate is worse than no hook, because the two then
+disagree about a file nobody edited.
+
+### 3.7 Secret scanning (gitleaks)
+
+Runs in CI against the working tree, not history. Push protection is enabled on
+the repository and blocks a secret at the client before it reaches CI.
+
+### 3.8 CI
+
+```bash
+gh run list --limit 1
+gh run view <id> --log-failed
+```
+
+A local run is evidence about one platform. CI runs Linux under Python 3.10 and
+3.13; development is typically Windows. Read the run before calling a change
+good — three pushes were reported clean against a red pipeline on 2026-08-16.
+
+### 3.9 Verifying a fix
+
+A fix ships with a test that fails against the unfixed code. Run it both ways:
+stash or revert the source change, confirm the new test fails, restore, confirm
+it passes. Say so in the commit message.
+
+### 3.10 Build (build, twine)
+
+```bash
+python -m build
+python -m twine check dist/*
+```
+
+Both need the `dev` extra. `dist/` is gitignored. The wheel must contain
+`pyomb/` and its `dist-info` and nothing else — the `src/` layout is what keeps
+`tests/` and `scripts/` out of it, so check the listing after changing the
+build configuration:
+
+```bash
+python -c "import zipfile; print(*zipfile.ZipFile('dist/pyomb-<version>-py3-none-any.whl').namelist(), sep='\n')"
+```
+
+CI runs all three on every change, in the `build` job, so a build that breaks
+or a wheel that starts carrying `tests/` fails the pull request rather than
+the release.
+
+### 3.11 Line endings (.gitattributes, .editorconfig)
+
+```bash
+git ls-files --eol | grep -c "i/crlf"
+```
+
+Zero is the pass condition. `.gitattributes` normalises every text file to LF
+in the index, so whatever `core.autocrlf` does in a working tree never reaches
+a commit; `.editorconfig` is the editor-side half, for editors that read it.
+Development is Windows and CI is Linux, which is the split the pair exists for.
+
+A non-zero count means a CRLF file was committed before the normalisation
+covered it. `git add --renormalize .` rewrites the index, and the diff it
+produces is the fix.
+
+## 4. Maintenance
+
+### 4.1 Bump the templates submodule
+
+Pin a released tag, never a branch tip.
+
+```bash
+git -C docs/solid-ai-templates fetch --tags
+git -C docs/solid-ai-templates checkout <tag>
+git add docs/solid-ai-templates && git commit -m "chore(templates): bump to <tag>"
+```
+
+Read rules at the pinned revision:
+`git -C docs/solid-ai-templates show HEAD:templates/<file>`. Reading from
+`origin/main` describes a future state of this repository, not its current one.
+
+### 4.2 Record a decision
+
+Add `docs/decisions/NNN-slug.md` with Status, Date, Context, Decision,
+Alternatives considered, Consequences, and an `Upstream:` line naming a
+candidate template file or `none`.
+
+### 4.3 Write a journal entry
+
+Append to `docs/dev-journal.md`, oldest-first. Heading
+`## YYYY-MM-DD — three to six word theme`, with `(morning)`/`(afternoon)` when
+a day has more than one session. A P0/P1 fix or an incident requires a
+post-mortem: Symptom, Root cause, Why missed, Fix, Prevention. One without a
+prevention action is incomplete.
+
+## 5. Release and deploy
+
+Not yet released. The distribution has never been published, and #11 tracks
+the first release.
+
+Before the first one: claim the name on PyPI per ADR-002, wire the build gate
+into CI (#38), and publish from CI only — never from a local machine.

@@ -1,0 +1,44 @@
+{
+  // Tests are pytest, not unittest. Both enabled at once makes the Testing
+  // panel collect every test twice.
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+
+  // Discovery starts at tests/. The suite has no __init__.py there on
+  // purpose: pytest prepends each test module's own directory to sys.path,
+  // which is what makes `from stub_socket import ...` resolve. Adding an
+  // __init__.py turns tests/ into a package and breaks those imports.
+  "python.testing.pytestArgs": ["tests"],
+
+  // The integration tests bind real ports and sleep through timeouts, so a
+  // full run takes around 25 seconds. Re-discovering on every save makes the
+  // editor feel stuck.
+  "python.testing.autoTestDiscoverOnSaveEnabled": false,
+
+  "python.analysis.extraPaths": ["tests"],
+
+  // One type-checker at one strictness. Pylance runs its own analysis by
+  // default and reports findings the mypy gate is configured to ignore, so
+  // contributors would chase diagnostics CI does not have and "green in CI"
+  // would stop meaning "green in the editor". The mypy extension surfaces the
+  // gate's own diagnostics live instead; completion, hover and rename are
+  // unaffected by turning the evaluation off.
+  "python.analysis.typeCheckingMode": "off",
+
+  // Formatting is gated, so the editor applies it rather than letting a
+  // contributor find out from a red pipeline. ruff reads pyproject.toml, the
+  // same configuration the gate reads.
+  "[python]": {
+    "editor.rulers": [80, 120],
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true
+  },
+
+  // The vendored templates are a submodule, not this project's code.
+  "search.exclude": {
+    "docs/solid-ai-templates/**": true
+  },
+  "files.watcherExclude": {
+    "**/docs/solid-ai-templates/**": true
+  }
+}

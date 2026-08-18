@@ -1,0 +1,12 @@
+{
+  // The editor-side surface of the CI gates: ruff lints and formats, mypy
+  // type-checks, EditorConfig applies the line-ending and indent rules. Each
+  // reads the configuration the gate reads, so the editor reports what CI
+  // reports.
+  "recommendations": [
+    "ms-python.python",
+    "charliermarsh.ruff",
+    "ms-python.mypy-type-checker",
+    "editorconfig.editorconfig"
+  ]
+}
