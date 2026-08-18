@@ -30,9 +30,8 @@ python scripts/gen_test_certs.py
 
 The `test` extra carries pytest, pytest-cov, ruff and mypy, which is what CI
 installs; `dev` adds the hook runner and the build tools on top of it and is
-what a contributor wants. The library itself has no runtime dependencies,
-which is why `requirements.txt` is empty of them and installing from it alone
-leaves you without a test runner.
+what a contributor wants. The library itself has no runtime dependencies, so
+`pyproject.toml` is the only place this project declares a dependency.
 
 `pre-commit install` is a one-off. From then on the gates run against your
 staged files before each commit, so you find a formatting or typing slip
