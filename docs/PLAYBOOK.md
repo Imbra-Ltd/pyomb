@@ -304,17 +304,22 @@ A local run is evidence about one platform. CI runs Linux under Python 3.10 and
 3.13; development is typically Windows. Read the run before calling a change
 good — three pushes were reported clean against a red pipeline on 2026-08-16.
 
-Four checks gate a merge to `main`: `test (3.10)`, `test (3.13)`, `build` and
-`secrets`. They are required status checks in branch protection, and the
+One check gates a merge to `main`: `gate`. It is a fan-in job that needs every
+other job in the workflow and fails unless each reports exactly `success`, so a
+skipped or a cancelled job fails it rather than slipping through. Branch
 protection binds administrators, so a red pull request cannot be merged by
 anyone. A pull request is required at zero approvals — a single-seat
 organisation cannot supply an approval, so any higher count would deadlock
 every merge.
 
-The workflow runs a fifth job, `security`, which is not yet a required check
-and therefore reports without gating. Read the live list rather than trusting
-this paragraph — a required-checks list drifts from prose the moment a job is
-added:
+Naming one context rather than one per job is what keeps the list from going
+stale. Under the previous arrangement each job was named individually, and
+`security` was simply never added — it ran green and gated nothing for as long
+as it existed. A job added now binds the moment it joins the `gate` job's
+`needs` list.
+
+Read the live list rather than trusting this paragraph — a required-checks list
+drifts from prose the moment the arrangement changes:
 
 ```bash
 gh api repos/Imbra-Ltd/pyomb/branches/main/protection \
