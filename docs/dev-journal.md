@@ -64,3 +64,47 @@ package, per ADR-002. See `README.md` for usage and
   audit left the same credential incident described in full in the journal's
   post-mortem, which would have travelled with the codebase into a repository
   heading for public. A scrub is scoped by the content, not by the filename.
+
+## 2026-08-18 — Audit the new repository (later)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **First 360 audit** — nine engineering dimensions per `360-headless`,
+    since a library has no Value or Discovery surface. Overall C-, which is
+    the Security grade. The code graded A to B+ throughout; every failing
+    finding is repository configuration rather than source, and all of it
+    arrived with the migration.
+  - **Corrected an API rationale rather than the API** — the module docstring
+    withheld the simulators from `__all__` because they "pull in socket, ssl
+    and threading". Two thirds false: `stream.py` is re-exported and imports
+    socket, threading and select itself, so a plain import already pays for
+    them. Only ssl is avoided. The decision survives on measurement — ssl
+    costs roughly 32ms against the package's own 45ms — so the reason was
+    replaced with the number and the command to re-measure it.
+  - **Repointed the original working copy** — `origin` now names this
+    repository. The two histories share no ancestor, so the old branch was
+    renamed `protocol-modbus-archive` and its upstream unset rather than
+    reset away, and the stale v0.1.0 tag was replaced with this repository's.
+- **PRs merged:** #9 and #14.
+- **Issues closed/created:** none closed. #10 opened for secret scanning and
+  push protection being disabled, #11 for the absent SAST, #12 for `main`
+  being unprotected so no check gates a merge, and #13 for actions pinned to
+  mutable tags. #1 was rewritten rather than filed against: it claimed the
+  client and server sat at 0% coverage, citing a package path deleted days
+  earlier, where they measure 85% and 94%.
+- **Lesson:** a repository's security settings are not part of its source and
+  do not travel with a migration. Secret scanning and push protection were
+  enabled on the predecessor in response to a real credential exposure, and
+  this repository — created precisely to improve on that history — was created
+  without them. Nothing in the tree records the loss, and no gate detects it;
+  only asking the host does.
+- **Lesson:** two searches in a row returned confident, plausible, opposite
+  answers about whether the tests assert against the wire. The first pattern
+  was mis-escaped and the second failed silently because `grep -P` is
+  unsupported in this locale, and a silent failure is indistinguishable from a
+  genuine zero. Reading one file settled what two greps could not. Counted
+  properly, 26 of 41 test files carry 510 literal vectors. Any finding whose
+  weight rests on a count needs the count produced twice, by different means.
+- **Pending:** #10 and #12 block publication. The PyPI name is unclaimed and
+  needs credentials this session did not have. Two pull requests, #16 and #17,
+  were opened by another session and are untouched here.
