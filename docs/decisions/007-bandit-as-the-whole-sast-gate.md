@@ -2,10 +2,11 @@
 
 **Status:** Accepted
 **Date:** 2026-08-19
-**Upstream:** candidate for `templates/base/workflow/quality-gates.md`. With the
-domain skin off, the convention is that a gate row naming two tools is
-satisfied by one of them plus a recorded decline carrying a revisit trigger —
-never left blank because the second is unavailable. Not yet filed.
+**Upstream:** filed as braboj/solid-ai-templates#1026 against
+`templates/base/workflow/quality-gates.md`. With the domain skin off, the
+convention is that a gate category naming more than one tool is satisfied by
+the tools that can run plus a recorded decline carrying a revisit trigger —
+never left blank because one of them is unavailable.
 
 ## Context
 
