@@ -384,6 +384,22 @@ rather than fixing them in the same pass — an audit is a discovery pass.
 
 Run before a release or a visibility change, and at milestone boundaries.
 
+### 4.5 Action version updates (Dependabot)
+
+Every `uses:` in the workflow is pinned to a commit SHA with the release in a
+trailing comment. Dependabot reads that comment, so a bump arrives as a pull
+request rewriting the SHA and the comment together.
+
+`.github/dependabot.yml` enrols the Actions ecosystem alone, weekly, on the
+default versioning strategy — the one that lifts a pin to the newest release.
+That default is the point of the arrangement rather than an oversight: a pin
+nothing moves is a pin that goes stale, and pinning is only worth doing if
+something keeps it current.
+
+Read the release notes for input changes before merging a major bump; the
+gate proves the rest. The pip ecosystem is deliberately not enrolled, because
+this project bounds its dependencies rather than pinning them.
+
 ## 5. Release and deploy
 
 v0.1.0 is tagged and released on GitHub. The distribution is not on PyPI.
