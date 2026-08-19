@@ -359,3 +359,82 @@ package, per ADR-002. See `README.md` for usage and
   the previous session and still needing the owner. #4 is unchanged and still
   blocked: upstream has cut no tag past `v2.44.0`, so neither route it names is
   available yet.
+
+## 2026-08-19 — Resolve the platform template layer (late evening)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Resolved the platform axis of the template manifest** — the mandatory
+    startup block listed the chain for `stack-python-lib` and no platform
+    template at all. ADR-001 walked the stack axis and stopped, and nothing
+    flagged it because no stack in `templates/manifest.yaml` declares a
+    platform dependency: the platform is chosen by where the repository is
+    hosted, on an axis the stack graph never touches. A single-axis walk
+    terminates cleanly and looks finished. ADR-008 adds
+    `templates/platform/github.md` and `templates/base/workflow/issues.md`,
+    which the manifest names as its dependency, and declines
+    `base/security/devsecops.md` on the evidence that no library stack in any
+    language depends on it.
+  - **Fanned the CI gates in to one required check** — the workflow fanned out
+    and never fanned in, so branch protection named four contexts individually
+    and `security` was not among them. Bandit has run green and blocked nothing
+    since ADR-007 wired it. The new `gate` job needs every other job and
+    requires each result to be exactly `success`, so a skipped or cancelled job
+    fails rather than passes, and a job added later binds by joining the needs
+    list instead of by someone remembering to edit a repository setting.
+  - **Guarded the gitleaks download** — the step ran `curl` without `-f`, which
+    reports success on a 404 and writes the response body into the archive; the
+    run then failed two lines down at `tar` naming a corrupt archive rather
+    than a missing release.
+  - **Corrected two issues whose premises had expired** — #3 asked for a
+    `CONTRIBUTING.md` rewrite that had already shipped, and #22 deferred to an
+    issue that was closed and had never covered the condition it was deferring
+    on. Both were 2026-08-13 audit findings raised against the predecessor
+    repository and carried across the migration unchecked, the same way #1 was.
+    What #3 actually left was two git rules the file never carried, and those
+    shipped instead of the rewrite.
+- **PRs merged:** #37, #39 and #40.
+- **Issues closed/created:** #32, #38 and #3 closed. #36 and #38 created. #3
+  and #22 had their bodies corrected before anything else happened to them —
+  both rested on premises that had expired, and closing #3 on the original
+  text would have recorded a rewrite that never took place.
+- **Lesson:** an omission produced by a resolution procedure is invisible in its
+  own output. Reading the startup block against the templates would never have
+  found the missing platform layer, because the block is internally consistent
+  and every file it lists is correct — what surfaced it was reading the
+  manifest that generates the block instead of the block itself. Where a
+  derived artifact can be wrong by omission, the check has to run against the
+  deriving rule, not the artifact.
+- **Lesson:** two of the three items planned for this session rested on false
+  premises, and both cost about a minute to falsify. A stale ticket is
+  expensive in a specific way — #3 would have produced a full rewrite of a file
+  that needed two sentences, and the rewrite would have looked like real work
+  the whole time. Issues that survive a repository migration are the ones to
+  re-verify first; three of the seven open here were raised against a tree that
+  no longer exists.
+- **Lesson:** a measurement in the wrong unit reads exactly like a finding.
+  Checking the added prose for the 80-column rule, `awk length` reported 81 on
+  a compliant line and `wc -m` agreed, because the line carries an em-dash and
+  neither tool was counting characters — one counts bytes, and the other counts
+  bytes too in a non-UTF-8 locale. The line is 79 characters. Two tools
+  agreeing is not corroboration when they share the same blind spot.
+- **Upstream:** two conventions, both filed rather than named.
+  braboj/solid-ai-templates#1029 covers the startup-block rule, which says to
+  list every template the project depends on and thereby reads as one graph
+  walk — it would omit the platform layer identically for
+  `platform-gitlab` and `platform-linear`.
+  braboj/solid-ai-templates#1030 is a factual correction rather than a
+  convention: `platform/github.md` states CodeQL is free on public and private
+  repositories, and ADR-007 already measured the 403 that refutes it for a
+  private one. Until it is corrected, ADR-007 outranks the template on that
+  point under the precedence order in `CLAUDE.md`.
+- **Pending:** branch protection still needs repointing at `gate` as the sole
+  required context, which is the step that finally makes `security` block a
+  merge — it is a repository setting rather than a file, so the workflow half
+  landing changes nothing on its own, and until it happens the new job reports
+  and binds exactly as much as bandit does today, which is nothing.
+  `CONTRIBUTING.md` section 6 and PLAYBOOK 3.9 both describe the pre-gate
+  arrangement and want a sentence each once that lands; neither was rewritten
+  ahead of the setting, because a sentence describing a state that does not
+  hold yet is the same defect in the other direction. #4 is unchanged and
+  still blocked: upstream has cut no tag past `v2.44.0`.
