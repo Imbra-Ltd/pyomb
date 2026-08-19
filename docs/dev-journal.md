@@ -162,3 +162,51 @@ package, per ADR-002. See `README.md` for usage and
   passes `twine check`, and the route is a pending publisher on PyPI plus a
   tag-triggered release workflow, since the index has no way to reserve a name
   short of uploading to it.
+
+## 2026-08-19 — Stop the leaked server thread (later)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Found the leak with a probe rather than by reading** — the issue offered
+    two candidate fixes and both aimed at the logger. A throwaway pytest plugin
+    that listed live threads after every test named the culprit instead:
+    `TestMutualTls` was the only class in the suite leaving an `OmbServerSim`
+    thread behind, on four of its tests, while the other 370 tests finished
+    clean.
+  - **Fixed the fixture that guessed** — its `tearDown` called `stop()` and
+    slept a fifth of a second. `stop()` only sets the quit event and the run
+    loop sits in a one second `select`, so the sleep was shorter than the wait
+    it stood in for and never once sufficed. It now joins with the same five
+    second bound the other three server fixtures use, and reports the timeout
+    instead of passing silently.
+  - **Added a suite-wide guard** — `tests/conftest.py` fails any test that
+    finishes with a live server thread, so the next fixture that sleeps is
+    named where it leaks rather than surfacing as noise at the end of an
+    unrelated run. Against the unfixed fixture it errors on four tests; with
+    the fix the file is eight passed.
+  - **Corrected a comment the fix falsified** — the class justified per-test
+    ports by the listener not always being released before the next `setUp`.
+    The join makes that untrue, so the comment now carries the reason that
+    survives: the server sets no `SO_REUSEADDR`, so a just-closed port can
+    still refuse the next bind while its connection sits in `TIME_WAIT`.
+- **PRs merged:** #23.
+- **Issues closed/created:** #5 closed. #22 created, recording that the CI
+  badge cannot render while the repository is private.
+- **Lesson:** the issue's mechanism section was accurate and its proposed fixes
+  were still wrong. `Logger` binding `sys.stdout` at construction is the
+  condition that makes the noise visible, not the cause; the cause is a fixture
+  that does not wait for the thread it started. Nulling the logger in the suite
+  would have silenced the traceback and left a server running through unrelated
+  tests. Both candidates were plausible enough to implement without noticing.
+- **Lesson:** the error text carried the answer. The traceback named
+  `('0.0.0.0', 18807)` and the TLS class counts up from 18802, so the sixth
+  test of that class owned the leaked thread. Reading the port out of the
+  failure was quicker than reasoning about which of the seven fixtures looked
+  wrong, and it agreed with the probe.
+- **Pending:** the TLS `setUp` still sleeps half a second after `start()`,
+  which is redundant because `start()` already blocks until the listener is up
+  or raises. It causes no defect and was left out of the fix; it is worth its
+  own small change. The autouse guard is a reusable convention rather than a
+  project-specific one and belongs upstream in
+  `templates/base/core/testing.md`, as a sibling of the rule about tests not
+  touching processes they did not start — the upstream issue is not yet filed.
