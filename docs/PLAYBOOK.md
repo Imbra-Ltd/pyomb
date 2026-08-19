@@ -136,6 +136,11 @@ everything — deferral is the absence of a milestone, never a label.
 
 1. Add the request and response PDU classes to `src/pyomb/packets.py`, following
    the existing pairs — `PDU_FORMAT`, `PDU_ID`, `serialize`, `deserialize`.
+   The last two carry a fixed signature: `serialize(self)` and the classmethod
+   `deserialize(cls, stream)`, per ADR-009. Reach the packing helper with
+   `self.pack(fmt)` rather than accepting a format from the caller — a
+   function code's layout is fixed by the specification.
+   `tests/test_packet_signature_contract.py` fails on a class that diverges.
 2. Register both at the bottom of the module, where every other class is
    registered.
 3. Add a builder to `RequestFactory` in `src/pyomb/omb_client.py` and a
@@ -239,9 +244,11 @@ same thing — the overrides apply on top of it.
 its first commit. The six modules that predate the gate are frozen by error
 code in `[[tool.mypy.overrides]]`, each listing exactly what it emits today.
 The two rules are the ones the lint freeze carries: never add a module to make
-the gate pass, and never widen an entry. ADR-005 records why, and #51 tracks
-the two findings in that freeze that are real defects rather than missing
-annotations.
+the gate pass, and never widen an entry. ADR-005 records why. Narrowing is the
+migration, and it has run once: ADR-009 settled the packet operation signatures
+and dropped `override` from `pyomb.packets`, which split that entry away from
+`pyomb.stream`. The findings still frozen that are real defects rather than
+missing annotations are tracked in #45 and #46.
 
 mypy is pinned to a minor range for the reason ruff is: the freeze records one
 version's error codes, and a release reporting a new one would fail the gate
