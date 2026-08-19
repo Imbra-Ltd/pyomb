@@ -301,3 +301,55 @@ package, per ADR-002. See `README.md` for usage and
   startup block requires, exists only in those unreleased commits — so pinning
   back to the tag would break the startup block, and the issue needs a
   `v2.45.0` upstream release before it can move.
+
+## 2026-08-19 — Pin the actions and scan the history (evening)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Pinned every action reference to a commit SHA** — seven references, not
+    the five #13 counted, because the bandit job landed after that body was
+    written. A tag is mutable, and the job holding the pin also holds a
+    checkout of this source. `.github/dependabot.yml` enrols the Actions
+    ecosystem on the default versioning strategy, so the pins keep moving.
+  - **Took the Node 24 majors in the same change** — pinning forces a version
+    choice, and the current majors are the ones that retire the deprecation.
+    Both were read against their release notes rather than assumed drop-in:
+    checkout takes no inputs here, and the one input the setup-python major
+    removed is one this workflow never passed. Verified on the runs rather
+    than the diff — five deprecation annotations before, none after.
+  - **Switched the secret scan from the working tree to the whole history** —
+    the job carried `--no-git` behind a comment saying history still held
+    credential material awaiting a purge. Neither half survived a probe. The
+    purge was closed as not planned, so the lifting condition could never
+    fire, and the material is not in this history at all: the comment came
+    over verbatim from the predecessor, whose unreachable objects the
+    migration left behind. No commit here has ever added key material.
+  - **Fetched the history that scan needs** — `fetch-depth: 0` on that job's
+    checkout, because the action fetches a single commit by default.
+  - **Swept the surfaces describing the old arrangement** — PLAYBOOK 3.7 and
+    SECURITY.md both still called it a working-tree scan. PLAYBOOK 4.5 is new,
+    covering the weekly bump pull requests the Dependabot config starts
+    producing.
+- **PRs merged:** #30 and #31.
+- **Issues closed/created:** #13, #8 and #7 closed. #32 created.
+- **Lesson:** an issue's proposed fix is a hypothesis about the repository, and
+  this one was written against the wrong repository. #7 asked for the
+  working-tree scan to be documented as permanent; three commands showed the
+  constraint it rested on belongs to the predecessor, and the stronger gate was
+  available immediately. Probing cost under a minute, and the alternative was
+  recording a weaker gate as a deliberate choice.
+- **Lesson:** removing a limiting flag can leave a check weaker while it reads
+  stronger. `--no-git` gone with `fetch-depth` left at its default gives a job
+  that scans one commit, finds nothing and goes green, which the interface
+  renders identically to a real pass. What settled it was reading the count out
+  of the job log rather than the exit status: 18 commits scanned, not 1.
+- **Upstream:** none to file — the convention is already upstream, as a MUST in
+  both `base/security/devsecops.md` and `platform/github.md`, and was filed and
+  closed there as braboj/solid-ai-templates#759. The finding is the other
+  direction: neither template is in this project's startup block, so a rule
+  that has existed upstream all along was re-derived here from a defect. #32
+  carries the question of whether to resolve them.
+- **Pending:** `security` is still not a required status check, carried from
+  the previous session and still needing the owner. #4 is unchanged and still
+  blocked: upstream has cut no tag past `v2.44.0`, so neither route it names is
+  available yet.
