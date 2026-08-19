@@ -393,7 +393,7 @@ package, per ADR-002. See `README.md` for usage and
     repository and carried across the migration unchecked, the same way #1 was.
     What #3 actually left was two git rules the file never carried, and those
     shipped instead of the rewrite.
-- **PRs merged:** #37, #39 and #40.
+- **PRs merged:** #37, #39, #40 and #42.
 - **Issues closed/created:** #32, #38 and #3 closed. #36 and #38 created. #3
   and #22 had their bodies corrected before anything else happened to them —
   both rested on premises that had expired, and closing #3 on the original
@@ -428,13 +428,18 @@ package, per ADR-002. See `README.md` for usage and
   repositories, and ADR-007 already measured the 403 that refutes it for a
   private one. Until it is corrected, ADR-007 outranks the template on that
   point under the precedence order in `CLAUDE.md`.
-- **Pending:** branch protection still needs repointing at `gate` as the sole
-  required context, which is the step that finally makes `security` block a
-  merge — it is a repository setting rather than a file, so the workflow half
-  landing changes nothing on its own, and until it happens the new job reports
-  and binds exactly as much as bandit does today, which is nothing.
-  `CONTRIBUTING.md` section 6 and PLAYBOOK 3.9 both describe the pre-gate
-  arrangement and want a sentence each once that lands; neither was rewritten
-  ahead of the setting, because a sentence describing a state that does not
-  hold yet is the same defect in the other direction. #4 is unchanged and
-  still blocked: upstream has cut no tag past `v2.44.0`.
+- **Settings:** branch protection was repointed at `gate` as the sole required
+  context, by the owner through the repository settings page. That is the half
+  the workflow could not carry — until it landed the new job reported and bound
+  exactly as much as bandit did, which is nothing. `security` now blocks a
+  merge for the first time since ADR-007 wired it. Every other protection value
+  survived the edit unchanged: administrators still bound, zero required
+  approvals, no force-push, no branch deletion. `CONTRIBUTING.md` section 6 and
+  PLAYBOOK 3.9 followed in #42 rather than ahead of it, because the two
+  surfaces flip in opposite directions and a sentence describing a state that
+  does not hold yet is the same defect facing the other way.
+- **Pending:** #4 only, unchanged and still blocked — upstream has cut no tag
+  past `v2.44.0`, so neither route it names is available. Worth carrying
+  forward instead: #1 and #6 come from the same 2026-08-13 audit cohort as #3
+  and #22, both of which turned out to be describing a repository that no
+  longer exists. Re-verify their premises before scoping either.
