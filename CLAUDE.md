@@ -74,6 +74,7 @@ pip install -e ".[dev]"          # install with dev dependencies
 pre-commit install               # run the gates before every commit
 pytest                           # run tests
 mypy                             # type check; settings in pyproject.toml
+bandit -c pyproject.toml -r src scripts tests   # static analysis
 ruff check src tests scripts     # lint
 ruff format src tests scripts    # format
 python -m build                  # build distribution
@@ -176,6 +177,9 @@ follow the referenced templates. Project-specific additions only:
   module and never widen its `disable_error_code` list. Freeze a finding, never
   the analysis that produces it — turning off a strict sub-flag stops the
   checker looking and discards findings the module already has; see ADR-005
+- Suppress a bandit finding at the line with `# nosec <ID>` naming the one
+  check, and put the reason above it. Never add to the config-level `skips`,
+  which stops the check firing tree-wide; see ADR-007
 
 ## 4. Identity
 

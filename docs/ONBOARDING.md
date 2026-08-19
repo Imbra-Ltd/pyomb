@@ -28,10 +28,11 @@ pre-commit install
 python scripts/gen_test_certs.py
 ```
 
-The `test` extra carries pytest, pytest-cov, ruff and mypy, which is what CI
-installs; `dev` adds the hook runner and the build tools on top of it and is
-what a contributor wants. The library itself has no runtime dependencies, so
-`pyproject.toml` is the only place this project declares a dependency.
+The `test` extra carries pytest, pytest-cov, ruff, mypy and bandit, which is
+what CI installs; `dev` adds the hook runner and the build tools on top of it
+and is what a contributor wants. The library itself has no runtime
+dependencies, so `pyproject.toml` is the only place this project declares a
+dependency.
 
 `pre-commit install` is a one-off. From then on the gates run against your
 staged files before each commit, so you find a formatting or typing slip
@@ -65,11 +66,14 @@ and a number in a setup document is wrong more often than it is right.
 ```bash
 python -m ruff check src tests scripts
 python -m mypy
+python -m bandit -c pyproject.toml -r src scripts tests
 ```
 
 Expect `All checks passed!` from the first and a `Success:` line from the
 second. The module count in mypy's line is not written down here for the
-same reason the test count above is not.
+same reason the test count above is not. Bandit prints a run summary and exits
+zero; every severity row should read zero, and the two suppressed findings in
+the certificate generator are reported on their own line.
 
 ## 4. Key files
 

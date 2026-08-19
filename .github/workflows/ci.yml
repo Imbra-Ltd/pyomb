@@ -97,6 +97,35 @@ jobs:
           print("wheel contents OK:", sorted(tops))
           PY
 
+  # Bandit is the static analysis the quality gates make a Layer 3 MUST. It is
+  # the whole of that gate here: GitHub code scanning needs Code Security,
+  # which a private repository does not carry, so the platform half is
+  # declined rather than missing. The decision record under docs/decisions/
+  # carries the reasoning and the condition that reopens it.
+  #
+  # Passing -c is load-bearing. Bandit reads no configuration from
+  # pyproject.toml unless pointed at it, so without the flag the exclusions
+  # and the test-only assert skip vanish and this run stops matching a local
+  # one. scripts/ and tests/ are in scope alongside src/: they are not
+  # shipped, but they run on a contributor's machine.
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Static analysis
+        run: python -m bandit -c pyproject.toml -r src scripts tests
+
   secrets:
     runs-on: ubuntu-latest
 

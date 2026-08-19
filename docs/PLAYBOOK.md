@@ -227,7 +227,28 @@ disagree about a file nobody edited.
 Runs in CI against the working tree, not history. Push protection is enabled on
 the repository and blocks a secret at the client before it reaches CI.
 
-### 3.8 CI
+### 3.8 Static analysis (bandit)
+
+```bash
+python -m bandit -c pyproject.toml -r src scripts tests
+```
+
+The `-c` is not optional. Bandit reads nothing from `pyproject.toml` unless
+pointed at it, so dropping the flag produces a different, noisier run than CI's
+— the exclusions and the test-only assert skip both disappear.
+
+The tree is clean at every severity, so there is no freeze table and no
+severity floor: any finding fails. Suppress a false positive at the line with
+`# nosec <ID>` naming the specific check, and put the reason in a comment above
+it. Never add a check to the config-level `skips` — that stops bandit looking
+everywhere rather than here, which is the distinction ADR-005 draws and
+[ADR-007](decisions/007-bandit-as-the-whole-sast-gate.md) applies to this gate.
+
+GitHub code scanning is not the other half of this gate. It cannot run on a
+private repository without Code Security, and ADR-007 records the decline and
+what would reopen it.
+
+### 3.9 CI
 
 ```bash
 gh run list --limit 1
@@ -238,20 +259,20 @@ A local run is evidence about one platform. CI runs Linux under Python 3.10 and
 3.13; development is typically Windows. Read the run before calling a change
 good — three pushes were reported clean against a red pipeline on 2026-08-16.
 
-Four checks gate a merge to `main`: `test (3.10)`, `test (3.13)`, `build` and
-`secrets`. They are required status checks in branch protection, and the
-protection binds administrators, so a red pull request cannot be merged by
-anyone. A pull request is required at zero approvals — a single-seat
+Five checks gate a merge to `main`: `test (3.10)`, `test (3.13)`, `build`,
+`security` and `secrets`. They are required status checks in branch protection,
+and the protection binds administrators, so a red pull request cannot be merged
+by anyone. A pull request is required at zero approvals — a single-seat
 organisation cannot supply an approval, so any higher count would deadlock
 every merge.
 
-### 3.9 Verifying a fix
+### 3.10 Verifying a fix
 
 A fix ships with a test that fails against the unfixed code. Run it both ways:
 stash or revert the source change, confirm the new test fails, restore, confirm
 it passes. Say so in the commit message.
 
-### 3.10 Build (build, twine)
+### 3.11 Build (build, twine)
 
 ```bash
 python -m build
@@ -271,7 +292,7 @@ CI runs all three on every change, in the `build` job, so a build that breaks
 or a wheel that starts carrying `tests/` fails the pull request rather than
 the release.
 
-### 3.11 Line endings (.gitattributes, .editorconfig)
+### 3.12 Line endings (.gitattributes, .editorconfig)
 
 ```bash
 git ls-files --eol | grep -c "i/crlf"

@@ -110,8 +110,8 @@ ratcheted upward, never lowered.
 ## 6. Continuous integration
 
 `.github/workflows/ci.yml` runs lint, format, type check, tests and coverage on
-Python 3.10 and 3.13, plus a build and a secret scan, on every push to `main`
-and every pull request. A red pipeline blocks merge.
+Python 3.10 and 3.13, plus a build, a static analysis pass and a secret scan,
+on every push to `main` and every pull request. A red pipeline blocks merge.
 
 Install the hooks once and the same checks run before a commit lands, so a red
 pipeline is not the first you hear of a formatting or typing slip:
