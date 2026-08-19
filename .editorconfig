@@ -10,12 +10,11 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 indent_style = space
 
-# 120 is where the ruff gate refuses, so the editor draws the line CI draws.
-# 80 stays the recommendation for new code, which the rulers in
-# .vscode/settings.json show alongside it.
+# 80 is the preferred width for new code. Ruff permits up to 120, which the
+# rulers in .vscode/settings.json show alongside the preferred width.
 [*.py]
 indent_size = 4
-max_line_length = 120
+max_line_length = 80
 
 [*.{yml,yaml,json,toml}]
 indent_size = 2
