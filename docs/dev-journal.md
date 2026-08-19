@@ -189,7 +189,13 @@ package, per ADR-002. See `README.md` for usage and
     The join makes that untrue, so the comment now carries the reason that
     survives: the server sets no `SO_REUSEADDR`, so a just-closed port can
     still refuse the next bind while its connection sits in `TIME_WAIT`.
-- **PRs merged:** #23.
+  - **Dropped the sleep on the other side of the same fixture** — `setUp`
+    slept half a second after `start()`, which already blocks until the
+    listener is accepting and raises if it does not. Removed in a follow-up
+    once the fix had landed, with ten runs of the file and three full-suite
+    runs as the oracle, since there is no behaviour to assert on. The file
+    went from about 8s to under 3s and the suite from about 38s to about 33s.
+- **PRs merged:** #23 and #25.
 - **Issues closed/created:** #5 closed. #22 created, recording that the CI
   badge cannot render while the repository is private.
 - **Lesson:** the issue's mechanism section was accurate and its proposed fixes
@@ -203,10 +209,10 @@ package, per ADR-002. See `README.md` for usage and
   test of that class owned the leaked thread. Reading the port out of the
   failure was quicker than reasoning about which of the seven fixtures looked
   wrong, and it agreed with the probe.
-- **Pending:** the TLS `setUp` still sleeps half a second after `start()`,
-  which is redundant because `start()` already blocks until the listener is up
-  or raises. It causes no defect and was left out of the fix; it is worth its
-  own small change. The autouse guard is a reusable convention rather than a
+- **Pending:** the autouse guard is a reusable convention rather than a
   project-specific one and belongs upstream in
   `templates/base/core/testing.md`, as a sibling of the rule about tests not
   touching processes they did not start — the upstream issue is not yet filed.
+  A local `main` was left carrying a stray merge commit and an unsquashed
+  duplicate after `gh pr merge` and `git pull` ran together; the content
+  matched `origin/main` exactly, and the reset to clear it needs the owner.
