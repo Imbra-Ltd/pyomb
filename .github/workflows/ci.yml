@@ -156,7 +156,44 @@ jobs:
         env:
           GITLEAKS_VERSION: 8.21.2
         run: |
-          curl -sSL -o gitleaks.tar.gz \
+          set -euo pipefail
+          # -f is load-bearing. Without it curl reports success on a 404 and
+          # writes the response body into the archive, so the run fails two
+          # lines down at tar with "not in gzip format" -- a corrupt-archive
+          # error standing in for a release that is not there.
+          curl -sSfL -o gitleaks.tar.gz \
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
           tar -xzf gitleaks.tar.gz gitleaks
           ./gitleaks detect --source . --redact --verbose --exit-code 1
+
+  # Branch protection names one required context, and this is it. The jobs
+  # above fan out so each fails fast and reports on its own; this one fans them
+  # back in, so a job added later binds the moment it joins the needs list
+  # rather than when someone remembers to edit a repository setting. That gap
+  # is not hypothetical: bandit ran green and blocked nothing from the day it
+  # was wired until the day this job landed.
+  #
+  # The comparison is against success rather than against failure. A skipped or
+  # a cancelled job is not a pass, and the checks list renders it much like
+  # one, so a fan-in testing only for failure lets it through.
+  gate:
+    needs: [test, build, security, secrets]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      # The results map goes through the environment rather than into the
+      # script body, which keeps a value expanded by the workflow engine off
+      # the shell's command line.
+      - name: Require every gate to have succeeded
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "${RESULTS}"
+          for result in ${{ join(needs.*.result, ' ') }}; do
+            if [ "${result}" != "success" ]; then
+              echo "a gate did not succeed; see the map above" >&2
+              exit 1
+            fi
+          done
