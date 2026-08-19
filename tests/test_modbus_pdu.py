@@ -24,12 +24,12 @@ class TestModbusPdu(unittest.TestCase):
     def test_serialization(self):
         expected = b"\x01\x00\x01\x02\x00\x03\x04"
         pdu = ModbusPdu(fc=1, data=(1, 2, 3, 4))
-        serialized = pdu.serialize(fmt=">BHBHB")
+        serialized = pdu.pack(">BHBHB")
         self.assertEqual(serialized, expected)
 
     def test_deserialization(self):
         message = b"\x01\x00\x01\x02\x00\x03\x04"
-        pdu = ModbusPdu.deserialize(message, fmt=">BHBHB")
+        pdu = ModbusPdu.unpack(message, ">BHBHB")
         self.assertEqual(pdu.fc, 1)
         self.assertEqual(pdu.data, (1, 2, 3, 4))
 
