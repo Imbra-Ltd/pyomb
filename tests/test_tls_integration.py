@@ -10,7 +10,6 @@ rather than part of the default run.
 
 import os
 import ssl
-import time
 import unittest
 
 from pyomb.omb_client import OmbClientSim
@@ -83,8 +82,15 @@ class TestMutualTls(unittest.TestCase):
         type(self).port_counter += 1
         self.PORT = type(self).port_counter
         self.server = OmbServerSim(port=self.PORT, secure=True, cert=SERVER_CRT, key=SERVER_KEY, ca_chain=CA)
+
+        # start() returns only once the listener is accepting: it waits on the
+        # server's own started event, bounded by STARTUP_TIMEOUT, and raises
+        # ModbusNetworkError if the thread dies or the deadline passes. Sleeping
+        # here waited a second time for something already waited for, and a
+        # fixed half second is the wrong answer either way -- too long when the
+        # listener is up in milliseconds, too short if it ever is not.
         self.server.start()
-        time.sleep(0.5)
+
         self.client = None
 
     def tearDown(self):
