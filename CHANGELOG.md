@@ -6,6 +6,26 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Every packet class now serializes through `serialize()` and deserializes
+  through the classmethod `deserialize(stream)`. The abstract base declared
+  both with `**kwargs` and `ModbusPdu` redeclared them with a format
+  parameter, so each of the 34 implementations narrowed what the base
+  promised and a caller holding the abstract type could not call either
+  operation. See ADR-009
+- `ModbusPdu.serialize` and `ModbusPdu.deserialize` no longer take a `fmt`
+  argument. Caller-supplied packing moved to `ModbusPdu.pack(fmt)` and
+  `ModbusPdu.unpack(stream, fmt)`, which is a breaking change for anyone
+  passing a format. The format is now required where it appears rather than
+  falling back to the class default on an empty value
+
+### Fixed
+
+- The 122 Liskov violations the type checker reported across the PDU
+  hierarchy. The findings behind the mypy freeze fall from 711 to 593, and
+  `pyomb.packets` no longer suppresses the `override` code
+
 ## [0.1.0] - 2026-08-18
 
 First tagged release. The library has not been published to PyPI, so there is

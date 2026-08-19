@@ -56,25 +56,28 @@ class ModbusPacketAbc(metaclass=ABCMeta):
         """Check if two packets are not equal"""
         return not self.__eq__(other)
 
+    # This operation and the one below it carry no tuning parameters. A packet
+    # knows its own wire layout, so a caller that could hand one in could also
+    # ask a concrete packet for a frame its specification does not allow. Where
+    # a layout genuinely varies per call, the class offering that freedom
+    # exposes it under its own name rather than widening these; see
+    # ModbusPdu.pack.
     @abstractmethod
-    def serialize(self, **kwargs):
+    def serialize(self):
         """Serialize the packet and return a stream of bytes
-
-        Args:
-            kwargs: Additional keyword arguments
 
         Returns:
             bytes : The serialized packet
         """
         raise NotImplementedError
 
+    @classmethod
     @abstractmethod
-    def deserialize(self, stream, **kwargs):
+    def deserialize(cls, stream):
         """Deserialize the packet from a stream of bytes
 
         Args:
             stream (bytes): The stream of bytes to deserialize
-            kwargs: Additional keyword arguments
 
         Returns:
             ModbusPacketAbc : The deserialized packet
@@ -262,19 +265,18 @@ class ModbusPdu(ModbusPacketAbc):
         """Check if the PDU is a request."""
         return self.PDU_ID < 0x8000
 
-    def serialize(self, fmt=None):
-        """Serialize the PDU to a stream of bytes.
+    def pack(self, fmt):
+        """Pack the function code and the data under an explicit format string.
+
+        This is the escape hatch for a PDU shape the library does not model.
+        Prefer serialize(), which supplies the format the class declares.
 
         Args:
-            fmt (str)   : The format string of the PDU
+            fmt (str)   : The format string to pack under
 
-         Returns:
-            bytes : The serialized PDU
+        Returns:
+            bytes : The packed PDU
         """
-
-        # Use the default PDU format if not specified
-        if not fmt:
-            fmt = self.PDU_FORMAT.format(len(self.data))
 
         try:
             # Pack the data using the format string
@@ -288,21 +290,19 @@ class ModbusPdu(ModbusPacketAbc):
         return packed_bytes
 
     @classmethod
-    def deserialize(cls, stream, fmt=None):
-        """Deserialize the PDU from a stream of bytes.
+    def unpack(cls, stream, fmt):
+        """Unpack a PDU from a stream of bytes under an explicit format string.
+
+        This is the escape hatch for a PDU shape the library does not model.
+        Prefer deserialize(), which supplies the format the class declares.
 
         Args:
-            stream (bytes)  : The stream of bytes to deserialize
-            fmt (str)       : The format string of the PDU
+            stream (bytes)  : The stream of bytes to unpack
+            fmt (str)       : The format string to unpack under
 
         Returns:
             ModbusPdu : The Modbus PDU object
         """
-
-        # Use the default format if not specified
-        # The first byte is the function code, the rest is the data
-        if not fmt:
-            fmt = cls.PDU_FORMAT.format(len(stream) - 1)
 
         try:
             # Unpack the message bytes
@@ -320,6 +320,28 @@ class ModbusPdu(ModbusPacketAbc):
 
         # Return a new instance of the class
         return cls(fc, data)
+
+    def serialize(self):
+        """Serialize the PDU to a stream of bytes.
+
+        Returns:
+            bytes : The serialized PDU
+        """
+        return self.pack(self.PDU_FORMAT.format(len(self.data)))
+
+    @classmethod
+    def deserialize(cls, stream):
+        """Deserialize the PDU from a stream of bytes.
+
+        Args:
+            stream (bytes)  : The stream of bytes to deserialize
+
+        Returns:
+            ModbusPdu : The Modbus PDU object
+        """
+
+        # The first byte is the function code, the rest is the data
+        return cls.unpack(stream, cls.PDU_FORMAT.format(len(stream) - 1))
 
 
 ################################################################################
@@ -608,7 +630,7 @@ class ModbusRequestFC1(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusRequestFC1, self).serialize(fmt=self.PDU_FORMAT)
+            stream = self.pack(self.PDU_FORMAT)
 
         except Exception as e:
             message = "Error serializing the FC1 Request PDU: {0}".format(e)
@@ -688,7 +710,7 @@ class ModbusResponseFC1(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusResponseFC1, self).serialize(fmt=self.PDU_FORMAT.format(self.byte_count))
+            stream = self.pack(self.PDU_FORMAT.format(self.byte_count))
 
         except Exception as e:
             message = "Error serializing the FC1 Response PDU: {0}".format(e)
@@ -784,7 +806,7 @@ class ModbusRequestFC2(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusRequestFC2, self).serialize(fmt=self.PDU_FORMAT)
+            stream = self.pack(self.PDU_FORMAT)
 
         except Exception as e:
             message = "Error serializing the FC2 Request PDU: {0}".format(e)
@@ -867,7 +889,7 @@ class ModbusResponseFC2(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusResponseFC2, self).serialize(fmt=self.PDU_FORMAT.format(self.byte_count))
+            stream = self.pack(self.PDU_FORMAT.format(self.byte_count))
 
         except Exception as e:
             message = "Error serializing the FC2 Response PDU: {0}".format(e)
@@ -961,7 +983,7 @@ class ModbusRequestFC3(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusRequestFC3, self).serialize(fmt=self.PDU_FORMAT)
+            stream = self.pack(self.PDU_FORMAT)
 
         except Exception as e:
             message = "Error serializing the FC3 Request PDU: {0}".format(e)
@@ -1044,7 +1066,7 @@ class ModbusResponseFC3(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusResponseFC3, self).serialize(fmt=self.PDU_FORMAT.format(len(self.values)))
+            stream = self.pack(self.PDU_FORMAT.format(len(self.values)))
 
         except Exception as e:
             message = "Error serializing the FC3 Response PDU: {0}".format(e)
@@ -1142,7 +1164,7 @@ class ModbusRequestFC4(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusRequestFC4, self).serialize(fmt=self.PDU_FORMAT)
+            stream = self.pack(self.PDU_FORMAT)
 
         except Exception as e:
             message = "Error serializing the FC4 Request PDU: {0}".format(e)
@@ -1225,7 +1247,7 @@ class ModbusResponseFC4(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusResponseFC4, self).serialize(fmt=self.PDU_FORMAT.format(len(self.values)))
+            stream = self.pack(self.PDU_FORMAT.format(len(self.values)))
 
         except Exception as e:
             message = "Error serializing the FC4 Response PDU: {0}".format(e)
@@ -1323,7 +1345,7 @@ class ModbusRequestFC5(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusRequestFC5, self).serialize(fmt=self.PDU_FORMAT)
+            stream = self.pack(self.PDU_FORMAT)
 
         except Exception as e:
             message = "Error serializing the FC5 Request PDU: {0}".format(e)
@@ -1404,7 +1426,7 @@ class ModbusResponseFC5(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusResponseFC5, self).serialize(fmt=self.PDU_FORMAT)
+            stream = self.pack(self.PDU_FORMAT)
 
         except Exception as e:
             message = "Error serializing the FC5 Response PDU: {0}".format(e)
@@ -1485,7 +1507,7 @@ class ModbusRequestFC6(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusRequestFC6, self).serialize(fmt=self.PDU_FORMAT)
+            stream = self.pack(self.PDU_FORMAT)
 
         except Exception as e:
             message = "Error serializing the FC6 Request PDU: {0}".format(e)
@@ -1566,7 +1588,7 @@ class ModbusResponseFC6(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusResponseFC6, self).serialize(fmt=self.PDU_FORMAT)
+            stream = self.pack(self.PDU_FORMAT)
 
         except Exception as e:
             message = "Error serializing the FC6 Response PDU: {0}".format(e)
@@ -1635,7 +1657,7 @@ class ModbusRequestFC7(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusRequestFC7, self).serialize(fmt=self.PDU_FORMAT)
+            stream = self.pack(self.PDU_FORMAT)
 
         except Exception as e:
             message = "Error serializing the FC7 Request PDU: {0}".format(e)
@@ -1710,7 +1732,7 @@ class ModbusResponseFC7(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusResponseFC7, self).serialize(fmt=self.PDU_FORMAT)
+            stream = self.pack(self.PDU_FORMAT)
 
         except Exception as e:
             message = "Error serializing the FC7 Response PDU: {0}".format(e)
@@ -1794,7 +1816,7 @@ class ModbusRequestFC8(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusRequestFC8, self).serialize(fmt=self.PDU_FORMAT.format(len(self.subfunc_data)))
+            stream = self.pack(self.PDU_FORMAT.format(len(self.subfunc_data)))
 
         except Exception as e:
             message = "Error serializing the FC8 Request PDU: {0}".format(e)
@@ -1892,7 +1914,7 @@ class ModbusResponseFC8(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusResponseFC8, self).serialize(fmt=self.PDU_FORMAT.format(len(self.subfunc_data)))
+            stream = self.pack(self.PDU_FORMAT.format(len(self.subfunc_data)))
 
         except Exception as e:
             message = "Error serializing the FC8 Response PDU: {0}".format(e)
@@ -1997,7 +2019,7 @@ class ModbusRequestFC15(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusRequestFC15, self).serialize(fmt=self.PDU_FORMAT.format(len(self.values)))
+            stream = self.pack(self.PDU_FORMAT.format(len(self.values)))
 
         except Exception as e:
             message = "Error serializing the FC15 Request PDU: {0}".format(e)
@@ -2101,7 +2123,7 @@ class ModbusResponseFC15(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusResponseFC15, self).serialize(fmt=self.PDU_FORMAT)
+            stream = self.pack(self.PDU_FORMAT)
 
         except Exception as e:
             message = "Error serializing the FC15 Response PDU: {0}".format(e)
@@ -2199,7 +2221,7 @@ class ModbusRequestFC16(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusRequestFC16, self).serialize(fmt=self.PDU_FORMAT.format(len(self.values)))
+            stream = self.pack(self.PDU_FORMAT.format(len(self.values)))
 
         except Exception as e:
             message = "Error serializing the FC16 Request PDU: {0}".format(e)
@@ -2304,7 +2326,7 @@ class ModbusResponseFC16(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusResponseFC16, self).serialize(fmt=self.PDU_FORMAT)
+            stream = self.pack(self.PDU_FORMAT)
 
         except Exception as e:
             message = "Error serializing the FC16 Response PDU: {0}".format(e)
@@ -2395,7 +2417,7 @@ class ModbusRequestFC22(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusRequestFC22, self).serialize(fmt=self.PDU_FORMAT)
+            stream = self.pack(self.PDU_FORMAT)
 
         except Exception as e:
             message = "Error serializing the FC22 Request PDU: {0}".format(e)
@@ -2480,7 +2502,7 @@ class ModbusResponseFC22(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusResponseFC22, self).serialize(fmt=self.PDU_FORMAT)
+            stream = self.pack(self.PDU_FORMAT)
 
         except Exception as e:
             message = "Error serializing the FC22 Response PDU: {0}".format(e)
@@ -2589,7 +2611,7 @@ class ModbusRequestFC23(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusRequestFC23, self).serialize(fmt=self.PDU_FORMAT.format(len(self.write_values)))
+            stream = self.pack(self.PDU_FORMAT.format(len(self.write_values)))
 
         except Exception as e:
             message = "Error serializing the FC23 Request PDU: {0}".format(e)
@@ -2711,7 +2733,7 @@ class ModbusResponseFC23(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusResponseFC23, self).serialize(fmt=self.PDU_FORMAT.format(len(self.values)))
+            stream = self.pack(self.PDU_FORMAT.format(len(self.values)))
 
         except Exception as e:
             message = "Error serializing the FC23 Response PDU: {0}".format(e)
@@ -2813,7 +2835,7 @@ class ModbusRequestFC43(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusRequestFC43, self).serialize(fmt=self.PDU_FORMAT.format(len(self.mei_data)))
+            stream = self.pack(self.PDU_FORMAT.format(len(self.mei_data)))
 
         except Exception as e:
             message = "Error serializing the FC43 Request PDU: {0}".format(e)
@@ -2913,7 +2935,7 @@ class ModbusResponseFC43(ModbusPdu):
         """
 
         try:
-            stream = super(ModbusResponseFC43, self).serialize(fmt=self.PDU_FORMAT.format(len(self.mei_data)))
+            stream = self.pack(self.PDU_FORMAT.format(len(self.mei_data)))
 
         except Exception as e:
             message = "Error serializing the FC43 Response PDU: {0}".format(e)
