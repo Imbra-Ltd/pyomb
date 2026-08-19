@@ -123,7 +123,13 @@ ratcheted upward, never lowered.
 
 `.github/workflows/ci.yml` runs lint, format, type check, tests and coverage on
 Python 3.10 and 3.13, plus a build, a static analysis pass and a secret scan,
-on every push to `main` and every pull request. A red pipeline blocks merge.
+on every push to `main` and every pull request.
+
+A red pipeline blocks merge, and one job decides that. `gate` needs every other
+job and requires each to report exactly `success`, so any red job fails it —
+and so does a job that is skipped or cancelled, which is not the same as one
+that passed. It is the only required status check, which is what stops a newly
+added job from reporting without gating anything.
 
 Install the hooks once and the same checks run before a commit lands, so a red
 pipeline is not the first you hear of a formatting or typing slip:
