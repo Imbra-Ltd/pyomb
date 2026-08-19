@@ -1,7 +1,22 @@
 import unittest
 from pyomb.packets import ModbusRequestFC1, ModbusResponseFC1
-from pyomb.packets import ModbusTcpRequest, ModbusTcpResponse
+from pyomb.packets import ModbusTcpPacket, ModbusTcpRequest, ModbusTcpResponse
 from pyomb.packets import ModbusPduParser, ModbusHeader
+
+
+class TestModbusTcpPacket(unittest.TestCase):
+    def test_the_string_form_carries_both_parts(self):
+
+        # The generic packet is what a diagnostic prints when neither
+        # direction is known, so it has to show the header and the PDU rather
+        # than name its own class
+        header = ModbusHeader(trans_id=1, prot_id=0, length=6, unit_id=1)
+        pdu = ModbusRequestFC1(start_addr=1, quantity=2)
+
+        packet = ModbusTcpPacket(header=header, pdu=pdu)
+
+        self.assertIn(str(header), str(packet))
+        self.assertIn(str(pdu), str(packet))
 
 
 class TestModbusTcpRequest(unittest.TestCase):
