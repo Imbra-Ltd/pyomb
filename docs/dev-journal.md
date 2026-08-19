@@ -343,12 +343,18 @@ package, per ADR-002. See `README.md` for usage and
   that scans one commit, finds nothing and goes green, which the interface
   renders identically to a real pass. What settled it was reading the count out
   of the job log rather than the exit status: 18 commits scanned, not 1.
-- **Upstream:** none to file — the convention is already upstream, as a MUST in
-  both `base/security/devsecops.md` and `platform/github.md`, and was filed and
-  closed there as braboj/solid-ai-templates#759. The finding is the other
-  direction: neither template is in this project's startup block, so a rule
-  that has existed upstream all along was re-derived here from a defect. #32
-  carries the question of whether to resolve them.
+- **Upstream:** two conventions, and they went opposite ways. The
+  full-history-scan rule was already upstream as a MUST in both
+  `base/security/devsecops.md` and `platform/github.md`, filed and closed there
+  as braboj/solid-ai-templates#759 — so nothing to contribute, and the finding
+  runs the other direction: neither template is in this project's startup
+  block, so a rule that existed upstream all along was re-derived here from a
+  defect. #32 carries whether to resolve them. The second convention is new and
+  filed as braboj/solid-ai-templates#1028: a gate whose input scope is a
+  configuration parameter has to be verified by the coverage it reports rather
+  than its exit status, because a scope collapsed to near-nothing still exits
+  zero. The existing rules cover a gate that was skipped and a verdict that was
+  misread, not one that ran green over an almost empty input.
 - **Pending:** `security` is still not a required status check, carried from
   the previous session and still needing the owner. #4 is unchanged and still
   blocked: upstream has cut no tag past `v2.44.0`, so neither route it names is
