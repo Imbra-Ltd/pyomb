@@ -41,7 +41,7 @@ from __future__ import print_function
 import argparse
 import os
 import shutil
-import subprocess
+import subprocess  # nosec B404
 import sys
 import tempfile
 
@@ -82,7 +82,14 @@ extendedKeyUsage = critical, clientAuth
 def run(command):
     """Run a command, raising with captured output if it fails."""
 
-    result = subprocess.run(command, capture_output=True, text=True)
+    # This is the one place the script reaches openssl, and the two suppressed
+    # checks -- the advisory on importing subprocess, and this call site --
+    # both rest on the same property. command is always a list, which hands
+    # the argument vector to the operating system directly rather than to a
+    # shell, so an argument cannot break out and become a second command
+    # however the caller spells a path. The checks match on call shape and
+    # cannot see that the shell is absent.
+    result = subprocess.run(command, capture_output=True, text=True)  # nosec B603
 
     if result.returncode != 0:
         raise RuntimeError("{0} failed:\n{1}".format(" ".join(command), result.stderr.strip()))

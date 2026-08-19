@@ -185,10 +185,10 @@ pre-commit install
 pytest
 ```
 
-The `test` extra carries what the gates need — pytest, pytest-cov, ruff and
-mypy — and is what CI installs. The `dev` extra adds the hook runner and the
-build tools on top of it. `pre-commit install` is a one-off that puts the same
-checks in front of every commit.
+The `test` extra carries what the gates need — pytest, pytest-cov, ruff, mypy
+and bandit — and is what CI installs. The `dev` extra adds the hook runner and
+the build tools on top of it. `pre-commit install` is a one-off that puts the
+same checks in front of every commit.
 
 The TLS tests need a certificate chain, which is generated rather than
 committed:
