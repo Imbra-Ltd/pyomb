@@ -107,6 +107,29 @@ so the resolution is the branch's own version throughout, and
 merge brought in something the branch did not already have, which is worth
 reading before committing.
 
+### 1.6 Issue labels (gh)
+
+Every issue carries exactly one type label and one priority label. GitHub has
+no mutually-exclusive label group, so nothing refuses an issue that is missing
+one or carries two — the rule holds only because something runs the check:
+
+```bash
+gh issue list --state open --limit 200 --json number,labels \
+  --jq '[.[] | {n: .number,
+                t: ([.labels[].name
+                     | select(test("^(bug|epic|task|spike|incident)$"))] | length),
+                p: ([.labels[].name | select(test("^P[0-3]$"))] | length)}
+        | select(.t != 1 or .p != 1)]'
+```
+
+Output MUST be `[]`. Each reported entry names the issue and its actual type
+and priority counts, so a `t: 0` is an unlabelled issue and a `t: 2` is a
+double-labelled one. Run it when triaging and before a release.
+
+There is no priority below `P3` and no holding-lane milestone. Work that is
+not scheduled carries an empty milestone field, which this repository uses for
+everything — deferral is the absence of a milestone, never a label.
+
 ## 2. Domain operations
 
 ### 2.1 Add a function code
