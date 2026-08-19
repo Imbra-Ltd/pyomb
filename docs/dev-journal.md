@@ -129,7 +129,13 @@ package, per ADR-002. See `README.md` for usage and
     request is required at zero approvals, force pushes and deletion are
     blocked, and merged head branches delete themselves. Administrators are
     bound too, which goes beyond what the issue asked.
-- **PRs merged:** #16.
+  - **Corrected the Python floor** — `CLAUDE.md` claimed 3.11+ while
+    `requires-python`, the classifier, the CI matrix, the README badge,
+    `ONBOARDING` and `CONTRIBUTING` all said 3.10. The packaging metadata and
+    the matrix are what bind a consumer, so the context file was the stale
+    copy and was lowered to match rather than the floor being raised to match
+    it. Surfaced while checking whether the project was ready to publish.
+- **PRs merged:** #16 and #20.
 - **Issues closed/created:** #10 and #12 closed, each verified by reading the
   setting back from the host after applying it. None created.
 - **Lesson:** on a single-seat organisation the review count and the gate are
@@ -151,4 +157,8 @@ package, per ADR-002. See `README.md` for usage and
   plan — confirm that before writing a workflow. #2 is down to repository
   topics alone; the description and the v0.1.0 release already exist, so its
   title overstates what is left. #4, the submodule pinned to an unreleased
-  revision, is untouched.
+  revision, is untouched. Claiming the PyPI name was scoped and then postponed
+  by the owner: the name is free on both indexes, the artifact builds and
+  passes `twine check`, and the route is a pending publisher on PyPI plus a
+  tag-triggered release workflow, since the index has no way to reserve a name
+  short of uploading to it.
