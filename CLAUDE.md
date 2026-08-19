@@ -25,7 +25,13 @@ working tree after a bare fetch:
 - `templates/base/workflow/quality-gates.md`
 - `templates/base/workflow/scope.md`
 - `templates/base/workflow/ai-workflow.md`
+- `templates/base/workflow/issues.md`
+- `templates/platform/github.md`
 - `templates/stack/python-lib.md`
+
+The list resolves both axes of `templates/manifest.yaml` — the stack chain and
+the platform for the code host — plus the two workflow templates the session
+protocol needs and no stack declares; see ADR-008.
 
 Precedence when authorities disagree, highest first: an explicit instruction
 in the current session, then this file, then `docs/decisions/`, then the
