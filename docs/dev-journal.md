@@ -418,7 +418,7 @@ package, per ADR-002. See `README.md` for usage and
   neither tool was counting characters — one counts bytes, and the other counts
   bytes too in a non-UTF-8 locale. The line is 79 characters. Two tools
   agreeing is not corroboration when they share the same blind spot.
-- **Upstream:** two conventions, both filed rather than named.
+- **Upstream:** four filings, all filed rather than named.
   braboj/solid-ai-templates#1029 covers the startup-block rule, which says to
   list every template the project depends on and thereby reads as one graph
   walk — it would omit the platform layer identically for
@@ -428,6 +428,17 @@ package, per ADR-002. See `README.md` for usage and
   repositories, and ADR-007 already measured the 403 that refutes it for a
   private one. Until it is corrected, ADR-007 outranks the template on that
   point under the precedence order in `CLAUDE.md`.
+  braboj/solid-ai-templates#1031 came out of the end-of-session audit: the
+  templates state the skipped-is-not-passed rule and give the fan-in that
+  encodes it, but never say the encoding has to be verified on the skipped
+  path. A failed upstream job trips a correct fan-in and a naive one alike,
+  so only a skipped upstream tells them apart, and that is the run nobody
+  reaches for.
+  braboj/solid-ai-templates#1032 is the cohort rule this session paid for
+  twice: a migration invalidates every open issue at once, because each is a
+  claim about a tree that no longer exists while the issue itself survives.
+  The existing rules verify one claim at a time and never name the trigger
+  that spoils a batch.
 - **Settings:** branch protection was repointed at `gate` as the sole required
   context, by the owner through the repository settings page. That is the half
   the workflow could not carry — until it landed the new job reported and bound
