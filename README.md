@@ -167,7 +167,7 @@ src/pyomb/              # The library
   defines.py            # Protocol constants
 tests/                  # One module per source module, plus regression modules
 scripts/                # Certificate generation and standalone demos
-docs/                   # Specifications, tutorial, decisions, journal
+docs/                   # Specifications, tutorial, decisions, journal, audits
 assets/                 # Generated test certificates (gitignored)
 pyproject.toml          # Packaging metadata and tool configuration
 ```

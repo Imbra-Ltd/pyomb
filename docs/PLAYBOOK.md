@@ -309,10 +309,36 @@ a day has more than one session. A P0/P1 fix or an incident requires a
 post-mortem: Symptom, Root cause, Why missed, Fix, Prevention. One without a
 prevention action is incomplete.
 
+### 4.4 Run a 360-degree audit
+
+Nine engineering dimensions, not the four stakeholder perspectives: a library
+has no Value or Discovery surface, so `360-headless` applies. Review one
+dimension at a time with its lens restated, and give each finding the command
+or file that demonstrates it. A finding that cannot be demonstrated is dropped
+or marked UNVERIFIED, never listed beside a demonstrated one.
+
+Write the report to `docs/audits/YYYY-MM-DD-360.md` with a scores table, the
+issues created, a "Current bottleneck" section, and a findings table per
+dimension. The overall grade is the lowest dimension. File findings as issues
+rather than fixing them in the same pass — an audit is a discovery pass.
+
+Run before a release or a visibility change, and at milestone boundaries.
+
 ## 5. Release and deploy
 
-Not yet released. The distribution has never been published, and #11 tracks
-the first release.
+v0.1.0 is tagged and released on GitHub. The distribution is not on PyPI.
 
-Before the first one: claim the name on PyPI per ADR-002, wire the build gate
-into CI (#38), and publish from CI only — never from a local machine.
+To cut a release:
+
+1. Check `git branch --no-merged main` and `git fsck --unreachable` for work
+   that would be lost
+2. Run a 360 audit per 4.4; do not ship with critical findings open
+3. Branch `chore/release-vX.Y.Z`, set `__version__` in `src/pyomb/__init__.py`
+   — hatchling reads it, so that literal is the only place a version lives
+4. Open the pull request, merge it, and wait for CI to pass on `main`
+5. Tag with `git tag -a`, never a lightweight tag, or `git describe` reports a
+   stale version to consumers
+6. Create the GitHub release from the tag
+
+Before the first PyPI publish: claim the name per ADR-002, and publish from CI
+only, never from a local machine. Tracked as #2.

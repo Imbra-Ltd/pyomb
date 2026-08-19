@@ -2,8 +2,12 @@
 
 **Status:** Accepted
 **Date:** 2026-08-18
-**Upstream:** none — the constraint that drives the ordering is a GitHub
-platform rule, not a convention the templates could carry
+**Upstream:** `templates/base/core/git.md`, filed as
+braboj/solid-ai-templates#1021. This line first read `none`, on the reasoning
+that a platform rule is not a convention a template could carry. That was
+wrong: the platform rule is the *reason*, and the convention it implies —
+verify a new repository's security settings, and sequence a migration around
+what issue transfer permits — is exactly what a template holds
 
 ## Context
 
@@ -29,7 +33,7 @@ import package on `pyomb` while leaving the repository named
 `protocol-modbus`, calling that name cosmetic and noting it could change later
 at no cost.
 
-```
+```text
 protocol-modbus (private, archive)        pyomb (new)
 +-----------------------------+           +---------------------+
 | 27 commits + unreachable    |           | 1 commit at v0.1.0  |
