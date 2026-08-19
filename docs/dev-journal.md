@@ -454,3 +454,89 @@ package, per ADR-002. See `README.md` for usage and
   forward instead: #1 and #6 come from the same 2026-08-13 audit cohort as #3
   and #22, both of which turned out to be describing a repository that no
   longer exists. Re-verify their premises before scoping either.
+
+## 2026-08-19 — Settle the packet signature contract (night)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Settled one signature per packet operation** — `ModbusPacketAbc`
+    declared `serialize` with `**kwargs` and `deserialize` as an instance
+    method taking `**kwargs`, `ModbusPdu` redeclared both with a format
+    parameter, and each of the 34 implementations dropped whatever it did not
+    use. Every step narrowed what the one above promised, so a caller holding
+    the abstract type could not call either operation without knowing the
+    concrete class it really had. The contract is now `serialize(self)` and
+    the classmethod `deserialize(cls, stream)`, declared once. ADR-009 carries
+    the decision.
+  - **Split the format escape hatch out under its own name** — caller-supplied
+    packing is something the generic PDU genuinely offers and no concrete PDU
+    may, because a concrete PDU's layout is fixed by the specification and
+    honouring a caller's format there emits a frame a real device rejects. It
+    moved to `ModbusPdu.pack(fmt)` and `ModbusPdu.unpack(stream, fmt)`, so a
+    subclass declining to offer it breaks nothing. `fmt` is required there
+    rather than falling back to the class default on a falsy value, which is
+    what `base/core/config.md` asks for.
+  - **Shrank the mypy freeze** — `pyomb.packets` no longer suppresses
+    `override`, and the entry it shared with `pyomb.stream` split in two so
+    the one module still needing the code keeps it alone. Findings behind the
+    freeze fell from 711 to 593.
+  - **Re-verified two carried-forward premises before scoping either** — #1
+    and #6 came from the same 2026-08-13 audit cohort as #3 and #22, both of
+    which described a repository that no longer exists. Both held exactly:
+    mypy reports 711 findings with 123 `override`, and coverage stands at 84%
+    with `packets.py` at 79%.
+  - **Repaired a PLAYBOOK reference to an issue that does not exist** — 3.5
+    cited `#51` as tracking the two real defects behind the mypy freeze. The
+    highest issue number in this repository is 46. The number survived the
+    migration in ADR-006 while the issue it named did not, so a reader tracing
+    it landed on nothing. It now names #45 and #46, and the paragraph records
+    that the freeze has been narrowed once.
+- **PRs merged:** #47 and #48.
+- **Issues closed/created:** #6 closed. #45 and #46 created, carrying the two
+  findings left out of this scope — the same narrowing in the sender
+  hierarchy, and the client's optional socket attribute, which cannot be
+  annotated without exposing 14 accesses under a code the freeze does not
+  carry.
+- **Lesson:** counting findings sizes a backlog; reading one finding's notes
+  sizes the fix. The gate reports 123 `[override]`, which reads as 123 things
+  to settle. mypy's `note:` lines print the two signatures side by side, and
+  one of them showed the whole cluster is two defects — a variadic in the base
+  that constrains nobody, and a parameter one class offers that its own
+  subtypes must not. That collapsed 123 findings into about sixty lines in two
+  base classes.
+- **Lesson:** a suppression entry listing two modules cannot express a partial
+  migration. `pyomb.packets` and `pyomb.stream` shared one `override` entry,
+  so every code in it looked equally earned by both. Splitting the entry was
+  the only way to record that one module was done, and the split is the
+  artifact that stops the next reader assuming the packets module still needs
+  the code.
+- **Lesson:** the breaking change was invisible from the source tree. Nothing
+  under `src/` passed a format, the README never showed one, and a grep over
+  `docs/` found nothing — the only callers were five lines in the test suite.
+  It would have read as a dead capability safe to delete rather than one worth
+  renaming. The suite was the sole evidence the escape hatch was used at all,
+  which is an argument for reading it as a consumer rather than as coverage.
+- **Lesson:** the ruff freeze bit a new file for the first time, as designed.
+  `tests/**` is exempt from the `D` family only, and the per-file table cannot
+  cover a file that did not exist, so the new test module failed on `UP032`
+  for using `.format()` in the style every legacy module around it uses. The
+  fix was to write the new file to the whole rule set. A freeze that holds
+  legacy code where it is, and gates new code fully, looks exactly like this
+  from the inside.
+- **Upstream:** one filing. braboj/solid-ai-templates#1033 against
+  `templates/base/core/quality.md`. The templates name the Liskov principle
+  once, in `testing.md`, from the testing angle, and carry no rule that would
+  stop a variadic being declared on an abstract operation — nor one for the
+  legitimate case where a class part-way down a hierarchy offers a capability
+  its own subtypes must not, which is resolved by giving the capability its
+  own name rather than widening the shared contract.
+- **Pending:** #4, unchanged and still blocked. Upstream has cut no tag past
+  `v2.44.0` and the submodule sits three commits beyond it, so neither route
+  the issue names is available; re-checked this session rather than assumed.
+  Also pending, and needing a decision rather than work: PLAYBOOK 5 says the
+  first PyPI publish is "Tracked as #2", but #2 is closed and was about
+  repository metadata and the initial release, and no open issue tracks the
+  publish. Either the sentence loses its tracker or the work gets one, and
+  filing planned release work is the owner's call, so it is flagged rather
+  than fixed. Worth carrying forward: #1 is now measured rather than claimed —
+  `packets.py` at 79% is the only module under the floor, and it is the codec.
