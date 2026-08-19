@@ -45,7 +45,7 @@ outstanding — read them rather than inferring the gap.
 - Model: hybrid
 - Owner: Imbra Ltd — Branimir Georgiev
 - Repo: `github.com/Imbra-Ltd/pyomb` (private)
-- Stack: Python 3.11+, `pyproject.toml`, ruff, mypy, pytest
+- Stack: Python 3.10+, `pyproject.toml`, ruff, mypy, pytest
 - Distribution: PyPI as `pyomb`, imported as `pyomb`
 - Specifications: Modbus Application Protocol v1.1b3, Modbus Messaging
   Implementation Guide v1.0b, MB-TCP-Security v21 — all in `docs/`
