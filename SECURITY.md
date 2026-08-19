@@ -45,5 +45,5 @@ exposed to untrusted ones.
 ## Certificate material
 
 Never commit private keys. `.gitignore` covers the common key extensions, and
-CI scans the working tree for secrets, but neither is a substitute for
+CI scans the whole history for secrets, but neither is a substitute for
 generating test certificates locally and keeping them out of version control.
