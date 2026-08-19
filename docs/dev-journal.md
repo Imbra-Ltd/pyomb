@@ -393,12 +393,11 @@ package, per ADR-002. See `README.md` for usage and
     repository and carried across the migration unchecked, the same way #1 was.
     What #3 actually left was two git rules the file never carried, and those
     shipped instead of the rewrite.
-- **PRs opened:** #37, #39 and #40. All three are green and none are merged —
-  merging is blocked by a permission rule in this environment, so they need the
-  owner.
-- **Issues closed/created:** none closed yet, because nothing merged; #32, #38
-  and #3 close on merge. #36 and #38 created. #3 and #22 corrected in place
-  with the evidence rather than closed on a false premise.
+- **PRs merged:** #37, #39 and #40.
+- **Issues closed/created:** #32, #38 and #3 closed. #36 and #38 created. #3
+  and #22 had their bodies corrected before anything else happened to them —
+  both rested on premises that had expired, and closing #3 on the original
+  text would have recorded a rewrite that never took place.
 - **Lesson:** an omission produced by a resolution procedure is invisible in its
   own output. Reading the startup block against the templates would never have
   found the missing platform layer, because the block is internally consistent
@@ -429,10 +428,13 @@ package, per ADR-002. See `README.md` for usage and
   repositories, and ADR-007 already measured the 403 that refutes it for a
   private one. Until it is corrected, ADR-007 outranks the template on that
   point under the precedence order in `CLAUDE.md`.
-- **Pending:** the three open PRs need the owner to merge them. Branch
-  protection then needs repointing at `gate` as the sole required context,
-  which is the step that finally makes `security` block a merge — until it
-  happens the new job reports and binds nothing, exactly as bandit does today.
-  `CONTRIBUTING.md` section 6 still claims a red pipeline blocks merge and
-  wants one sentence once that lands. #4 is unchanged and still blocked:
-  upstream has cut no tag past `v2.44.0`.
+- **Pending:** branch protection still needs repointing at `gate` as the sole
+  required context, which is the step that finally makes `security` block a
+  merge — it is a repository setting rather than a file, so the workflow half
+  landing changes nothing on its own, and until it happens the new job reports
+  and binds exactly as much as bandit does today, which is nothing.
+  `CONTRIBUTING.md` section 6 and PLAYBOOK 3.9 both describe the pre-gate
+  arrangement and want a sentence each once that lands; neither was rewritten
+  ahead of the setting, because a sentence describing a state that does not
+  hold yet is the same defect in the other direction. #4 is unchanged and
+  still blocked: upstream has cut no tag past `v2.44.0`.
