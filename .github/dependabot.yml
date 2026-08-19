@@ -1,0 +1,13 @@
+version: 2
+
+updates:
+  # The Actions ecosystem keeps Dependabot's default versioning strategy,
+  # which lifts a pin to the newest release. That default is what the SHA
+  # pins in the workflow depend on: a pin nothing moves is a pin that goes
+  # stale, and the security case for pinning assumes something keeps it
+  # current. Only the pip ecosystem wants increase-if-necessary, and this
+  # repository does not enrol it here.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
