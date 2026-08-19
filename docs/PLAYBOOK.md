@@ -65,19 +65,38 @@ into it or use `gh pr update-branch <N>`.
 
 ### 1.5 Merge a stack
 
-This repository does **not** delete the head branch on merge. That single
-setting decides whether a stacked pull request survives.
+This repository deletes the head branch automatically on merge. Confirm it
+before relying on the procedure below, because that one setting decides whether
+a stacked pull request survives:
+
+```bash
+gh repo view --json deleteBranchOnMerge
+```
+
+How the branch is deleted matters more than whether it is. Deletion carried out
+as part of the merge retargets a dependent pull request onto the merged one's
+own base and leaves it open. Deletion as a separate step does not: the host
+closes the dependent pull request, and it cannot be reopened, because reopening
+needs its base ref to exist.
 
 Merge bottom-up, and for each pair:
 
-1. Merge the lower pull request. Do not pass a delete-branch flag.
-2. Retarget the upper one onto `main` with `gh pr edit <N> --base main`.
-3. Only then delete the lower branch.
+1. Merge the lower pull request. Do not pass a delete-branch flag while
+   anything still targets its branch — `gh pr merge <N> --squash`, no more.
+2. Let the automatic deletion retarget the upper one.
 
-Deleting first closes the upper pull request, and it cannot be reopened,
-because reopening needs its base ref to exist. Automatic head-branch deletion
-would retarget it instead — this repository has that turned off, so the
-retarget is manual.
+The flag is the trap, not the setting. `gh pr merge --delete-branch` deletes as
+a separate step even though it reads as part of the merge, and so does deleting
+the branch by hand afterwards. Either one closes the upper pull request for
+good.
+
+To recover from that: recreate the deleted ref from the base branch, reopen the
+pull request, retarget it, delete the ref again, then update the branch.
+
+The same shape catches automated dependency pull requests. Merging a change to
+the bot's own config invalidates every pull request it has open, closing them
+and deleting their branches — merge the pending bumps first when the intent is
+to take them and change the policy.
 
 After the lower one merges, the upper one's diff will double-count it: the
 merge base is still the old `main`. Merge `main` into the upper branch and push
