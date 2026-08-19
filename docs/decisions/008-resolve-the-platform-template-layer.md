@@ -132,7 +132,7 @@ template apply. #36 tracks the SBOM obligation until then.
   resolves an axis that decision never reached, and the phrase "the resolved
   chain" there should be read as the stack chain it was.
 - Reading `platform/github.md` surfaced two defects in CI that no gate reports,
-  both fixed under #32:
+  both fixed under #38:
   - the workflow has no fan-in `gate` job, so every job is individually
     required and `security` is required by nobody — which is why bandit has
     been able to fail without blocking a merge since ADR-007 wired it
