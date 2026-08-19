@@ -43,6 +43,18 @@ Commits: `<type>(<scope>): <summary>`, where type is one of `feat`, `fix`,
 change is needed, not what the diff already shows. Reference issues with
 `Refs #N` or `Closes #N`.
 
+Repeat the closing keyword before every number when a change closes more than
+one issue. `Closes #12, closes #13` closes both, while `Closes #12, #13` closes
+only the first — a bare `#13` is a plain reference, and it stays open after the
+merge. The keyword is matched as a bare substring, so a negation does not save
+you either: "does not close #14" closes #14. Write `part of #14` when you mean
+to reference without closing.
+
+Never force-push, `--force-with-lease` included. It rewrites history that other
+contributors and CI have already fetched, and it can discard commits that were
+never on your machine. When a branch falls behind `main`, merge `main` into it
+rather than rebasing.
+
 Keep pull requests small and focused on one concern.
 
 ## 4. Code style
