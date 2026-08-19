@@ -216,3 +216,88 @@ package, per ADR-002. See `README.md` for usage and
   A local `main` was left carrying a stray merge commit and an unsquashed
   duplicate after `gh pr merge` and `git pull` ran together; the content
   matched `origin/main` exactly, and the reset to clear it needs the owner.
+
+## 2026-08-19 — Wire the last quality gate (later still)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Wired the SAST gate** — bandit runs in CI over `src`, `scripts` and
+    `tests`, failing on any finding at any severity. Security was the one
+    blank row left in the quality-gates table, on a library whose whole job is
+    parsing untrusted bytes off a socket. See ADR-007.
+  - **Turned the gate on with no freeze table** — ADR-003 froze hundreds of
+    lint findings and ADR-005 froze 711 type errors to make their gates
+    passable. Measuring first showed this one needs neither: `src/` reports
+    nothing at all, across 4,363 lines. The whole tree yields 35 findings and
+    both groups are explainable rather than latent — 33 asserts in one test
+    module, and the cert generator's two subprocess advisories.
+  - **Handled both groups where they sit** — a glob-scoped `assert_used` skip
+    for the test modules, and site-local `# nosec` markers naming the specific
+    check for the subprocess pair, each with its reason above the line. Never
+    a config-level `skips` entry, which would stop bandit looking tree-wide
+    rather than at the one call site.
+  - **Proved the gate bites** — a throwaway module carrying an assert, a
+    hardcoded password, `shell=True` and an MD5 digest went into `src/pyomb/`
+    and the gate failed on all four. The assert firing there is the part that
+    matters: it proves the test-only skip did not leak out of `tests/`.
+  - **Probed the exclude anchoring rather than trusting it** — the stack
+    template warns that an unanchored path pattern silently drops a whole
+    sub-package while CI stays green. Confirmed directly: an unanchored
+    `"docs"` excludes a planted `src/pyomb/docs` and the run still exits zero;
+    `"./docs"` scans it and reports the finding.
+  - **Declined platform SAST rather than leaving the row blank** — code
+    scanning returns 403 on a private repository without Code Security, so it
+    cannot be turned on by committing a workflow. ADR-007 records the decline
+    with the two conditions that reopen it.
+  - **Corrected the head-branch deletion procedure** — PLAYBOOK 1.5 asserted
+    the repository does not delete the head branch on merge; the setting is
+    on, and both merges this session had their branches removed by the host
+    before anything local could. Rewritten around how the branch is deleted
+    rather than whether, since deletion as part of the merge retargets a
+    dependent pull request while deletion as a separate step closes it for
+    good.
+  - **Set the repository topics** — the last item in #2, whose description and
+    v0.1.0 release already existed.
+- **PRs merged:** #27 and #28.
+- **Issues closed/created:** #11 and #2 closed. None created.
+- **Lesson:** measure before assuming a retrofit needs a ratchet. Two prior
+  decision records established freezing as this project's way of turning a
+  gate on, and the third gate looked like the same shape. Running the tool
+  first showed the shipped code was already clean, so the gate starts at full
+  strictness and any finding it reports from here is genuinely new. Copying
+  the established pattern would have built a freeze table with nothing in it
+  and a weaker gate to go with it.
+- **Lesson:** a document that contradicts the system can be worse than merely
+  stale. PLAYBOOK 1.5 was wrong about the setting, and the procedure it built
+  on that premise instructed deleting a base branch as a separate step — which
+  is exactly the move that closes a dependent pull request irrecoverably. The
+  reader following it carefully was the one who got hurt. What confirmed the
+  fix was complete is the sweep rule: the remaining hits are the 2026-08-18
+  audit and this journal, both historical records, leaving the playbook as the
+  only surviving instruction to apply the old behaviour.
+- **Upstream:** both flagged candidates were filed rather than left named.
+  braboj/solid-ai-templates#1026 proposes that a gate category naming more than
+  one tool is satisfied by the tools that can run plus a recorded decline
+  carrying a revisit trigger, never left blank — the generic form of what
+  ADR-007 decided here. braboj/solid-ai-templates#1027 carries the previous
+  session's autouse thread guard, which had been named and left unfiled: where
+  a suite starts a background worker, a per-test fixture asserts none survives,
+  so the leak names the test that caused it rather than the run that inherits
+  it.
+- **Lesson:** the prior session's rule about testing a narrow sibling call paid
+  off in the other direction. Adding `security` to the required status checks
+  was refused, and a sibling write to the repository's topics on the same host
+  went straight through — which isolates the objection to the protection
+  endpoint rather than to repository writes in general. That is worth stating
+  precisely when handing the action back, because it tells the owner the block
+  is not something a rephrasing will clear.
+- **Pending:** `security` is not yet a required status check, so the job runs
+  without gating. PLAYBOOK 3.9 already says five checks gate a merge while four
+  do — a known inconsistency that closes when the setting lands, and it needs
+  the owner.
+  Claiming the PyPI name is now untracked, having lived only in #2. #4 is
+  blocked rather than merely untouched: the submodule sits three commits past
+  `v2.44.0`, and `templates/base/core/examples.md`, which this project's
+  startup block requires, exists only in those unreleased commits — so pinning
+  back to the tag would break the startup block, and the issue needs a
+  `v2.45.0` upstream release before it can move.

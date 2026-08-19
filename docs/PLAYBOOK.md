@@ -278,12 +278,22 @@ A local run is evidence about one platform. CI runs Linux under Python 3.10 and
 3.13; development is typically Windows. Read the run before calling a change
 good — three pushes were reported clean against a red pipeline on 2026-08-16.
 
-Five checks gate a merge to `main`: `test (3.10)`, `test (3.13)`, `build`,
-`security` and `secrets`. They are required status checks in branch protection,
-and the protection binds administrators, so a red pull request cannot be merged
-by anyone. A pull request is required at zero approvals — a single-seat
+Four checks gate a merge to `main`: `test (3.10)`, `test (3.13)`, `build` and
+`secrets`. They are required status checks in branch protection, and the
+protection binds administrators, so a red pull request cannot be merged by
+anyone. A pull request is required at zero approvals — a single-seat
 organisation cannot supply an approval, so any higher count would deadlock
 every merge.
+
+The workflow runs a fifth job, `security`, which is not yet a required check
+and therefore reports without gating. Read the live list rather than trusting
+this paragraph — a required-checks list drifts from prose the moment a job is
+added:
+
+```bash
+gh api repos/Imbra-Ltd/pyomb/branches/main/protection \
+  --jq .required_status_checks.contexts
+```
 
 ### 3.10 Verifying a fix
 
