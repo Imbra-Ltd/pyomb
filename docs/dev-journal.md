@@ -540,3 +540,83 @@ package, per ADR-002. See `README.md` for usage and
   filing planned release work is the owner's call, so it is flagged rather
   than fixed. Worth carrying forward: #1 is now measured rather than claimed —
   `packets.py` at 79% is the only module under the floor, and it is the codec.
+
+## 2026-08-19 — Cover the packet error branches (late night)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Pinned the error type every packet operation reports** — `packets.py`
+    was the only module under the floor at 79%, and it is the codec, where an
+    untested branch means a wrong frame on the wire. Reading the uncovered
+    lines rather than counting them settled the scope: of 226 uncovered
+    statements, about 210 were one repeated block, the `try`/`except` around
+    each `serialize` and `deserialize` that re-raises as `ModbusPacketError`.
+    It was written per class forty-odd times and pinned nowhere, so a class
+    whose handler was missing or mis-scoped would let a raw `struct.error`
+    out through an `except` clause no caller ever wrote. The module now
+    stands at 99%.
+  - **Two inputs carry all 34 concrete classes** — an empty stream, which
+    nothing decodes from and a peer can send, and a one-element tuple holding
+    a value past every unsigned format the specification uses. `struct`
+    refuses that tuple whether the field it lands on is a scalar or a
+    sequence, which is what removes the need for a per-class table of field
+    types. The tests collect their subjects from the module rather than
+    listing them, so a packet class added later is covered the day it lands.
+  - **Covered the logger and the derivation with a history** — `logger.py`
+    went from 63% to 100%. The whole of `file_handler` and `log_to_file` was
+    untested, including the appending form that replaced a `str.replace`
+    derivation. An empty search string makes `str.replace` insert between
+    every character, so an entry point without an extension produced names
+    such as `.logs.loge.logr.logv.loge.logr.log`.
+  - **Shared the class enumeration rather than copying it** — the signature
+    contract from the previous session had the only copy. It moved to
+    `tests/packet_hierarchy.py` and both contracts read it from there.
+  - **Filed the one hole the new contract does not close** — #50. `ModbusPdu`
+    computes `len(...)` outside the guard in both `serialize` and
+    `deserialize`, so a scalar `data` field or a non-sized stream leaves a raw
+    `TypeError`. The contract test passes only because it supplies `data` as
+    the sequence the constructor documents. Filed rather than fixed: no
+    production code belongs in a coverage change.
+- **PRs merged:** #51.
+- **Issues closed/created:** #1 closed. #50 created, carrying the `ModbusPdu`
+  guard hole. Neither path in it is reachable from the wire — the transport
+  hands `deserialize` a `bytes` object and nothing builds a `ModbusPdu` with a
+  scalar — which is why it is P3 rather than a defect against the codec.
+- **Lesson:** a coverage number sizes the work, and the uncovered lines shape
+  it. 226 statements across a 3,700-line codec reads as a module-wide testing
+  effort. Bucketing the missing lines by statement text took one command and
+  showed 210 of them were three lines repeated: `except Exception as e`, a
+  message, a re-raise. That collapsed forty near-identical tests into one
+  contract over a collected hierarchy, and the collection is what keeps the
+  next packet class covered without anyone remembering to add it.
+- **Lesson:** a test written against passing code proves nothing about broken
+  code. Both sets were run against a mutated source before being trusted —
+  all 76 re-raise sites replaced with a bare `raise` produced 76 failures, and
+  reinstating the `str.replace` derivation failed the two derivation tests
+  with the `.logs.loge.logr...` shape in the error. Without that step a test
+  asserting `assertRaises(ModbusPacketError)` around a call that raises for an
+  entirely different reason would have looked identical.
+- **Lesson:** the four statements left uncovered in `packets.py` are the
+  `raise NotImplementedError` bodies in the abstract base, and `ABCMeta`
+  refuses to instantiate the class that would reach them. Chasing 100% there
+  means calling the unbound function, which asserts on how the base is wired
+  rather than on what any object does. The honest report is 99% with the
+  remainder named.
+- **Lesson:** the ruff freeze bit again, and the same way as last session. The
+  new contract module tripped `SIM117` for nesting `assertRaises` inside
+  `subTest`. The per-file table cannot cover a file that did not exist, so a
+  new test file is gated on the whole rule set while the modules around it
+  keep their frozen codes. Fixing the finding took one line each.
+- **Upstream:** none. The collect-the-subjects-rather-than-list-them shape is
+  already carried by `testing-drift-guard` and `testing-ast-contract` in
+  `templates/base/core/testing.md`, which introspect the live artifact for the
+  same reason.
+- **Pending:** #4, unchanged and still blocked, re-checked rather than
+  assumed: upstream has cut no tag past `v2.44.0` and the submodule sits three
+  commits beyond it, so neither route the issue names is available. Still
+  needing a decision rather than work: PLAYBOOK 5 says the first PyPI publish
+  is "Tracked as #2", but #2 is closed and was about repository metadata, and
+  no open issue tracks the publish. Filing planned release work is the
+  owner's call. Worth carrying forward: `omb_client.py` at 85% and
+  `stream.py` at 85% are now the weakest modules, both above the floor and
+  neither tracked by an issue.
