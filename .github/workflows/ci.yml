@@ -115,7 +115,6 @@ jobs:
   # one. scripts/ and tests/ are in scope alongside src/: they are not
   # shipped, but they run on a contributor's machine.
   security:
-    if: false  # TEMPORARY: proving a skipped job fails the gate
     runs-on: ubuntu-latest
 
     steps:
