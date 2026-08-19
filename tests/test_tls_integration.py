@@ -31,6 +31,11 @@ HAVE_CERTS = all(os.path.exists(p) for p in (CA, SERVER_CRT, SERVER_KEY, CLIENT_
 
 SKIP_REASON = "run 'py scripts/gen_test_certs.py' to generate the test chain"
 
+# Seconds tearDown waits for the server thread, matching the other server
+# fixtures. The run loop sits in a select with a one second timeout, so the
+# thread needs up to that long to notice the quit event before it can wind down.
+SHUTDOWN_TIMEOUT = 5.0
+
 
 class TestSecureDefaults(unittest.TestCase):
     """The hardened defaults are the regression this guards; no certs needed."""
@@ -63,8 +68,10 @@ class TestSecureDefaults(unittest.TestCase):
 class TestMutualTls(unittest.TestCase):
     """The transport defaults must produce an authenticated, strong session."""
 
-    # Each test binds its own port: the simulator's listener is not always
-    # released before the next setUp, and a shared port intermittently hangs.
+    # Each test binds its own port. tearDown now waits for the listener to
+    # close, so it is released before the next setUp, but the server sets no
+    # SO_REUSEADDR: a port that has just carried a connection can still refuse
+    # the next bind while that connection sits in TIME_WAIT.
     port_counter = 18802
 
     def setUp(self):
@@ -87,7 +94,18 @@ class TestMutualTls(unittest.TestCase):
             except OSError:
                 pass
         self.server.stop()
-        time.sleep(0.2)
+
+        # stop() only sets the quit event, so the thread is still in its select
+        # when this returns. Sleeping a fifth of a second here was shorter than
+        # the loop's own timeout and so never waited long enough: the thread ran
+        # on into the next test, and at the end of the run into pytest's capture
+        # teardown, where its remaining log writes hit a closed stream.
+        self.server.join(SHUTDOWN_TIMEOUT)
+
+        self.assertFalse(
+            self.server.is_alive(),
+            f"the server thread was still running {SHUTDOWN_TIMEOUT} seconds after stop()",
+        )
 
     def connect(self, **kwargs):
         options = dict(host="localhost", port=self.PORT, secure=True, cert=CLIENT_CRT, key=CLIENT_KEY, ca_chain=CA)
