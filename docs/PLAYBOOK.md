@@ -243,8 +243,11 @@ disagree about a file nobody edited.
 
 ### 3.7 Secret scanning (gitleaks)
 
-Runs in CI against the working tree, not history. Push protection is enabled on
-the repository and blocks a secret at the client before it reaches CI.
+Runs in CI over the whole history, which is why that job checks out every
+commit rather than the single one the action fetches by default. This
+repository was imported at v0.1.0 and has never carried key material, so the
+full range is in scope. Push protection is enabled on the repository and blocks
+a secret at the client before it reaches CI.
 
 ### 3.8 Static analysis (bandit)
 
