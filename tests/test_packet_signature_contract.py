@@ -18,30 +18,9 @@ call the supertype accepts working.
 import inspect
 import unittest
 
-from pyomb import packets
+from packet_hierarchy import packet_classes
+
 from pyomb.packets import ModbusPacketAbc
-
-
-def packet_classes():
-    """Every packet class this library declares, the abstract base included.
-
-    Returns:
-        list : The packet classes defined in pyomb.packets
-    """
-
-    found = []
-
-    for name in dir(packets):
-        candidate = getattr(packets, name)
-
-        # A class imported into the module is somebody else's contract
-        if not inspect.isclass(candidate) or candidate.__module__ != packets.__name__:
-            continue
-
-        if issubclass(candidate, ModbusPacketAbc):
-            found.append(candidate)
-
-    return found
 
 
 def caller_parameters(cls, name):

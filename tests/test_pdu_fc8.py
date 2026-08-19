@@ -30,6 +30,17 @@ class TestPduRequestFC8(unittest.TestCase):
 
         self.assertNotEqual(request1, request2)
 
+    def test_length_grows_with_the_subfunction_data(self):
+
+        # One byte of function code and one two-byte word per field: the
+        # subfunction and each subfunction data word, per the Diagnostics
+        # function of the Modbus Application Protocol
+        request = ModbusRequestFC8(sub_func=1, subfunc_data=(1, 2))
+        longer = ModbusRequestFC8(sub_func=1, subfunc_data=(1, 2, 3))
+
+        self.assertEqual(len(request), 7)
+        self.assertEqual(len(longer), 9)
+
     def test_serialization(self):
 
         expected = b"\x08\x00\x01\x00\x01\x00\x02"
@@ -78,6 +89,17 @@ class TestPduResponseFC8(unittest.TestCase):
         response2 = ModbusResponseFC8(sub_func=1, subfunc_data=(1, 3))
 
         self.assertNotEqual(response1, response2)
+
+    def test_length_grows_with_the_subfunction_data(self):
+
+        # One byte of function code and one two-byte word per field: the
+        # subfunction and each subfunction data word, per the Diagnostics
+        # function of the Modbus Application Protocol
+        response = ModbusResponseFC8(sub_func=1, subfunc_data=(1, 2))
+        longer = ModbusResponseFC8(sub_func=1, subfunc_data=(1, 2, 3))
+
+        self.assertEqual(len(response), 7)
+        self.assertEqual(len(longer), 9)
 
     def test_serialization(self):
 
