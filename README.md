@@ -182,15 +182,20 @@ Modbus TCP protocol data unit (PDU).
 ```bash
 git clone https://github.com/Imbra-Ltd/pyomb.git
 cd pyomb
-pip install -e ".[dev]"
-pre-commit install
-pytest
+uv sync --locked --extra dev
+uv run pre-commit install
+uv run pytest
 ```
 
 The `test` extra carries what the gates need — pytest, pytest-cov, ruff, mypy
 and bandit — and is what CI installs. The `dev` extra adds the hook runner and
 the build tools on top of it. `pre-commit install` is a one-off that puts the
 same checks in front of every commit.
+
+The toolchain is locked in `uv.lock`, and `--locked` installs exactly what it
+records rather than re-resolving, so a contributor and CI run the same
+versions. Installing the library needs no uv — that is the `pip install` in
+Quick start, and there are no runtime dependencies to lock.
 
 The TLS tests need a certificate chain, which is generated rather than
 committed:

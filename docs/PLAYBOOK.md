@@ -179,8 +179,10 @@ Ctrl+Shift+P and "Test: Run All Tests".
 
 If the panel shows no tests or reports import errors, the cause is almost
 always the interpreter. `pyomb` resolves through the editable install, so VS
-Code must be pointed at the environment where `pip install -e ".[dev]"` ran:
-Ctrl+Shift+P, "Python: Select Interpreter". Confirm with "Python: Show Output"
+Code must be pointed at the `.venv` that `uv sync` created in the repository
+root: Ctrl+Shift+P, "Python: Select Interpreter". A selection made before the
+toolchain moved to uv points at the old site-packages install and will keep
+resolving an increasingly stale `pyomb`. Confirm with "Python: Show Output"
 and check the path matches `python -c "import sys; print(sys.executable)"`.
 
 The mutual-TLS tests skip until the chain exists — see 2.2. The integration
@@ -261,9 +263,9 @@ pre-commit install
 pre-commit run --all-files
 ```
 
-The first command is a one-off after `pip install -e ".[dev]"`; from then on
-the hooks run on staged files at every commit. The second runs them across the
-whole tree, which is the audit rather than the commit path.
+The first command is a one-off after `uv sync --locked --extra dev`; from then
+on the hooks run on staged files at every commit. The second runs them across
+the whole tree, which is the audit rather than the commit path.
 
 The hooks are ruff check, ruff format, gitleaks, file hygiene and mypy — every
 one of which CI also runs, because a hook is skippable with `--no-verify`. The
@@ -434,6 +436,35 @@ something keeps it current.
 Read the release notes for input changes before merging a major bump; the
 gate proves the rest. The pip ecosystem is deliberately not enrolled, because
 this project bounds its dependencies rather than pinning them.
+
+### 4.6 Refresh the toolchain lock (uv)
+
+```bash
+uv lock --upgrade
+uv sync --locked --extra dev
+```
+
+`uv.lock` pins every version the gates run against, across the whole
+`requires-python` range rather than for one interpreter, so the single file
+serves 3.10 CI, 3.13 CI and a Windows machine. ADR-010 carries why.
+
+The first command re-resolves to the newest versions the ranges in
+`pyproject.toml` allow and rewrites the lock. The second proves the result
+installs. Review the diff before committing: a toolchain bump is a change to
+what every gate measures, and the diff is where that is visible.
+
+Two rules follow from `--locked`, which is what CI installs with:
+
+- Editing a dependency in `pyproject.toml` without running `uv lock` fails
+  every CI job at the install step, naming the fix. That is the gate working,
+  not a broken pipeline.
+- Never pass `--frozen` to work around it. `--frozen` skips the check the
+  freeze exists to perform, which turns the lock back into decoration.
+
+Dependabot is enrolled on the pip ecosystem and opens the refresh weekly, so
+the commands above are the manual path rather than the routine one. Treat a
+lock nobody has touched in months as a finding: it pins an ageing toolchain
+with no signal that it has aged.
 
 ## 5. Release and deploy
 
