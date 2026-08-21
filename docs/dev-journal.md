@@ -775,3 +775,66 @@ package, per ADR-002. See `README.md` for usage and
   first real proof is the next tag. Also carried: whether the first PyPI
   publish gets a tracking issue, which PLAYBOOK 5 no longer pretends is
   tracked.
+
+## 2026-08-21 — What the wrap-up audit found (wrap)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Repaired an edit that was made and then lost** — the uv migration
+    updated README, ONBOARDING and PLAYBOOK but left `CLAUDE.md` telling a
+    contributor to run `pip install -e ".[dev]"`. The edit had been written
+    and reverted in the same script: it called `write_text` twice from one
+    string read before either write, so the second write clobbered the first,
+    and both asserts passed because both targets existed in the original.
+  - **Put this session's changes in the CHANGELOG** — the `[Unreleased]`
+    section was last touched by the previous session, so the release assets,
+    the two breaking signature changes, the client's new error type and the
+    move to a locked toolchain were all absent from the one document a consumer
+    reads for them.
+  - **Made the ONBOARDING verify step name its environment** — section 3
+    checked the setup with a bare `python -m pytest`, which after the uv move
+    resolves against whatever interpreter is active. Where a global pytest
+    exists it runs, passes, and verifies an environment the contributor is not
+    about to develop in.
+  - **Named the workflow the fan-in gate covers** — PLAYBOOK 3.9 said `gate`
+    needs every other job "in the workflow", which was unambiguous while there
+    was one. It now names `ci.yml` and says `release.yml` gates nothing.
+- **PRs merged:** #60 and #62.
+- **Issues closed/created:** #61 created — the server tests bind ports from a
+  fixed base, and 20200 is unbindable on this machine.
+- **Lesson:** four documentation defects, none of which any gate could catch.
+  Each file was internally consistent; the contradictions only existed between
+  files, and nothing compares an install command in `CLAUDE.md` against the one
+  in `README.md`. The audit is the check, which is an argument for executing it
+  rather than summarising it.
+- **Lesson:** `write_text` twice from one pre-read string silently discards the
+  first edit, and an assertion on the target string does not catch it — both
+  targets exist in the original content, so both asserts pass. Read once, apply
+  every replacement, write once.
+- **Lesson:** `git add -A` swept an editor setting into a documentation commit.
+  An `88`-column ruler had appeared in `.vscode/settings.json` from outside the
+  session, and the commit carried it. Reverted on a second commit rather than
+  amended, because the branch was pushed and force-push is forbidden here, and
+  the squash collapses the pair. The scope guard calls this the silent kind of
+  creep, and it is: nothing about the diff looked wrong.
+- **Lesson:** asserting a mechanism from an error code is not diagnosing it.
+  #61 was filed saying two tests fail because `TIME_WAIT` holds their fixed
+  port and that waiting two minutes clears it. Neither was true — a bare
+  `socket.bind` on 20200 fails while 20201 and 20202 succeed, `netstat` shows
+  nothing bound, and it does not clear. The finding survived; the explanation
+  had to be corrected on the issue after it was already public.
+- **Upstream:** two filings, both from conventions this session produced rather
+  than from its ADRs. braboj/solid-ai-templates#1036 against
+  `templates/base/workflow/issues.md` — a deferred issue's trigger is a claim
+  about the world and needs re-verifying, not just stating; #36's had fired the
+  day before the issue was written. braboj/solid-ai-templates#1037 against
+  `templates/base/workflow/quality-gates.md` — narrowing what a check compares
+  is not the same as ratcheting which cases fail, and only the second keeps the
+  gate.
+- **Pending:** three issues, none of them blocked on a decision. #4 and #22 are
+  unchanged and genuinely blocked, both re-verified this session. #61 is new
+  and open. Carried forward unchanged from the previous entry: `release.yml`
+  has still never executed, and whether the first PyPI publish gets a tracking
+  issue is still the owner's call. New and worth carrying: the README quick
+  start tells a reader to build from source, which stays correct only until
+  a tag ships assets — the next release is when to offer the wheel instead.
