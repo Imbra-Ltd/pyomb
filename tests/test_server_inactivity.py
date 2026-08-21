@@ -43,12 +43,10 @@ class ServerThreadExceptions(object):
 
 
 class TestInactivitySweep(unittest.TestCase):
-    # Each test binds its own port, following the convention in the TLS suite.
-    port_counter = 19902
-
     def setUp(self):
-        type(self).port_counter += 1
-        self.port = type(self).port_counter
+        # 0 asks the operating system for a free port; start_server reads back
+        # which one, so dialling the server requires starting it first.
+        self.port = 0
         self.sockets = []
 
     def tearDown(self):
@@ -70,6 +68,8 @@ class TestInactivitySweep(unittest.TestCase):
         self.server.start()
 
         self.assertTrue(self.server.startedEvent.wait(5.0), "the server never reached its accept loop")
+
+        self.port = self.server.port
 
         return self.server
 
