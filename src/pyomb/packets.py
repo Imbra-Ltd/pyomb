@@ -326,8 +326,23 @@ class ModbusPdu(ModbusPacketAbc):
 
         Returns:
             bytes : The serialized PDU
+
+        Raises:
+            ModbusPacketError : If the data field carries no length
         """
-        return self.pack(self.PDU_FORMAT.format(len(self.data)))
+
+        # pack() guards what it packs, but the format it is handed is built
+        # here, so a data field that is not a sequence fails before pack() is
+        # entered. Guarding only the call would let a TypeError out of an
+        # operation whose callers catch ModbusPacketError.
+        try:
+            pdu_format = self.PDU_FORMAT.format(len(self.data))
+
+        except TypeError as error:
+            message = f"Error serializing the Modbus PDU: {error}"
+            raise ModbusPacketError(message) from error
+
+        return self.pack(pdu_format)
 
     @classmethod
     def deserialize(cls, stream):
@@ -338,10 +353,22 @@ class ModbusPdu(ModbusPacketAbc):
 
         Returns:
             ModbusPdu : The Modbus PDU object
+
+        Raises:
+            ModbusPacketError : If the stream carries no length
         """
 
-        # The first byte is the function code, the rest is the data
-        return cls.unpack(stream, cls.PDU_FORMAT.format(len(stream) - 1))
+        # The first byte is the function code, the rest is the data. The
+        # length is measured here rather than inside unpack(), so a stream
+        # that cannot be measured is converted here too.
+        try:
+            pdu_format = cls.PDU_FORMAT.format(len(stream) - 1)
+
+        except TypeError as error:
+            message = f"Error deserializing the Modbus PDU: {error}"
+            raise ModbusPacketError(message) from error
+
+        return cls.unpack(stream, pdu_format)
 
 
 ################################################################################
