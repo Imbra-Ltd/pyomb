@@ -493,7 +493,8 @@ with no signal that it has aged.
 
 ## 5. Release and deploy
 
-v0.1.0 is tagged and released on GitHub. The distribution is not on PyPI.
+Releases are tagged and published on GitHub. The distribution is not on a
+package index; #70 carries whether it ever is.
 
 To cut a release:
 
@@ -502,10 +503,16 @@ To cut a release:
 2. Run a 360 audit per 4.4; do not ship with critical findings open
 3. Branch `chore/release-vX.Y.Z`, set `__version__` in `src/pyomb/__init__.py`
    — hatchling reads it, so that literal is the only place a version lives
-4. Open the pull request, merge it, and wait for CI to pass on `main`
-5. Tag with `git tag -a`, never a lightweight tag, or `git describe` reports a
+4. Cut the `Unreleased` block of `CHANGELOG.md` into an `[X.Y.Z]` entry and add
+   the compare link beside the others at the foot of the file
+5. Point the README quick start install command at the wheel the new tag will
+   carry. `tests/test_readme_install_command.py` fails until it matches. Doing
+   it on this branch is what keeps the README inside the tagged sdist naming
+   its own release rather than the one before it
+6. Open the pull request, merge it, and wait for CI to pass on `main`
+7. Tag with `git tag -a`, never a lightweight tag, or `git describe` reports a
    stale version to consumers
-6. Push the tag
+8. Push the tag
 
 Pushing the tag is the last manual step. `.github/workflows/release.yml` fires
 on any `v*` tag and does the rest: it refuses a tag that does not name the
@@ -523,5 +530,5 @@ workflow uploads into it rather than failing.
 deliberately — assets built now from a later tree would not be what that tag
 was. See ADR-011.
 
-Before the first PyPI publish: claim the name per ADR-002, and publish from CI
-only, never from a local machine. No open issue tracks that work.
+Before any publish to a package index: claim the name per ADR-002, and publish
+from CI only, never from a local machine. #70 tracks that work.
