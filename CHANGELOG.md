@@ -6,6 +6,8 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-21
+
 ### Added
 
 - Tagged releases now carry their wheel, their sdist and a CycloneDX SBOM.
@@ -15,6 +17,9 @@ numbers follow [Semantic Versioning](https://semver.org/).
   the built wheel, so it lists what a consumer installs rather than what CI
   built with. See ADR-011
 - `v0.1.0` predates the workflow and keeps its empty asset list
+- The GitHub release record carries the distribution. `v0.2.0` is the
+  first tag to run the workflow, so it is the first release with assets
+  attached. Nothing uploads to a package index; see #70
 - `OmbServerSim` accepts port 0, asking the operating system for a free port,
   and reports the assigned port on its `port` attribute once `start()`
   returns. The server previously bound whatever it was given without reading
@@ -104,5 +109,6 @@ no upgrade path to describe and no consumer to break.
   committed chain was rotated; it was self-signed and installed in no trust
   store
 
-[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Imbra-Ltd/pyomb/releases/tag/v0.1.0
