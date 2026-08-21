@@ -112,7 +112,10 @@ jobs:
           set -euo pipefail
           uv venv /tmp/consumer
           uv pip install --python /tmp/consumer dist/*.whl
-          uv run --no-sync cyclonedx-py environment /tmp/consumer             --of JSON             --output-reproducible             -o "pyomb-${TAG#v}.cdx.json"
+          uv run --no-sync cyclonedx-py environment /tmp/consumer \
+            --of JSON \
+            --output-reproducible \
+            -o "pyomb-${TAG#v}.cdx.json"
           uv run --no-sync python - <<'PY'
           import glob
           import json
