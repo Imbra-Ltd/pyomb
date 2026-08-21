@@ -915,3 +915,82 @@ package, per ADR-002. See `README.md` for usage and
   describes #22 as a consequence of repository visibility; left unedited by
   the owner's call, because a merged ADR is immutable, and #22's correction
   note records the divergence from the tracker side.
+
+## 2026-08-21 — Go public and prove the release path (night)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Made the repository public** — pre-flighted rather than flipped:
+    gitleaks over every tracked file, and a sweep of all 47 commits for a
+    `.env`, key, certificate or credential path ever added. Both clean. The
+    flip settled #22 on its own. The anonymous fetch that 404'd in that
+    issue's correction note now returns `200 image/svg+xml`, which is the
+    case that mattered, because `pyproject.toml` makes the README the long
+    description an anonymous viewer reads.
+  - **Cut `v0.2.0` and watched `release.yml` execute for the first time** —
+    the workflow landed after `v0.1.0` and no tag had fired it since, so this
+    tag was its first run. Every step was rehearsed locally first, because a
+    tag is not something you take back: the package reports the version,
+    `build` produces both artifacts, `twine check` passes on each, and an
+    environment holding only the wheel yields an SBOM listing exactly
+    `pyomb`. The run then went green in 19 seconds, and the release carries
+    the wheel, the sdist and a CycloneDX 1.6 SBOM with no serial number.
+  - **Pointed the quick start at the wheel** — clone-and-build was correct
+    only while no release carried assets. The new command was run in a clean
+    virtual environment, then the example that follows it, which printed the
+    same twelve bytes the README documents.
+  - **Guarded the version the README names** — it now lives in
+    `__init__.py` and in the wheel URL, and every checker the project runs
+    reads that URL as prose. `tests/test_readme_install_command.py` pins the
+    second to the first, capturing the tag path and the filename separately
+    so a half-finished edit fails rather than passing on the half that was
+    done. Run both ways.
+  - **Recorded the release steps that were done by hand** — PLAYBOOK 5
+    gains the CHANGELOG cut and the README bump, and its "no open issue
+    tracks that work" line now names #70.
+- **PRs merged:** #72 and #73.
+- **Issues closed/created:** #22 and #66 closed. #70 and #71 created.
+- **Lesson:** a revisit trigger has no watcher. ADR-007 declined platform
+  SAST and named its trigger exactly — "the repository going public, which
+  makes code scanning free" — and the flip fired it silently. The record
+  still read `Accepted` and still described a scanner the host refuses to
+  run. It was caught only by re-probing the endpoint the ADR cited and
+  getting `not-configured` where it had recorded a 403. A decision record is
+  a file nobody re-reads without a reason, so the obligation belongs to
+  whoever fires the trigger, not to the record.
+- **Lesson:** a visibility flip is not one change. It resolved an open bug
+  without touching the code that bug named, fired a decision record's revisit
+  trigger, and moved a paid feature into reach. The blast radius was in the
+  decision log and the tracker, not in the tree — which is exactly where a
+  diff review does not look.
+- **Lesson:** rehearsing an unproven workflow is cheap and teaches something.
+  The SBOM step asserts its component list is exactly `pyomb`, which holds
+  only because `uv venv` creates an environment without pip. Built the
+  ordinary way, the generator lists pip too and the assertion fails. That was
+  worth learning in a scratch directory rather than in a red run against a
+  tag already pushed.
+- **Lesson:** the tag went up before the README could know about it. The
+  `v0.2.0` sdist carries the old clone-and-build quick start, because the
+  bump cannot name a wheel that does not exist yet. PLAYBOOK 5 now puts the
+  bump on the release branch, so the next tagged sdist names its own release
+  and the URL 404s only for the minutes between merge and tag.
+- **Upstream:** two filings, both from how this session went rather than from
+  a convention it produced. braboj/solid-ai-templates#1040 against
+  `templates/base/core/git.md` — the pre-release checks all read the
+  repository's state and none asks whether the pipeline the tag fires has
+  ever executed, and a tag gets no cheap first failure.
+  braboj/solid-ai-templates#1041 against `templates/base/core/quality.md` —
+  the YAGNI rule asks for a concrete revisit trigger but never says who
+  watches it, and a trigger with no owner is a reminder set to fire into an
+  empty room.
+- **Pending:** three issues, all open by the owner's call this session rather
+  than blocked on discovery. #70 defers the package-index question to a
+  separate discussion and carries the trigger. #71 holds the ADR-007 revisit,
+  filed rather than built to keep the session on one theme; the superseding
+  ADR is its deliverable, and until it lands `ADR-007` reads as `Accepted`
+  while describing a constraint that has lifted. #68 is unchanged and
+  re-checked rather than assumed: upstream has still cut no tag past
+  `v2.44.0`, and `templates/base/core/examples.md` is not in it. No ADR was
+  written this session — the distribution call schedules PyPI rather than
+  moving off it, which `base-issues-defer` puts in an unmilestoned issue, and
+  the visibility flip's decision consequence is #71's to record.

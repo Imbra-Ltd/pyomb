@@ -522,6 +522,15 @@ the SBOM and attaches that. ADR-011 carries why the SBOM is generated from an
 environment holding only the wheel, and why the distribution is uploaded before
 the SBOM exists.
 
+`release.yml` first executed on `v0.2.0`. Where it changes, rehearse the
+changed steps by hand before the tag rather than after. A tag is the trigger
+and cannot be taken back, so the pipeline gets no cheap first failure, and the
+whole path runs locally: `python -m build`, `python -m twine check dist/*`,
+then the SBOM generated against an environment holding only the wheel. Build
+that environment without a package installer, as the workflow does with
+`uv venv`; an ordinary virtual environment carries pip, which the generator
+then lists as a component and the workflow's assertion rejects.
+
 Do not create the release by hand first. The workflow creates it when absent,
 so a hand-made one only risks racing it; if you have already made one, the
 workflow uploads into it rather than failing.
