@@ -308,7 +308,8 @@ waiting to be told:
 
 ```bash
 gh api repos/Imbra-Ltd/pyomb/code-scanning/alerts --jq length
-gh api "repos/Imbra-Ltd/pyomb/code-scanning/analyses?ref=refs/heads/main"   --jq '.[0] | {category, results_count, ref}'
+gh api "repos/Imbra-Ltd/pyomb/code-scanning/analyses?ref=refs/heads/main" \
+  --jq '.[0] | {category, results_count, ref}'
 ```
 
 The `ref` is not decoration. A pull-request analysis reports what the change
@@ -332,16 +333,18 @@ A local run is evidence about one platform. CI runs Linux under Python 3.10 and
 3.13; development is typically Windows. Read the run before calling a change
 good — three pushes were reported clean against a red pipeline on 2026-08-16.
 
-One check gates a merge to `main`: `gate`. It is a fan-in job that needs every
-other job in `ci.yml` and fails unless each reports exactly `success`, so a
-skipped or a cancelled job fails it rather than slipping through.
+Two checks gate a merge to `main`, one per workflow: `gate` and `codeql`. Each
+is a fan-in job that needs every other job in its own workflow and fails unless
+each reports exactly `success`, so a skipped or a cancelled job fails it rather
+than slipping through. A fan-in can only need jobs beside it, which is why
+there are two rather than one: `codeql.yml` is separate so the
+`security-events: write` scope it needs stays off the CI jobs.
 
-`codeql.yml` carries a fan-in of its own, `codeql`, over its language matrix,
-for the same reason. It runs on every pull request but is not in the required
-list, so today it reports and gates nothing; ADR-012 records why adding it is
-the owner's call rather than the scanner's. Either way its scope is narrower
-than the name suggests — it proves the analysis ran, not that the code is
-clean.
+`codeql` is narrower than its name suggests. It proves the analysis ran, not
+that the code is clean — CodeQL uploads findings as alerts and still
+succeeds. Blocking a merge on an alert is a separate platform control and is
+not turned on; ADR-013 draws the distinction, and 3.8 says how to read the
+alerts.
 
 The third workflow, `release.yml`, runs only on a `v*` tag and gates nothing —
 it never runs on a pull request, so a green pull request says nothing about it.
@@ -352,11 +355,12 @@ by anyone. A pull request is required at zero approvals — a single-seat
 organisation cannot supply an approval, so any higher count would deadlock
 every merge.
 
-Naming one context rather than one per job is what keeps the list from going
-stale. Under the previous arrangement each job was named individually, and
-`security` was simply never added — it ran green and gated nothing for as long
-as it existed. A job added now binds the moment it joins the `gate` job's
-`needs` list.
+Naming one context per workflow rather than one per job is what keeps the list
+from going stale. Under the previous arrangement each job was named
+individually, and `security` was simply never added — it ran green and gated
+nothing for as long as it existed. A job added now binds the moment it joins
+its workflow's fan-in `needs` list, and only a new workflow needs the required
+list touched at all.
 
 Read the live list rather than trusting this paragraph — a required-checks list
 drifts from prose the moment the arrangement changes:

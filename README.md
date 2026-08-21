@@ -172,7 +172,7 @@ tests/                  # One module per source module, plus regression modules
 scripts/                # Certificate generation and standalone demos
 docs/                   # Specifications, tutorial, decisions, journal, audits
 assets/                 # Generated test certificates (gitignored)
-.github/                # CI and release workflows, Dependabot configuration
+.github/                # CI, CodeQL and release workflows, Dependabot config
 .vscode/                # Shared editor settings that mirror the CI gates
 pyproject.toml          # Packaging metadata and tool configuration
 ```

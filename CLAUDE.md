@@ -103,8 +103,10 @@ python scripts/gen_test_certs.py # mint the throwaway TLS chain
   resolve — GitHub matches the bare substring even when negated
 - Never force-push, including `--force-with-lease`; a deny rule in this
   environment blocks it, so hand the command to the owner instead
-- Read the CI run for a push before describing the change as good — a local
-  run is evidence about one platform only. Check: `gh run list --limit 1`
+- Read every workflow run for a push before describing the change as good — a
+  local run is evidence about one platform only, and `--limit 1` reports
+  whichever workflow finished last while hiding the other. Check:
+  `gh run list --commit $(git rev-parse HEAD)`
 - Never commit `.venv/`, `__pycache__/`, `*.egg-info/`, `dist/`,
   `.mypy_cache/`, or `assets/certificates/`
 - Always commit `uv.lock`, and run `uv lock` in the same change as any
@@ -211,8 +213,9 @@ end-of-session audit.
 
 Read every file in the Mandatory startup block. Check the branch, check
 `git status` and ship any unshipped previous wrap first, prune stale branches,
-and check the latest CI run on `main` completed successfully. Confirm the scope
-with the owner and review the open issues related to it before writing code.
+and check every workflow run on the `main` tip completed successfully. Confirm
+the scope with the owner and review the open issues related to it before
+writing code.
 
 ### 6.2 During the session
 
