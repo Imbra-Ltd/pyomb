@@ -46,8 +46,14 @@ HEADER_SIZE = ModbusHeader.SIZE
 class ModbusSenderAbc(metaclass=ABCMeta):
     """Abstract base class for sending Modbus messages."""
 
+    # Burst is a property of the sender, not of one run: it sets TCP_NODELAY
+    # on the socket the sender owns. The only implementation carries it as
+    # state, set through the constructor or set_burst_mode, and no caller has
+    # ever passed it here. Declaring it on the operation promised a per-call
+    # choice that nothing honours; see ADR-009 for the same defect settled in
+    # the packet hierarchy.
     @abstractmethod
-    def run_once(self, burst=False):
+    def run_once(self):
         """Sends the Modbus messages."""
         raise NotImplementedError
 
@@ -88,8 +94,12 @@ class ModbusFragmenterAbc(metaclass=ABCMeta):
 class ModbusStreamAbc(metaclass=ABCMeta):
     """Abstract base class for sending and receiving Modbus messages."""
 
+    # Named for what every caller passes, which is the serialized bytes rather
+    # than the packet object they came from. The implementation always called
+    # it message; a supertype promising a different keyword is a promise its
+    # own subtype breaks.
     @abstractmethod
-    def send(self, packet):
+    def send(self, message):
         """Sends a serialized packet"""
         raise NotImplementedError
 

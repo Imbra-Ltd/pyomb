@@ -19,28 +19,9 @@ import inspect
 import unittest
 
 from packet_hierarchy import packet_classes
+from signatures import caller_parameters
 
 from pyomb.packets import ModbusPacketAbc
-
-
-def caller_parameters(cls, name):
-    """The parameters a caller supplies, with the implicit self or cls dropped.
-
-    Args:
-        cls (type)  : The class declaring the method
-        name (str)  : The method name to inspect
-
-    Returns:
-        list : The inspect.Parameter objects a caller supplies
-    """
-
-    # getattr_static reads the class dictionary without triggering the
-    # descriptor, which is what leaves a classmethod distinguishable from an
-    # instance method here
-    declared = inspect.getattr_static(cls, name)
-    function = declared.__func__ if isinstance(declared, classmethod) else declared
-
-    return list(inspect.signature(function).parameters.values())[1:]
 
 
 class PacketSignatureContract(unittest.TestCase):
