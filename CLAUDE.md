@@ -189,7 +189,7 @@ follow the referenced templates. Project-specific additions only:
   checker looking and discards findings the module already has; see ADR-005
 - Suppress a bandit finding at the line with `# nosec <ID>` naming the one
   check, and put the reason above it. Never add to the config-level `skips`,
-  which stops the check firing tree-wide; see ADR-007
+  which stops the check firing tree-wide; see ADR-012
 
 ## 4. Identity
 

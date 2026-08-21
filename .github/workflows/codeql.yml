@@ -53,6 +53,12 @@ jobs:
       - uses: github/codeql-action/init@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
         with:
           languages: ${{ matrix.language }}
+
+          # Measured before it was chosen. Against this tree the default suite
+          # runs 43 python and 17 actions rules, extended runs 50 and 23, and
+          # both report nothing -- so the wider set costs seconds already being
+          # spent and buys 13 more rules on a library whose whole job is
+          # parsing untrusted bytes. ADR-012 carries the numbers.
           queries: security-extended
 
       # No autobuild step. Both languages are interpreted, so CodeQL reads the
