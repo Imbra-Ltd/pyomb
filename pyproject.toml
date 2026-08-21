@@ -174,14 +174,14 @@ convention = "google"
 strict = true
 files = ["src"]
 
-# 593 findings across six modules, and only four distinct codes.
+# 594 findings across six modules, and only three distinct codes.
 # no-untyped-def and no-untyped-call are the annotations the tree does not yet
-# carry. The other two are real findings rather than missing annotations, and
-# are filed rather than left to be rediscovered: the sender narrows run_once
-# away from the signature its abstract base declares, and the client assigns
-# None to an attribute inferred as socket. The 122 override findings the PDU
-# hierarchy used to carry are gone -- one signature per operation now holds
-# across every packet class, pinned by a test rather than by this freeze.
+# carry. Exactly one is a real finding rather than a missing annotation, and it
+# is filed rather than left to be rediscovered: the client assigns None to an
+# attribute inferred as socket. The override code is gone from every entry --
+# one signature per operation now holds across the packet classes and across
+# the sender and receiver, pinned by a test in each hierarchy rather than by
+# this freeze.
 [[tool.mypy.overrides]]
 module = ["pyomb.errors", "pyomb.logger", "pyomb.omb_server"]
 disable_error_code = ["no-untyped-call", "no-untyped-def"]
@@ -196,7 +196,7 @@ disable_error_code = ["no-untyped-call", "no-untyped-def"]
 
 [[tool.mypy.overrides]]
 module = ["pyomb.stream"]
-disable_error_code = ["no-untyped-call", "no-untyped-def", "override"]
+disable_error_code = ["no-untyped-call", "no-untyped-def"]
 
 [tool.bandit]
 
