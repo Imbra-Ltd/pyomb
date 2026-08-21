@@ -1068,3 +1068,60 @@ package, per ADR-002. See `README.md` for usage and
   and #68 are unchanged from earlier today. The `codeql` context is not in
   branch protection, so CodeQL reports and gates nothing until the owner adds
   it; ADR-012 carries the command and why it is theirs to run.
+
+## 2026-08-21 — What the wrap-up audit found (wrap)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Made `codeql` a required context** — the owner ran the branch
+    protection change, so two checks now gate a merge, one per workflow.
+    `strict`, `enforce_admins`, the zero-approval review requirement and both
+    force-push and deletion blocks were read back and are unchanged.
+  - **Corrected PLAYBOOK 3.9** — it still said one check gates a merge and
+    that `codeql` was in no required list, both written hours before either
+    became false.
+  - **Corrected the CI-reading rule in CLAUDE.md** — it told the agent to
+    check `gh run list --limit 1`, which was right while the repository had
+    one workflow. With two it reports whichever finished last and hides the
+    other, so an agent could read a green CodeQL run and call a red build
+    good. It now selects by commit.
+  - **Fixed a collapsed line continuation in PLAYBOOK 3.8** — the same
+    defect repaired in `release.yml` two pull requests earlier, reintroduced
+    by the same editing mistake in the same session.
+  - **Updated the README structure map** — `.github/` described CI and
+    release workflows and there are now three.
+- **PRs merged:** #82.
+- **Issues closed/created:** none. Five remain open, all deliberately.
+- **Lesson:** adding a workflow invalidated a rule in three documents, none of
+  which the change touched. PLAYBOOK 3.9 described the gate arrangement,
+  CLAUDE.md carried a check command that assumed one workflow, and the README
+  mapped the directory. A reviewer of the workflow diff had no reason to open
+  any of them, and no gate reads prose. The sweep only happened because the
+  audit runs after the work rather than inside it.
+- **Lesson:** a positional selector hides an assumption about cardinality.
+  `--limit 1` was a correct check for as long as the count was one, and it did
+  not fail when the count changed — it kept exiting zero and started
+  answering about an arbitrary member. Selecting by commit says what is
+  actually meant and survives the next workflow.
+- **Lesson:** the same editing mistake landed twice in one session. A
+  backslash-newline written through a nested heredoc came out as a literal
+  `\n` in `release.yml`, was caught by an argv comparison, and then
+  came out as collapsed spaces in PLAYBOOK 3.8 an hour later. Reading the
+  bytes back with `cat -A` is what caught both; reading the rendered diff
+  caught neither, because both render as what they were supposed to be.
+- **Upstream:** one filing. braboj/solid-ai-templates#1044 against
+  `templates/base/workflow/quality-gates.md` — `quality-gates-pair-check`
+  requires a rule to name its runnable check and says nothing about how that
+  check selects its subject, so the obvious positional selector goes silently
+  wrong the moment a second instance exists. Distinct from #1043, filed
+  earlier today: there the tool measures the wrong population, here it
+  measures correctly and the command asks about the wrong member.
+- **Pending:** five issues, none blocked on anything this session could
+  resolve. #76 is the only one carrying real weight — the TLS client's
+  protocol floor is currently correct by accident of OpenSSL 3.0.15 rather
+  than by anything the library states, so it is hardening rather than live
+  exposure, and it needs a test that fails against the unfixed code. #70 and
+  #77 and #80 are decisions rather than work, and #68 waits on an upstream tag
+  that does not exist. Verified against the tracker rather than recalled: all
+  five are open, correctly labelled, and none sits in a milestone the project
+  has moved past, since the project uses none.
