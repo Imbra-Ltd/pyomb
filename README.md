@@ -38,13 +38,16 @@ through cases a compliant peer would never produce.
 
 Prerequisites: Python 3.10 or newer.
 
-pyomb is not yet published to PyPI, so install it from source:
+pyomb is not on a package index. Every tagged release attaches a wheel to its
+record on GitHub, so install that:
 
 ```bash
-git clone https://github.com/Imbra-Ltd/pyomb.git
-cd pyomb
-pip install .
+pip install https://github.com/Imbra-Ltd/pyomb/releases/download/v0.2.0/pyomb-0.2.0-py3-none-any.whl
 ```
+
+The [releases page](https://github.com/Imbra-Ltd/pyomb/releases) carries an
+sdist and a CycloneDX SBOM beside each wheel. Contributors install from a
+checkout instead; see [Development setup](#development-setup).
 
 Build a Modbus TCP request, serialize it, and read it back:
 
