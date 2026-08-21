@@ -696,3 +696,82 @@ package, per ADR-002. See `README.md` for usage and
   "Tracked as #2", but #2 is closed and no open issue tracks the publish.
   Worth carrying forward: `v0.1.0` carries no release assets at all, so
   whatever is decided for the SBOM covers the wheel and sdist too.
+
+## 2026-08-21 — Lock the toolchain and ship release assets (later)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Locked the development toolchain with uv** — five packages floated
+    completely, so CI and a contributor's machine resolved them
+    independently and a green run could not say afterwards what it ran
+    against. The template names `requirements-dev.lock`, which implies
+    `pip freeze` output, and that is the one thing that cannot work here:
+    frozen output has its markers already resolved, so it is true for one
+    interpreter and platform and misrepresents the others, and this project
+    spans three. `uv lock` resolves across the whole `requires-python` range
+    instead. ADR-010.
+  - **Made the lock load-bearing rather than decorative** — every job installs
+    with `uv sync --locked`, which refuses a lock that no longer matches
+    `pyproject.toml`, and every gate step runs under `uv run --no-sync` so the
+    install is the only place a dependency can be resolved. Dependabot is
+    enrolled on pip, because a lock nothing refreshes pins an ageing toolchain
+    silently.
+  - **Gave tagged releases their assets** — the repository had no release
+    workflow at all; CI built a wheel on every change and discarded it with the
+    run. `release.yml` fires on a `v*` tag, refuses one that does not name the
+    version the package reports, builds, creates the release record when the
+    tag has none, attaches the wheel and sdist, then generates the SBOM and
+    attaches that. ADR-011.
+  - **Generated the SBOM from a consumer environment** — every generator's
+    convenient mode reads the environment at hand, which in CI is the build
+    environment. Measured, that lists 81 components including pytest, ruff and
+    mypy; an environment holding only the built wheel lists one. Both documents
+    are schema-valid, so the step asserts the component set rather than
+    trusting the exit code.
+  - **Repaired the dead tracker in PLAYBOOK 5** — the section ended "Tracked
+    as #2", and #2 is closed and was about repository metadata. The pointer is
+    gone and the substance kept. Filing a replacement is still the owner's.
+- **PRs merged:** #57 and #58.
+- **Issues closed/created:** #15 and #36 closed. None created.
+- **Lesson:** re-reading a deferred issue's trigger cost one command and
+  changed what the session did. #36 said the repository had cut no release, so
+  the SBOM was deferred until one existed. `v0.1.0` had published a day before
+  the issue was filed. The rule was being violated rather than not yet
+  applicable — and the same check found the larger gap the issue never
+  mentions, that the release carries no wheel or sdist either.
+- **Lesson:** the template turned out far more prescriptive than the issue
+  quoting it, and reading the source changed the design. `devsecops.md` marks
+  the SBOM job `continue-on-error` and forbids it creating the release record.
+  Neither fits a workflow that *is* the release pipeline rather than a side-car
+  scan, so both are documented divergences — but the rule's actual intent,
+  that a scan must never leave a release empty, is carried by ordering wheel and
+  sdist upload before the SBOM is generated. Reading the rule got the intent;
+  reading the issue would have got two rules to obey or ignore.
+- **Lesson:** a number read off a manifest is not a measurement. ADR-011 first
+  said the build-environment SBOM carried 93 components, taken from the lock's
+  package count. Running the generator reported 81 — a lock resolves across
+  platforms and Python versions and records entries no single environment
+  installs. Corrected before the ADR shipped, and corrected on the upstream
+  issue that had already quoted it.
+- **Lesson:** an SBOM generator pointed at the wrong environment exits zero.
+  The document is schema-valid, the step is green, and the answer names the
+  toolchain as part of the product. That is the `quality-gates-pair-check`
+  shape exactly: the constraint is about content, so the check has to be about
+  content, and asserting the component set is the whole of it.
+- **Upstream:** two filings. braboj/solid-ai-templates#1034 against
+  `templates/stack/python-lib.md` — the lock file rule is one line naming
+  `requirements-dev.lock` and survives neither a CI matrix nor a lock nothing
+  installs from. braboj/solid-ai-templates#1035 against
+  `templates/base/security/devsecops.md` — the SBOM rule says where to attach
+  the document and never what it must describe, and the convenient command
+  produces the wrong one.
+- **Pending:** two issues, both genuinely blocked rather than waiting on work.
+  #4 is unchanged, re-checked rather than assumed: upstream has cut no tag past
+  `v2.44.0` and the submodule sits three commits beyond it. #22 is blocked on
+  the repository being private, re-checked and still true. Carrying forward:
+  `release.yml` has never executed — it does not run on pull requests, so CI
+  passing on #58 says nothing about it. The chain was run by hand end to end,
+  including the negative case where a tag names the wrong version, but the
+  first real proof is the next tag. Also carried: whether the first PyPI
+  publish gets a tracking issue, which PLAYBOOK 5 no longer pretends is
+  tracked.
