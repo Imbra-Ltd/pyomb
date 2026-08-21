@@ -81,7 +81,10 @@ class OmbServerSim(threading.Thread):
                                   built on mutual TLS.
         verify_hostname (bool)  : Verify client's hostname. Server contexts do
                                   not check hostnames; defaults to False.
-        ssl_options (int)       : Default SSL options.
+        ssl_options (int)       : SSL options OR-ed into the context. They can
+                                  only add a restriction, so a session may be
+                                  pinned above MINIMUM_TLS_VERSION but never
+                                  below it.
     """
 
     # None means "inherit the interpreter's secure default suite". The previous
@@ -94,6 +97,15 @@ class OmbServerSim(threading.Thread):
 
     PLAINTEXT_PORT = 502
     ENCRYPTED_PORT = 802
+
+    # The lowest protocol version the transport will negotiate. MB-TCP-Security
+    # v21 requires TLS 1.2 or better (R-32) and forbids negotiating down to TLS
+    # 1.1, TLS 1.0 or SSL 3.0 (R-34), so the floor is the specification's
+    # rather than a preference. Declaring it matters even where OpenSSL already
+    # defaults here: that default is a property of the linked library and its
+    # security level, so an older or differently configured build answers
+    # differently and nothing in this library would notice.
+    MINIMUM_TLS_VERSION = ssl.TLSVersion.TLSv1_2
 
     # Seconds start() waits for the listener before giving up on it.
     STARTUP_TIMEOUT = 10.0
@@ -185,6 +197,12 @@ class OmbServerSim(threading.Thread):
             self.ssl_context.check_hostname = verify_hostname
 
             self.ssl_context.options |= ssl_options
+
+            # Applied after the caller's options, which are OR-ed in and so can
+            # only add a restriction. ssl_options therefore still pins a session
+            # higher than the floor, and neither passing a mask that omits the
+            # protocol switches nor passing none at all can drop below it.
+            self.ssl_context.minimum_version = self.MINIMUM_TLS_VERSION
 
     ############################################################################
 

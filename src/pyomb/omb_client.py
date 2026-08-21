@@ -91,7 +91,9 @@ class OmbClientSim(object):
             accepts any certificate signed by the configured CA for any host.
 
         ssl_options (int):
-            The default SSL options. Defaults to ssl.OP_ALL.
+            SSL options OR-ed into the context. Defaults to ssl.OP_ALL. They
+            can only add a restriction, so a session may be pinned above
+            MINIMUM_TLS_VERSION but never below it.
 
         timeout (float):
             Socket timeout in seconds, applied to connect and to reads.
@@ -119,6 +121,15 @@ class OmbClientSim(object):
     # would otherwise block the caller forever with no way to recover. Pass
     # None to restore unbounded blocking.
     DEFAULT_TIMEOUT = 10.0
+
+    # The lowest protocol version the transport will negotiate. MB-TCP-Security
+    # v21 requires TLS 1.2 or better (R-32) and forbids negotiating down to TLS
+    # 1.1, TLS 1.0 or SSL 3.0 (R-34), so the floor is the specification's
+    # rather than a preference. Declaring it matters even where OpenSSL already
+    # defaults here: that default is a property of the linked library and its
+    # security level, so an older or differently configured build answers
+    # differently and nothing in this library would notice.
+    MINIMUM_TLS_VERSION = ssl.TLSVersion.TLSv1_2
 
     def __init__(
         self,
@@ -192,6 +203,12 @@ class OmbClientSim(object):
             self.crypto.check_hostname = verify_hostname
 
             self.crypto.options |= ssl_options
+
+            # Applied after the caller's options, which are OR-ed in and so can
+            # only add a restriction. ssl_options therefore still pins a session
+            # higher than the floor, and neither passing a mask that omits the
+            # protocol switches nor passing none at all can drop below it.
+            self.crypto.minimum_version = self.MINIMUM_TLS_VERSION
 
         # Optional because disconnect() clears it. Inferring the type from
         # this first assignment alone claims the attribute is always a socket,
