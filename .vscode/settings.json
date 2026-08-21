@@ -29,7 +29,7 @@
   // contributor find out from a red pipeline. ruff reads pyproject.toml, the
   // same configuration the gate reads.
   "[python]": {
-    "editor.rulers": [80, 88, 120],
+    "editor.rulers": [80, 120],
     "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.formatOnSave": true
   },
