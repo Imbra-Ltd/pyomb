@@ -1,6 +1,6 @@
 # ADR-007: Bandit is the whole SAST gate, and platform SAST is declined
 
-**Status:** Accepted
+**Status:** Superseded by ADR-012
 **Date:** 2026-08-19
 **Upstream:** filed as braboj/solid-ai-templates#1026 against
 `templates/base/workflow/quality-gates.md`. With the domain skin off, the

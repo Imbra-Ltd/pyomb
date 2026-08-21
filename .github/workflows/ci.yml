@@ -117,11 +117,12 @@ jobs:
           print("wheel contents OK:", sorted(tops))
           PY
 
-  # Bandit is the static analysis the quality gates make a Layer 3 MUST. It is
-  # the whole of that gate here: GitHub code scanning needs Code Security,
-  # which a private repository does not carry, so the platform half is
-  # declined rather than missing. The decision record under docs/decisions/
-  # carries the reasoning and the condition that reopens it.
+  # Bandit is half the static analysis the quality gates make a Layer 3 MUST.
+  # CodeQL is the other half and lives in its own workflow, so the write scope
+  # it needs stays off this one. The two are not redundant: bandit fails this
+  # job on any finding at any severity, which blocks the merge, where CodeQL
+  # writes alerts a human reads. The decision records under docs/decisions/
+  # carry both, and why the platform half was declined until it could run.
   #
   # Passing -c is load-bearing. Bandit reads no configuration from
   # pyproject.toml unless pointed at it, so without the flag the exclusions

@@ -296,11 +296,24 @@ severity floor: any finding fails. Suppress a false positive at the line with
 `# nosec <ID>` naming the specific check, and put the reason in a comment above
 it. Never add a check to the config-level `skips` — that stops bandit looking
 everywhere rather than here, which is the distinction ADR-005 draws and
-[ADR-007](decisions/007-bandit-as-the-whole-sast-gate.md) applies to this gate.
+[ADR-012](decisions/012-adopt-codeql-as-the-platform-sast.md) applies to this
+gate. ADR-007 wrote these rules and ADR-012 supersedes it, carrying them
+forward unchanged, so the live record is the later one.
 
-GitHub code scanning is not the other half of this gate. It cannot run on a
-private repository without Code Security, and ADR-007 records the decline and
-what would reopen it.
+CodeQL is the other half of this gate, in `.github/workflows/codeql.yml` and
+recorded in [ADR-012](decisions/012-adopt-codeql-as-the-platform-sast.md). The
+two are not redundant: bandit fails the build on any finding, so it blocks a
+merge, where CodeQL writes alerts that nothing announces. Read them rather than
+waiting to be told:
+
+```bash
+gh api repos/Imbra-Ltd/pyomb/code-scanning/alerts --jq length
+gh api repos/Imbra-Ltd/pyomb/code-scanning/analyses --jq '.[0]'
+```
+
+A green CodeQL run means the analysis ran, not that it found nothing. ADR-007
+declined this half while the repository was private and named the trigger that
+reopened it.
 
 ### 3.9 CI
 
@@ -315,9 +328,18 @@ good — three pushes were reported clean against a red pipeline on 2026-08-16.
 
 One check gates a merge to `main`: `gate`. It is a fan-in job that needs every
 other job in `ci.yml` and fails unless each reports exactly `success`, so a
-skipped or a cancelled job fails it rather than slipping through. The other
-workflow, `release.yml`, runs only on a `v*` tag and gates nothing — it never
-runs on a pull request, so a green pull request says nothing about it. See 5.
+skipped or a cancelled job fails it rather than slipping through.
+
+`codeql.yml` carries a fan-in of its own, `codeql`, over its language matrix,
+for the same reason. It runs on every pull request but is not in the required
+list, so today it reports and gates nothing; ADR-012 records why adding it is
+the owner's call rather than the scanner's. Either way its scope is narrower
+than the name suggests — it proves the analysis ran, not that the code is
+clean.
+
+The third workflow, `release.yml`, runs only on a `v*` tag and gates nothing —
+it never runs on a pull request, so a green pull request says nothing about it.
+See 5.
 
 Branch protection binds administrators, so a red pull request cannot be merged
 by anyone. A pull request is required at zero approvals — a single-seat
