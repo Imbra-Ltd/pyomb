@@ -314,10 +314,13 @@ A local run is evidence about one platform. CI runs Linux under Python 3.10 and
 good — three pushes were reported clean against a red pipeline on 2026-08-16.
 
 One check gates a merge to `main`: `gate`. It is a fan-in job that needs every
-other job in the workflow and fails unless each reports exactly `success`, so a
-skipped or a cancelled job fails it rather than slipping through. Branch
-protection binds administrators, so a red pull request cannot be merged by
-anyone. A pull request is required at zero approvals — a single-seat
+other job in `ci.yml` and fails unless each reports exactly `success`, so a
+skipped or a cancelled job fails it rather than slipping through. The other
+workflow, `release.yml`, runs only on a `v*` tag and gates nothing — it never
+runs on a pull request, so a green pull request says nothing about it. See 5.
+
+Branch protection binds administrators, so a red pull request cannot be merged
+by anyone. A pull request is required at zero approvals — a single-seat
 organisation cannot supply an approval, so any higher count would deadlock
 every merge.
 
@@ -359,7 +362,8 @@ python -c "import zipfile; print(*zipfile.ZipFile('dist/pyomb-<version>-py3-none
 
 CI runs all three on every change, in the `build` job, so a build that breaks
 or a wheel that starts carrying `tests/` fails the pull request rather than
-the release.
+the release. The build that produces the artifacts a consumer downloads is a
+different one, in `release.yml` on a tag; see 5.
 
 ### 3.12 Line endings (.gitattributes, .editorconfig)
 
