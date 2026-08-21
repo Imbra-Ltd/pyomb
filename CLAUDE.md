@@ -106,6 +106,9 @@ python scripts/gen_test_certs.py # mint the throwaway TLS chain
   run is evidence about one platform only. Check: `gh run list --limit 1`
 - Never commit `.venv/`, `__pycache__/`, `*.egg-info/`, `dist/`,
   `.mypy_cache/`, or `assets/certificates/`
+- Always commit `uv.lock`, and run `uv lock` in the same change as any
+  dependency edit — CI installs with `--locked` and fails on a stale lock;
+  never reach for `--frozen` to get past it. See ADR-010
 - Bump the templates submodule to a released tag, never to a branch tip
 
 ### 2.2 Python

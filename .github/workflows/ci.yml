@@ -32,34 +32,44 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[test]"
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
 
+      # --locked is the gate rather than a convenience: uv refuses a lock that
+      # no longer matches pyproject.toml instead of quietly re-resolving, so a
+      # dependency edit that skipped `uv lock` fails here rather than
+      # installing a set the lock does not record. One lock serves both legs --
+      # it is resolved across the whole requires-python range, so 3.10 takes
+      # tomli and an older stevedore from the same file 3.13 reads.
+      - name: Install
+        run: uv sync --locked --extra test --python "${{ matrix.python-version }}"
+
+      # --no-sync on every step below: the install above is the only place a
+      # dependency may be resolved, so a gate cannot quietly pull one in.
       - name: Lint
-        run: python -m ruff check src tests scripts
+        run: uv run --no-sync python -m ruff check src tests scripts
 
       # A separate ruff command from the lint one above, and it only reports:
       # --check never rewrites a file, so a red run names the fix rather than
       # applying it behind the contributor's back.
       - name: Format
-        run: python -m ruff format --check src tests scripts
+        run: uv run --no-sync python -m ruff format --check src tests scripts
 
       # No arguments: the scope, the strict setting and the per-module freeze
       # all live in pyproject.toml, so the gate and a local run cannot resolve
       # to different checks.
       - name: Type check
-        run: python -m mypy
+        run: uv run --no-sync python -m mypy
 
       # Throwaway chain for the TLS integration tests, which skip without it.
       # Generated per run and never committed: the keys are unencrypted.
       - name: Generate test certificates
-        run: python scripts/gen_test_certs.py
+        run: uv run --no-sync python scripts/gen_test_certs.py
 
       - name: Test
         run: >
-          python -m pytest tests
+          uv run --no-sync python -m pytest tests
           --cov=pyomb
           --cov-report=term-missing
           --cov-fail-under=80
@@ -77,23 +87,27 @@ jobs:
         with:
           python-version: '3.13'
 
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
+      # The dev extra rather than test: build and twine are release tooling, and
+      # dev is where the lock records them.
       - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install build twine
+        run: uv sync --locked --extra dev --python 3.13
 
       - name: Build
-        run: python -m build
+        run: uv run --no-sync python -m build
 
       - name: Check metadata
-        run: python -m twine check dist/*
+        run: uv run --no-sync python -m twine check dist/*
 
       # The src/ layout is what keeps tests/ and scripts/ out of the wheel.
       # Asserting it here means a build-configuration change cannot quietly
       # start shipping them.
       - name: Assert the wheel carries the package and nothing else
         run: |
-          python - <<'PY'
+          uv run --no-sync python - <<'PY'
           import pathlib
           import zipfile
           wheel = next(pathlib.Path("dist").glob("*.whl"))
@@ -124,13 +138,15 @@ jobs:
         with:
           python-version: '3.13'
 
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
       - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[test]"
+        run: uv sync --locked --extra test --python 3.13
 
       - name: Static analysis
-        run: python -m bandit -c pyproject.toml -r src scripts tests
+        run: uv run --no-sync python -m bandit -c pyproject.toml -r src scripts tests
 
   secrets:
     runs-on: ubuntu-latest

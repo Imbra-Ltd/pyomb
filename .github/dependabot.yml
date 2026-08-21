@@ -5,9 +5,22 @@ updates:
   # which lifts a pin to the newest release. That default is what the SHA
   # pins in the workflow depend on: a pin nothing moves is a pin that goes
   # stale, and the security case for pinning assumes something keeps it
-  # current. Only the pip ecosystem wants increase-if-necessary, and this
-  # repository does not enrol it here.
+  # current.
   - package-ecosystem: github-actions
     directory: /
+    schedule:
+      interval: weekly
+
+  # The pip ecosystem is enrolled because uv.lock now exists to be refreshed.
+  # An unrefreshed lock pins an ageing toolchain with no signal that it has
+  # aged, which is the failure mode ADR-010 trades the floating versions for.
+  #
+  # increase-if-necessary rather than the default: a floor here is a
+  # compatibility claim about what a consumer may install, and the default
+  # lifts every floor to the newest release whether or not anything needs it.
+  # The Actions ecosystem above keeps the default for the opposite reason.
+  - package-ecosystem: pip
+    directory: /
+    versioning-strategy: increase-if-necessary
     schedule:
       interval: weekly
