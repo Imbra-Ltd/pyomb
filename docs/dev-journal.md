@@ -994,3 +994,77 @@ package, per ADR-002. See `README.md` for usage and
   written this session — the distribution call schedules PyPI rather than
   moving off it, which `base-issues-defer` puts in an unmilestoned issue, and
   the visibility flip's decision consequence is #71's to record.
+
+## 2026-08-21 — Adopt CodeQL, and correct its baseline an hour later (late)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Adopted the platform SAST that ADR-007 declined** — the trigger it
+    named had fired when the repository went public, so the objection the ADR
+    rejected the alternative on was gone. `.github/workflows/codeql.yml`
+    analyses `python` and `actions`, in its own workflow because it is the one
+    thing here needing `security-events: write`.
+  - **Gave the isolated workflow its own fan-in** — `platform/github.md`
+    wants the write scope isolated and also wants one required context, and
+    the two collide: a fan-in can only need jobs in its own workflow. A
+    `codeql` job over the language matrix satisfies both, at one required
+    context per workflow instead of one per language.
+  - **Superseded ADR-007 and carried its bandit rules forward** — a reader
+    who stops at the live record has to find them, so ADR-012 restates the
+    three rather than leaving them in a superseded file. All 21 citations of
+    ADR-007 were audited; the two that instruct rather than narrate moved, and
+    the rest stayed because they are history.
+  - **Corrected the baseline in ADR-013, one hour after ADR-012 merged** —
+    the suite comparison in ADR-012 was measured on pull-request refs, where
+    CodeQL reports against the diff. Both rows read zero because the branch
+    added nothing, not because the tree was clean.
+  - **Filed what the real baseline found** — #76, the TLS client setting no
+    minimum protocol version, and #77, two bind-to-all-interfaces alerts.
+    Both reproduced against the source before filing rather than forwarded
+    from the scanner.
+  - **Restored the line continuations in the SBOM command** — one
+    162-character line with runs of thirteen spaces where the backslashes had
+    been. Behaviour-neutral, and proved so by extracting the command from both
+    revisions and diffing the argv.
+- **PRs merged:** #75, #78 and #79.
+- **Issues closed/created:** #71 closed. #76, #77 and #80 created.
+- **Lesson:** a scanner's pull-request run is not a baseline. Zero on
+  `refs/pull/N/merge` means the change introduces nothing; the same commit on
+  `refs/heads/main` reported three. Nothing about the wrong number looked
+  wrong — two suites, two plausible rule counts, a consistent zero, and a
+  conclusion that followed from it. The project's verification rules prompt for
+  a measurement in the wrong unit and for a silently partial extraction, and a
+  diff-scoped run resembles neither.
+- **Lesson:** CodeQL paid for itself in under an hour on a tree bandit calls
+  clean at full strictness. Bandit has no check for a missing TLS floor and
+  none for a bind to all interfaces expressed as `""`, so its zero was
+  evidence about its rule set rather than about the code. ADR-007 read that
+  zero as the tree being clean, which is why both scanners are worth the
+  second workflow.
+- **Lesson:** the argv check caught an edit that a diff review would have
+  passed. The first attempt at the continuation fix wrote a literal
+  backslash-n into the workflow. It renders identically to a real continuation
+  and would have handed the SBOM generator three arguments named `n`. Reading
+  it back with `cat -A` and comparing the tokenised command is what found it,
+  on the one workflow that cannot be dry-run on a pull request.
+- **Lesson:** the first measurement of the ASCII footprint said 96,965
+  non-ASCII characters in one source file. `grep -o '[^ -]'` does not
+  interpret that range and matched almost everything. The real number is 338
+  across 23 files, and the implausible one should have been the tell before the
+  method was.
+- **Upstream:** two filings. braboj/solid-ai-templates#1042 against
+  `templates/platform/github.md` — isolating an elevated-scope scan into
+  its own workflow costs the single-required-context property unless that
+  workflow carries its own fan-in, and the template asks for both rules without
+  noting they collide. braboj/solid-ai-templates#1043 against
+  `templates/base/core/review.md` — the verification section covers a
+  measurement in the wrong unit and a silently partial extraction, and a
+  measurement at the wrong scope is a third axis that looks like neither.
+- **Pending:** five issues, none blocked. #76 is the only one with a severity
+  worth acting on soon: the TLS floor is currently correct by accident of
+  OpenSSL 3.0.15 rather than by anything the library states, so it is a
+  hardening fix rather than a live exposure, and it needs a test that fails
+  against current code. #77 and #80 are both decisions rather than work. #70
+  and #68 are unchanged from earlier today. The `codeql` context is not in
+  branch protection, so CodeQL reports and gates nothing until the owner adds
+  it; ADR-012 carries the command and why it is theirs to run.
