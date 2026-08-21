@@ -1125,3 +1125,100 @@ package, per ADR-002. See `README.md` for usage and
   that does not exist. Verified against the tracker rather than recalled: all
   five are open, correctly labelled, and none sits in a milestone the project
   has moved past, since the project uses none.
+
+## 2026-08-21 — Declare the TLS floor, settle the ASCII rule (last)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Declared the minimum TLS version on both contexts** — `OmbClientSim` and
+    `OmbServerSim` built their `SSLContext` without `minimum_version`, so the
+    floor was a property of whichever OpenSSL a consumer links rather than of
+    this library. The value comes from the specification the repository
+    already ships rather than from taste: MB-TCP-Security v21 R-32 requires
+    TLS 1.2 or better and R-34 forbids negotiating down to 1.1, 1.0 or SSL
+    3.0. Read out of the PDF with `pdftotext` rather than recalled.
+  - **Widened that fix to the server** — CodeQL reported the client alone, and
+    `omb_server.py` carried the identical `options |= ssl_options` with no
+    floor. `TestSecureDefaults` asserts the two symmetrically, so a
+    client-only fix would have left the same latent defect in the sibling and
+    a visibly lopsided test class. Agreed with the owner before the change
+    rather than absorbed into it.
+  - **Triaged both bind alerts without moving the default** — a server
+    simulator exists to accept connections from a device under test, and that
+    device is normally on another host, so a loopback-only default would
+    refuse the traffic the simulator is for. Both alerts are dismissed with a
+    reason, and both reasons are also at the bind site, because a dismissal
+    that lives only in the Security tab is lost with the tab.
+  - **Settled the ASCII rule as ADR-014** — prose keeps the em dash, code and
+    configuration stay ASCII, and Markdown may use nothing else either. The
+    last clause is the load-bearing one: the four defects #80 found were
+    hiding behind 353 deliberate em dashes, so a blanket prose exemption would
+    have made them permanent.
+  - **Gave that rule the check it never had** — `tests/test_source_is_ascii.py`
+    reads the tree as git tracks it and names each offender as
+    `path:line:column U+XXXX`. `RUF002` came off the `errors.py` entry in the
+    ruff freeze once its two characters were gone, and ruff reported nothing
+    new in its place.
+  - **Repaired two control bytes in this journal** — it carried a literal NUL
+    and a literal DEL inside a code span, on the line describing the very
+    grep that mishandles that range.
+- **PRs merged:** none. #83, #84 and #85 are open, green on both workflows and
+  mergeable; merging was unavailable to the agent this session, so landing
+  them is the owner's.
+- **Issues closed/created:** none closed, none created. #76, #77 and #80 each
+  carry a closing keyword in exactly one pull request and close on merge —
+  checked with the PLAYBOOK 1.3 query rather than by reading, which also
+  confirmed no body carries a stray or negated keyword. #68 was re-checked
+  against upstream and its trigger still has not fired: `v2.44.0` is the
+  newest tag and does not contain `examples.md`. #70 was excluded by the owner.
+- **Lesson:** a test asserting the hardened value would have passed against
+  the unfixed code. This OpenSSL already defaults to TLS 1.2, so the floor
+  reads 771 either way, and the defect was never the value — it was that the
+  value came from the platform. The assertion had to be about provenance, so
+  the test injects a permissive platform and asserts the library overrides it.
+  When the thing being fixed is where a value comes from rather than what it
+  is, an assertion on the value is not a test of the fix.
+- **Lesson:** the double could not be installed the obvious way. Replacing
+  `ssl.SSLContext` on the module recurses forever, because the standard
+  library's own `minimum_version` setter resolves that same name on the
+  module and lands back in the double. Redirecting only the name the module
+  under test reads leaves the real class where the standard library expects
+  it. The first attempt failed with a `RecursionError` that looked like a
+  passing test, in that the run was red either way — worth reading why a test
+  fails and not only that it does.
+- **Lesson:** a gate never seen to fail is not evidence of anything. Every
+  character class was injected one at a time to watch the ASCII check reject
+  it, and that is the only reason two holes surfaced. The check tested
+  `ord(c) > 127`, which treats ASCII as a ceiling when it is a range, so a NUL
+  and a DEL sat in this file undetected — a control character renders as
+  nothing, which hides it better than any homoglyph, and the only outward sign
+  was git and grep quietly reclassifying the file as binary. Separately,
+  `splitlines()` breaks on the vertical tab, the form feed and the Unicode
+  line separators, so each was consumed as a line boundary and never appeared
+  within a line for the check to see. Splitting on the newline alone fixed it.
+- **Lesson:** a comment about behaviour that differs by platform is a claim to
+  probe, not to reason out. The bind-site comment nearly shipped saying a
+  loopback-only blocker would leave the server free to bind, stated generally.
+  Linux refuses that later wildcard bind and Windows allows it, so with CI on
+  Linux and development on Windows the test would pass for the wrong reason on
+  one and the right reason on the other.
+- **Lesson:** an issue's own notes age like anything else. #77 gave the
+  dismissal reasons as `used_in_tests` and `wont_fix`; the API rejects both
+  and wants the spaced `used in tests` and `won't fix`, and caps the comment
+  at 280 characters. Two rejected calls, not a wrong dismissal, but the
+  ticket was written from memory of the API rather than against it.
+- **Upstream:** one filing. braboj/solid-ai-templates#1045 against
+  `templates/base/core/quality.md` — the ASCII rule names no check, which
+  `quality-gates-pair-check` requires of any mechanically checkable
+  constraint, and 170 of the 186 template documents carry 17,350 non-ASCII
+  characters themselves, including 751 box-drawing characters in the very
+  section that forbids them in ADR diagrams. Distinct from #1044, filed
+  earlier today: that one is about how a check selects its subject, this one
+  is about a rule having no check at all.
+- **Pending:** three pull requests to land, and the three issues that close
+  with them. Nothing is blocked on a decision. #68 remains genuinely blocked
+  on an upstream tag, re-verified this session rather than assumed, and #70 is
+  the owner's call by their own instruction. ADR-014 records a deliberate
+  divergence from the pinned templates, so the next submodule bump that moves
+  the ASCII rule must be read against that record rather than as a gap to
+  close.
