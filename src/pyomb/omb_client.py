@@ -193,16 +193,36 @@ class OmbClientSim(object):
 
             self.crypto.options |= ssl_options
 
-        # Create socket
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Optional because disconnect() clears it. Inferring the type from
+        # this first assignment alone claims the attribute is always a socket,
+        # which is a claim the teardown path contradicts.
+        self.sock: socket.socket | None = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(self.timeout)
+
+    ############################################################################
+
+    def _require_socket(self) -> socket.socket:
+        """The client's socket, or a named error when it holds none.
+
+        Returns:
+            socket.socket : The socket the client currently holds
+
+        Raises:
+            ModbusNetworkError : If the client has been disconnected
+        """
+
+        if self.sock is None:
+            message = "The client has no socket; call connect() first"
+            raise ModbusNetworkError(message=message)
+
+        return self.sock
 
     ############################################################################
 
     @property
     def recvbuf_size(self):
         """Get the receive buffer size of the socket."""
-        return self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
+        return self._require_socket().getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
 
     @recvbuf_size.setter
     def recvbuf_size(self, value):
@@ -211,7 +231,7 @@ class OmbClientSim(object):
         Args:
             value (int): The buffer size value.
         """
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, value)
+        self._require_socket().setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, value)
 
     ############################################################################
 
@@ -263,15 +283,25 @@ class OmbClientSim(object):
 
         self.log.info("Disconnecting client...")
 
+        # A caller that cannot tell whether it already disconnected should be
+        # able to ask again, so a client holding no socket is done rather than
+        # in error. The local is also what carries the narrowing: an attribute
+        # stays narrowed only until the next call that could reassign it.
+        sock = self.sock
+
+        if sock is None:
+            self.log.info("Client socket already closed")
+            return
+
         try:
             # Check if the socket is an encrypted socket
-            if isinstance(self.sock, ssl.SSLSocket):
+            if isinstance(sock, ssl.SSLSocket):
                 # If so unwrap the socket from the SSL context
-                self.sock = self.sock.unwrap()
+                sock = sock.unwrap()
 
             # Block any further communication without destroying the socket
             # TODO: Obsolete as later we are closing it
-            self.sock.shutdown(socket.SHUT_RDWR)
+            sock.shutdown(socket.SHUT_RDWR)
 
         except socket.error:
             # self.log.info("The server doesn't respond with NOTIFY ALERT")
@@ -280,7 +310,7 @@ class OmbClientSim(object):
         finally:
             # Block further communication and close the socket
             # TODO: This should be in the try block
-            self.sock.close()
+            sock.close()
             self.sock = None
 
         self.log.info("Client socket closed")
@@ -306,15 +336,17 @@ class OmbClientSim(object):
 
         self.log.info("Reset the client connection...")
 
+        sock = self._require_socket()
+
         # Configure the SO_LINGER option with a linger time of zero
-        self.sock.setsockopt(
+        sock.setsockopt(
             socket.SOL_SOCKET,  # Level is SOL_SOCKET
             socket.SO_LINGER,  # Option is SO_LINGER
             struct.pack("ii", 1, 0),  # Enable flag is 1, Linger time is 0
         )
 
         # Close the socket
-        self.sock.close()
+        sock.close()
 
     ############################################################################
 
@@ -569,7 +601,7 @@ class OmbClientSim(object):
             data (bytearray): The raw data to send.
         """
 
-        self.sock.send(data)
+        self._require_socket().send(data)
 
     ############################################################################
 
@@ -585,7 +617,7 @@ class OmbClientSim(object):
         Returns:
             bytearray: The received raw data.
         """
-        return self.sock.recv(buffer_size)
+        return self._require_socket().recv(buffer_size)
 
     ############################################################################
 
@@ -602,7 +634,7 @@ class OmbClientSim(object):
         Args:
             timeout (float): The timeout value in seconds.
         """
-        self.sock.settimeout(timeout)
+        self._require_socket().settimeout(timeout)
 
     ############################################################################
 
@@ -623,7 +655,7 @@ class OmbClientSim(object):
             optname (int)   : The socket option name (socket.SO_REUSEADDR).
             value           : The value to set for the option.
         """
-        self.sock.setsockopt(level, optname, value)
+        self._require_socket().setsockopt(level, optname, value)
 
     ############################################################################
 
