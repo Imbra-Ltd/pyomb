@@ -620,3 +620,79 @@ package, per ADR-002. See `README.md` for usage and
   owner's call. Worth carrying forward: `omb_client.py` at 85% and
   `stream.py` at 85% are now the weakest modules, both above the floor and
   neither tracked by an issue.
+
+## 2026-08-21 — Empty the freeze of real findings
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Moved the PDU length measurement inside the guard that converts** —
+    `ModbusPdu.serialize` and `deserialize` each built their format string
+    from a length taken before `pack()` or `unpack()` was entered, so the
+    guard those two carry never saw it. A `data` field that is not a sequence,
+    or a stream that cannot be measured, left a raw `TypeError` through an
+    operation whose callers catch `ModbusPacketError`. Every other class in
+    the hierarchy converts; this was the one that did not.
+  - **Settled one signature for `run_once`** — `ModbusSenderAbc` declared a
+    `burst` parameter its only implementation does not take. Burst is a
+    property of the sender rather than of one run: it sets TCP_NODELAY on the
+    socket the sender owns, and `ModbusTcpSender` already carries it as state
+    through the constructor or `set_burst_mode`. The parameter came off the
+    base, which is where ADR-009 put the same defect in the packet hierarchy.
+  - **Fixed the milder form of it found on the way** —
+    `ModbusStreamAbc.send` named its parameter `packet` where its own subtype
+    named it `message`, so the keyword the supertype promised was one the
+    subtype refused. mypy does not flag a rename under this project's
+    settings. The base took the subtype's name: every call site passes
+    serialized bytes positionally, so `message` is the accurate one.
+  - **Gave the client's socket the optional type its teardown implies** —
+    `disconnect()` clears the attribute, but it was inferred from its first
+    assignment as `socket.socket`. Eight of the exposed accesses route through
+    one private accessor that raises `ModbusNetworkError` naming the remedy;
+    the other two are the teardown itself, which now returns quietly on a
+    client holding no socket.
+  - **Emptied the mypy freeze of real findings** — `override` left with the
+    sender fix and `assignment` with the client fix. Remeasured by stripping
+    every `disable_error_code` and counting rather than by adjusting the
+    number in place: 594 findings, two codes, both of them annotations the
+    tree does not yet carry. Nothing frozen is a defect any more.
+- **PRs merged:** #53, #54 and #55.
+- **Issues closed/created:** #50, #45 and #46 closed. None created.
+- **Lesson:** an issue's own estimate of its size is a claim like any other.
+  #46 said annotating the attribute would turn 14 accesses into findings and
+  warned the sizing was part of the work. Applying the annotation and running
+  the checker reported ten: mypy narrows the other four itself from an
+  assignment earlier in the same method. The measurement took one probe and
+  moved the scope by nearly a third before any of it was written.
+- **Lesson:** a contract test that ignores a field to accommodate a known
+  defect is the freeze anti-pattern wearing a different hat. The stream
+  signature test compares parameter names, and one pair disagreed. Excluding
+  names would have passed today and stopped the test looking forever, which is
+  what ADR-005 says about turning off a strict sub-flag. Fixing the rename was
+  smaller than weakening the gate, and the gate now asserts the whole
+  signature.
+- **Lesson:** the helper that reads a signature has to know what kind of
+  method declared it. The packet version dropped the first parameter
+  unconditionally, which is right for an instance method and a classmethod and
+  wrong for a staticmethod — and `ModbusFragmenter` declares both its abstract
+  operations that way, so the shared helper would have read its `message`
+  parameter as the implicit one and reported a mismatch that is not there.
+- **Lesson:** re-reading a deferred issue's trigger is worth the one command
+  it costs. #36 defers an SBOM until the first release and states the
+  repository has cut none. It has: `v0.1.0` published 2026-08-18, annotated,
+  a day *before* the issue was filed saying otherwise. The trigger had already
+  fired, so the issue was not deferred-pending-an-event but open work reading
+  as deferred. Corrected on the issue rather than acted on, since the three
+  questions in its body bind the release workflow and are the owner's.
+- **Upstream:** none. Both defects settled this session are instances of rules
+  the templates already carry, and the Liskov gap that produced them was filed
+  upstream last session as braboj/solid-ai-templates#1033.
+- **Pending:** four issues, none of them code. #4 is unchanged and still
+  blocked, re-checked rather than assumed: upstream has cut no tag past
+  `v2.44.0` and the submodule sits three commits beyond it. #22 is blocked on
+  the repository being private, re-checked and still true. #15 and #36 are
+  both "what to decide" bodies whose questions are the owner's — and #36's
+  trigger has now fired, so it is waiting on a decision rather than on an
+  event. Also still waiting: PLAYBOOK 5 says the first PyPI publish is
+  "Tracked as #2", but #2 is closed and no open issue tracks the publish.
+  Worth carrying forward: `v0.1.0` carries no release assets at all, so
+  whatever is decided for the SBOM covers the wheel and sdist too.
