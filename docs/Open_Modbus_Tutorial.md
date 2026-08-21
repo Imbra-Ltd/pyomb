@@ -254,7 +254,7 @@ start_addr=0 is the first item of a group.
 
 ## 6. Function Codes
 
-Тhe function code is used to determine the action to be taken by the server. The response
+The function code is used to determine the action to be taken by the server. The response
 contains the same function code as the request in case of success. If an exception occurs, the
 server copies the function code and sets the MSB bit to 1 (adds 0x80). The data field contains
 the exception.

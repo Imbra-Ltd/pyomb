@@ -192,6 +192,9 @@ follow the referenced templates. Project-specific additions only:
 - Suppress a bandit finding at the line with `# nosec <ID>` naming the one
   check, and put the reason above it. Never add to the config-level `skips`,
   which stops the check firing tree-wide; see ADR-012
+- Markdown prose may use the em dash; every other tracked file is ASCII, and
+  Markdown may use no other non-ASCII character either. Enforced by
+  `tests/test_source_is_ascii.py`; see ADR-014
 
 ## 4. Identity
 

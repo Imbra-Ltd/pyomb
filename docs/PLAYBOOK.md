@@ -412,6 +412,24 @@ A non-zero count means a CRLF file was committed before the normalisation
 covered it. `git add --renormalize .` rewrites the index, and the diff it
 produces is the fix.
 
+### 3.13 Character set (pytest)
+
+```bash
+pytest tests/test_source_is_ascii.py
+```
+
+The sibling of the rule above: line endings govern how a file ends its lines,
+this governs which characters may appear in them. Markdown prose may use the em
+dash and nothing else beyond ASCII; every other tracked file is ASCII without
+exception. ADR-014 records why the project diverges from the templates here and
+where the boundary sits.
+
+A failure names each offending character as `path:line:column U+XXXX`. Outside
+Markdown the substitute for an em dash is `--`. Inside it, the usual causes are
+a curly quote, an en dash standing in for a hyphen, or a homoglyph — a Cyrillic
+letter that renders identically to its Latin twin, which is the case a reader
+cannot catch by reading and the check exists for.
+
 ## 4. Maintenance
 
 ### 4.1 Bump the templates submodule
