@@ -1,6 +1,6 @@
 # ADR-012: Adopt CodeQL as the platform half of the SAST gate
 
-**Status:** Accepted
+**Status:** Superseded by ADR-013
 **Date:** 2026-08-21
 **Supersedes:** ADR-007
 **Upstream:** filed as braboj/solid-ai-templates#1042 against

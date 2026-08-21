@@ -308,8 +308,14 @@ waiting to be told:
 
 ```bash
 gh api repos/Imbra-Ltd/pyomb/code-scanning/alerts --jq length
-gh api repos/Imbra-Ltd/pyomb/code-scanning/analyses --jq '.[0]'
+gh api "repos/Imbra-Ltd/pyomb/code-scanning/analyses?ref=refs/heads/main"   --jq '.[0] | {category, results_count, ref}'
 ```
+
+The `ref` is not decoration. A pull-request analysis reports what the change
+introduces, so it reads zero on a tree that carries findings — which is how
+ADR-012 came to record a baseline it had not measured, and why
+[ADR-013](decisions/013-correct-the-codeql-baseline.md) supersedes it. Measure
+the tree on `refs/heads/main`.
 
 A green CodeQL run means the analysis ran, not that it found nothing. ADR-007
 declined this half while the repository was private and named the trigger that

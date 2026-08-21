@@ -13,7 +13,8 @@ numbers follow [Semantic Versioning](https://semver.org/).
   suite. It is the platform half of the SAST gate ADR-007 declined while
   the repository was private, and it lives in its own workflow so the
   write scope it needs stays off the CI jobs. Bandit is unchanged, and
-  remains the half that fails a build on a finding. See ADR-012
+  remains the half that fails a build on a finding. See ADR-012, and
+  ADR-013 for the baseline it corrects
 
 ## [0.2.0] - 2026-08-21
 
