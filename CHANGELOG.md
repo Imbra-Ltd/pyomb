@@ -15,6 +15,11 @@ numbers follow [Semantic Versioning](https://semver.org/).
   the built wheel, so it lists what a consumer installs rather than what CI
   built with. See ADR-011
 - `v0.1.0` predates the workflow and keeps its empty asset list
+- `OmbServerSim` accepts port 0, asking the operating system for a free port,
+  and reports the assigned port on its `port` attribute once `start()`
+  returns. The server previously bound whatever it was given without reading
+  the result back, so a caller passing 0 got a listener it had no way to
+  reach. See #61
 
 ### Changed
 

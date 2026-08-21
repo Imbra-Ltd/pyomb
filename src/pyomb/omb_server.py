@@ -59,6 +59,9 @@ class OmbServerSim(threading.Thread):
         log (Logger)            : The logger instance used to log messages.
         ipAddress (int)         : The IP address of the server as a 32-bit integer.
         port (int)              : The port of the server as a 16-bit integer.
+                                  Pass 0 to let the operating system choose a
+                                  free one; the attribute then reports that
+                                  choice once start() returns.
         delay (float)           : The delay time for server response in seconds.
         frag_count (int)        : The Modbus message fragmentation size.
         frag_delay (float)      : The delay time between fragments.
@@ -302,6 +305,11 @@ class OmbServerSim(threading.Thread):
         srv.bind((ip_address_str, self.port))
         srv.setblocking(False)
         srv.listen(self.connLimit)
+
+        # Report back the port the socket actually got. Port 0 asks the operating system for a free one, and the
+        # caller has no other way to learn which; without this it reads the 0 it passed in and cannot reach its own
+        # server. Assigning before the started event means every caller the event releases sees the real port.
+        self.port = srv.getsockname()[1]
 
         # Add the server socket to the read list
         self.readList.append(srv)

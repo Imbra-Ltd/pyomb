@@ -67,21 +67,18 @@ class TestSecureDefaults(unittest.TestCase):
 class TestMutualTls(unittest.TestCase):
     """The transport defaults must produce an authenticated, strong session."""
 
-    # Each test binds its own port. tearDown now waits for the listener to
-    # close, so it is released before the next setUp, but the server sets no
-    # SO_REUSEADDR: a port that has just carried a connection can still refuse
-    # the next bind while that connection sits in TIME_WAIT.
-    port_counter = 18802
-
     def setUp(self):
         # The parser registry is process-global; register what these tests
         # need rather than depending on whatever ran before.
         ModbusPduParser.register(ModbusRequestFC1)
         ModbusPduParser.register(ModbusResponseFC1)
 
-        type(self).port_counter += 1
-        self.PORT = type(self).port_counter
-        self.server = OmbServerSim(port=self.PORT, secure=True, cert=SERVER_CRT, key=SERVER_KEY, ca_chain=CA)
+        # Port 0 asks the operating system for a free one. tearDown waits for
+        # the listener to close, but the server sets no SO_REUSEADDR, so a
+        # named port that has just carried a connection can still refuse the
+        # next bind while that connection sits in TIME_WAIT. Letting the
+        # operating system choose sidesteps that rather than timing it.
+        self.server = OmbServerSim(port=0, secure=True, cert=SERVER_CRT, key=SERVER_KEY, ca_chain=CA)
 
         # start() returns only once the listener is accepting: it waits on the
         # server's own started event, bounded by STARTUP_TIMEOUT, and raises
@@ -91,6 +88,7 @@ class TestMutualTls(unittest.TestCase):
         # listener is up in milliseconds, too short if it ever is not.
         self.server.start()
 
+        self.PORT = self.server.port
         self.client = None
 
     def tearDown(self):

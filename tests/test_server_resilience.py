@@ -70,21 +70,20 @@ class TestDisconnectToleratesADeadSocket(unittest.TestCase):
 
 
 class TestAbruptDisconnect(unittest.TestCase):
-    # Each test binds its own port; the listener is not always released before
-    # the next setUp, following the convention in the TLS suite.
-    port_counter = 19802
-
     def setUp(self):
-        type(self).port_counter += 1
-        self.port = type(self).port_counter
-
         # The inactivity sweep would otherwise close an idle connection after
         # a second, which these tests would race against.
-        self.server = OmbServerSim(port=self.port, inactiveTimeout=30.0)
+        #
+        # Port 0 asks the operating system for a free one, so a listener the
+        # previous test has not finished releasing cannot collide with this
+        # one. The port is read back below, once the listener is up.
+        self.server = OmbServerSim(port=0, inactiveTimeout=30.0)
         self.server.daemon = True
         self.server.start()
 
         self.assertTrue(self.server.startedEvent.wait(5.0), "the server never reached its accept loop")
+
+        self.port = self.server.port
 
     def tearDown(self):
         self.server.stop()
