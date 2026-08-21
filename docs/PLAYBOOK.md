@@ -396,6 +396,27 @@ Read rules at the pinned revision:
 `git -C docs/solid-ai-templates show HEAD:templates/<file>`. Reading from
 `origin/main` describes a future state of this repository, not its current one.
 
+A bump can change the resolved chain, so reconcile the `CLAUDE.md` startup
+block against the new pin in the same commit. Upstream adds and removes
+template files, and the block is a hand-maintained copy of what
+`templates/manifest.yaml` resolves to; a bump that adds one leaves the block
+short, and a bump backwards leaves it naming a file the pin does not carry.
+Every entry MUST exist at the pinned revision:
+
+```bash
+for f in $(sed -n 's/^- `\(templates\/[^`]*\)`.*/\1/p' CLAUDE.md); do
+  git -C docs/solid-ai-templates cat-file -e "HEAD:$f" 2>/dev/null \
+    || echo "MISSING $f"
+done
+```
+
+Output MUST be empty. A `MISSING` line means the block cites a file the pin
+does not contain, which is a startup instruction that cannot be followed.
+Check the manifest for entries the block now lacks in the other direction:
+resolve the stack chain for `stack-python-lib` plus the platform, and expect
+the block to be that set plus `scope.md` and `ai-workflow.md`, which no stack
+declares. ADR-008 carries why those two are there.
+
 ### 4.2 Record a decision
 
 Add `docs/decisions/NNN-slug.md` with Status, Date, Context, Decision,
