@@ -62,7 +62,12 @@ test = [
 
 # What a contributor installs. Adds the hook runner and the release tooling,
 # which the gates do not need but a contributor does.
-dev = ["pyomb[test]", "pre-commit", "build", "twine"]
+#
+# cyclonedx-bom is release tooling like build and twine: the release workflow
+# generates the SBOM with it, and carrying it here rather than installing it
+# unpinned in CI puts the generator's own version in uv.lock, where a bump is
+# reviewed like any other. See ADR-011.
+dev = ["pyomb[test]", "pre-commit", "build", "twine", "cyclonedx-bom"]
 
 [tool.hatch.version]
 path = "src/pyomb/__init__.py"

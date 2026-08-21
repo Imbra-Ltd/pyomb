@@ -480,7 +480,23 @@ To cut a release:
 4. Open the pull request, merge it, and wait for CI to pass on `main`
 5. Tag with `git tag -a`, never a lightweight tag, or `git describe` reports a
    stale version to consumers
-6. Create the GitHub release from the tag
+6. Push the tag
+
+Pushing the tag is the last manual step. `.github/workflows/release.yml` fires
+on any `v*` tag and does the rest: it refuses a tag that does not name the
+version the package reports, builds the wheel and the sdist, creates the
+release record if the tag has none, attaches the distribution, then generates
+the SBOM and attaches that. ADR-011 carries why the SBOM is generated from an
+environment holding only the wheel, and why the distribution is uploaded before
+the SBOM exists.
+
+Do not create the release by hand first. The workflow creates it when absent,
+so a hand-made one only risks racing it; if you have already made one, the
+workflow uploads into it rather than failing.
+
+`v0.1.0` predates the workflow and carries no assets. It is left that way
+deliberately — assets built now from a later tree would not be what that tag
+was. See ADR-011.
 
 Before the first PyPI publish: claim the name per ADR-002, and publish from CI
-only, never from a local machine. Tracked as #2.
+only, never from a local machine. No open issue tracks that work.
