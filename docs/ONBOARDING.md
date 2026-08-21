@@ -61,8 +61,14 @@ this CA anywhere but a test network.
 ## 3. Verify the setup
 
 ```bash
-python -m pytest -q
+uv run --no-sync python -m pytest -q
 ```
+
+Every command in this section is prefixed. A bare `python -m pytest` resolves
+against whatever interpreter is active, which after step 2 may not be the
+`.venv` uv just built — and if a global pytest exists it will run, pass, and
+verify an environment you are not about to develop in. `--no-sync` keeps the
+command from quietly re-resolving what step 2 pinned.
 
 Expect every test to pass and none to be skipped. A skip means the TLS chain is
 missing — rerun step 2's certificate command; the mutual-TLS tests skip
@@ -72,9 +78,9 @@ The count is deliberately not written down here. It changes with every branch,
 and a number in a setup document is wrong more often than it is right.
 
 ```bash
-python -m ruff check src tests scripts
-python -m mypy
-python -m bandit -c pyproject.toml -r src scripts tests
+uv run --no-sync python -m ruff check src tests scripts
+uv run --no-sync python -m mypy
+uv run --no-sync python -m bandit -c pyproject.toml -r src scripts tests
 ```
 
 Expect `All checks passed!` from the first and a `Success:` line from the
