@@ -838,3 +838,72 @@ package, per ADR-002. See `README.md` for usage and
   issue is still the owner's call. New and worth carrying: the README quick
   start tells a reader to build from source, which stays correct only until
   a tag ships assets — the next release is when to offer the wheel instead.
+
+## 2026-08-21 — Give the server port 0, pin back to a tag (evening)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Gave `OmbServerSim` a working port 0** — `run()` bound whatever port it
+    was handed and never read the result back, so a server asked for port 0
+    bound a real port and went on reporting 0. The listener was up and
+    unreachable, and that is what had forced every server test module to name
+    a fixed port. It now captures `getsockname()[1]` after `listen()` and
+    before setting the started event, so every caller the event releases sees
+    the real port.
+  - **Moved all four server test modules to port 0** — three allocated with
+    `type(self).port_counter`, which is the pattern the audit comment in
+    `test_server_connections.py` already recorded as broken, because the
+    subclass attribute write makes each subclass restart from the inherited
+    value. The comment had been read as advice about one module; it described
+    a defect live in three. The two startup tests now take a port from the
+    operating system and hold it rather than assuming a named one is free.
+  - **Pinned the templates submodule back to `v2.44.0`** — it sat three
+    commits past the newest tag, so the repository enforced rules upstream had
+    not cut, and `CLAUDE.md` listed a file that existed at no released
+    revision. Pinning back cost nothing: the commits refactored the examples
+    rules out of `readme.md` and `python-lib.md` into a new `examples.md`
+    rather than writing new ones, and this project has no `examples/`
+    directory, which is the condition `base-examples` applies under.
+  - **Corrected two issues that were wrong on the record** — #22 said the CI
+    badge cannot render while the repository is private, and #61 said the
+    suite fails on consecutive runs. Neither held.
+- **PRs merged:** #64 and #65.
+- **Issues closed/created:** #61 and #4 closed. #66 created — nothing
+  publishes the package and `release.yml` has never executed.
+- **Lesson:** the owner disproved a filed finding by looking at the page. #22
+  reasoned from a `curl` 404 to "broken for every viewer, the owner included",
+  but GitHub does not serve its own Actions badge through camo: the rendered
+  README carries a direct `src` while the two shields.io badges beside it are
+  proxied, so the browser sends a session cookie and any viewer who can read
+  the README can read the badge. The probe measured the anonymous case and the
+  conclusion was written about all cases. The endpoint authenticates by cookie
+  rather than by token, so even an authenticated API client reproduces the
+  404, which is what made the wrong reading so easy to confirm twice.
+- **Lesson:** #61 has now been misdiagnosed three times — `TIME_WAIT`, then
+  "20200 is unbindable on this machine", then the symptom itself, which does
+  not reproduce across six runs. What was actually broken was one line in
+  `src/`, and no amount of staring at the counter would have found it. The
+  finding survived all three wrong explanations, which is the argument for
+  filing the observation and probing the mechanism separately rather than
+  letting a plausible cause travel with the report.
+- **Lesson:** a planned fix is a hypothesis about a file. The README quick
+  start was carried into this session as work to do, on a journal note saying
+  it should offer the wheel once a tag ships assets. Opening it showed the
+  trigger has not fired — `v0.1.0` has zero assets — and that the documented
+  output is byte-correct against a real run. Changing it would have replaced a
+  working instruction with a broken one. It became an acceptance criterion on
+  #66 instead of an edit.
+- **Lesson:** three sessions of journal breadcrumbs are a ticket nobody filed.
+  "`release.yml` has still never executed" and "whether the first PyPI publish
+  gets a tracking issue is the owner's call" had been carried forward twice
+  without an owner, while #22's unblocking condition pointed at nothing. One
+  issue, #66, now holds all three.
+- **Upstream:** none. Both conventions this session leaned on —
+  `testing-in-process-server` and pinning a submodule to a released tag —
+  already exist upstream and were the authority for the changes rather than
+  candidates produced by them.
+- **Pending:** #22 and #66 open, both now correctly scoped and neither blocked
+  on a decision this session could take. `ADR-007`'s Related section still
+  describes #22 as a consequence of repository visibility; left unedited by
+  the owner's call, because a merged ADR is immutable, and #22's correction
+  note records the divergence from the tracker side.
