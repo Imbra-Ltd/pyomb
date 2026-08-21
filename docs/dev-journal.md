@@ -898,10 +898,18 @@ package, per ADR-002. See `README.md` for usage and
   gets a tracking issue is the owner's call" had been carried forward twice
   without an owner, while #22's unblocking condition pointed at nothing. One
   issue, #66, now holds all three.
-- **Upstream:** none. Both conventions this session leaned on —
-  `testing-in-process-server` and pinning a submodule to a released tag —
-  already exist upstream and were the authority for the changes rather than
-  candidates produced by them.
+- **Upstream:** two filings, neither from the conventions this session leaned
+  on. `testing-in-process-server` and pinning a submodule to a released tag
+  both already exist upstream and were the authority for the changes rather
+  than candidates produced by them; the filings come from how the session went
+  wrong instead. braboj/solid-ai-templates#1038 against
+  `templates/base/workflow/ai-workflow.md` — a comment recording a rejected
+  mechanism is a defect report that was only half-filed, so grep the mechanism
+  rather than reading the comment as advice about its own module.
+  braboj/solid-ai-templates#1039 against `templates/base/core/review.md` — a
+  probe running as the wrong principal answers a different question, and
+  checking it with the wrong credential type reproduces the wrong answer,
+  which is what let #22 survive a re-verification.
 - **Pending:** #22 and #66 open, both now correctly scoped and neither blocked
   on a decision this session could take. `ADR-007`'s Related section still
   describes #22 as a consequence of repository visibility; left unedited by

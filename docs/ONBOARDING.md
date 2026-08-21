@@ -19,6 +19,23 @@ like.
 No database, no container, no build step. The library has no runtime
 dependencies beyond the standard library.
 
+Every other tool arrives with `uv sync`, so uv is the one to install by hand.
+Astral's installer is the documented route and needs no Python on `PATH`:
+
+```bash
+# Windows
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# macOS and Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Where a Python is already present, `py -m pip install uv` on Windows or
+`python3 -m pip install uv` elsewhere reaches the same place. That route
+leaves uv importable as a module even when the installed script misses
+`PATH`, so `py -m uv sync --locked --extra dev` works where `uv` alone
+reports a missing command.
+
 ## 2. First-time setup
 
 ```bash
