@@ -1159,6 +1159,12 @@ package, per ADR-002. See `README.md` for usage and
     `path:line:column U+XXXX`. `RUF002` came off the `errors.py` entry in the
     ruff freeze once its two characters were gone, and ruff reported nothing
     new in its place.
+  - **Corrected PLAYBOOK 3.12's line-ending check** — the NUL did more
+    than hide itself. Git classifies a file containing one as binary, so
+    `text=auto` skipped normalising this journal and its 1127 CRLF endings
+    went into the index unconverted, in a repository whose rule is LF there.
+    The check reported clean throughout, because a binary-classified file
+    reports `i/-text` and never matches the `i/crlf` the command greps for.
   - **Repaired two control bytes in this journal** — it carried a literal NUL
     and a literal DEL inside a code span, on the line describing the very
     grep that mishandles that range.
@@ -1196,6 +1202,15 @@ package, per ADR-002. See `README.md` for usage and
   `splitlines()` breaks on the vertical tab, the form feed and the Unicode
   line separators, so each was consumed as a line boundary and never appeared
   within a line for the check to see. Splitting on the newline alone fixed it.
+- **Lesson:** a defect can disable the check that would have caught it. One
+  NUL byte made git treat this journal as binary, which suppressed the LF
+  normalisation and simultaneously made the line-ending check blind to the
+  result, since it greps for `i/crlf` and a binary file reports `i/-text`.
+  The check passed for as long as the file was broken and would have started
+  failing the moment it was fixed, had the endings not been repaired in the
+  same change. Same shape as the positional selector recorded earlier today:
+  the command ran correctly and answered about a population that excluded
+  its subject.
 - **Lesson:** a comment about behaviour that differs by platform is a claim to
   probe, not to reason out. The bind-site comment nearly shipped saying a
   loopback-only blocker would leave the server free to bind, stated generally.
