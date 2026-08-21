@@ -76,7 +76,8 @@ duplicate it here. Create that section if it is missing.
 ### 1.3 Commands
 
 ```bash
-pip install -e ".[dev]"          # install with dev dependencies
+uv sync --locked --extra dev     # install the locked toolchain into .venv
+uv lock --upgrade                # refresh the lock; review the diff
 pre-commit install               # run the gates before every commit
 pytest                           # run tests
 mypy                             # type check; settings in pyproject.toml
