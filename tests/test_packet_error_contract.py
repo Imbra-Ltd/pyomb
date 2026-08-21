@@ -8,8 +8,12 @@ handlers were written per class, forty-odd times, and a class whose handler
 was missing or mis-scoped would let a raw struct.error out through an except
 clause the caller never wrote.
 
-The two tests below collect their subjects from the module rather than listing
-them, so a packet class added later is covered the day it lands.
+The hierarchy-wide tests collect their subjects from the module rather than
+listing them, so a packet class added later is covered the day it lands. Where
+a class holds a failure mode the collected input cannot reach, it gets a named
+case of its own -- ModbusPdu builds its format from a length, and a caller
+following the documented signature never supplies a shape that cannot be
+measured.
 """
 
 import inspect
@@ -78,6 +82,30 @@ class MalformedStreamIsRejected(unittest.TestCase):
 
                 with self.assertRaises(ModbusPacketError):
                     packet.serialize()
+
+
+class TheGenericPduMeasuresInsideItsGuard(unittest.TestCase):
+    """ModbusPdu builds its format from a length, and taking one can fail.
+
+    The hierarchy-wide tests above cannot reach this: they supply `data` as the
+    sequence the constructor documents, which is what a caller following the
+    signature does. These two pass the shape that does not carry a length.
+    """
+
+    def test_serialize_reports_a_data_field_that_carries_no_length(self):
+        with self.assertRaises(ModbusPacketError):
+            ModbusPdu(fc=1, data=5).serialize()
+
+    def test_deserialize_reports_a_stream_that_carries_no_length(self):
+        with self.assertRaises(ModbusPacketError):
+            ModbusPdu.deserialize(None)
+
+    def test_the_ordinary_round_trip_is_untouched(self):
+        """The guard sits around the measurement, not around the packing."""
+
+        pdu = ModbusPdu(fc=1, data=(1, 2, 3))
+
+        self.assertEqual(ModbusPdu.deserialize(pdu.serialize()), pdu)
 
 
 class SkippingCrcVerificationKeepsTheErrorHandling(unittest.TestCase):
