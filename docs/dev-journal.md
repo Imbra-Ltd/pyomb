@@ -1222,14 +1222,21 @@ package, per ADR-002. See `README.md` for usage and
   and wants the spaced `used in tests` and `won't fix`, and caps the comment
   at 280 characters. Two rejected calls, not a wrong dismissal, but the
   ticket was written from memory of the API rather than against it.
-- **Upstream:** one filing. braboj/solid-ai-templates#1045 against
-  `templates/base/core/quality.md` — the ASCII rule names no check, which
-  `quality-gates-pair-check` requires of any mechanically checkable
-  constraint, and 170 of the 186 template documents carry 17,350 non-ASCII
-  characters themselves, including 751 box-drawing characters in the very
-  section that forbids them in ADR diagrams. Distinct from #1044, filed
-  earlier today: that one is about how a check selects its subject, this one
-  is about a rule having no check at all.
+- **Upstream:** three filings, all against templates whose rules this
+  session found unenforced or unenforceable.
+  braboj/solid-ai-templates#1045 against `templates/base/core/quality.md`:
+  the ASCII rule names no check, which `quality-gates-pair-check` requires
+  of any mechanically checkable constraint, and 170 of the 186 template
+  documents carry 17,350 non-ASCII characters themselves, including 751
+  box-drawing characters in the very section that forbids them in ADR
+  diagrams. #1046 against `templates/base/workflow/quality-gates.md`: a
+  paired check must not filter on a property the violation it detects can
+  change, which is the line-ending case above, and is a different axis from
+  #1044, where the member is selected wrongly from a fixed population
+  rather than the population itself being redefined. #1047 against
+  `templates/base/core/testing.md`: when a fix's subject is where a value
+  comes from rather than what it is, asserting the value does not test it,
+  because the environment may already supply the right answer.
 - **Pending:** three pull requests to land, and the three issues that close
   with them. Nothing is blocked on a decision. #68 remains genuinely blocked
   on an upstream tag, re-verified this session rather than assumed, and #70 is
