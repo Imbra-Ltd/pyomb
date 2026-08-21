@@ -61,11 +61,15 @@ real defects rather than merely permitting a style.
    an en dash in prose is a defect there exactly as it is in code. The
    allowance is deliberately the narrowest one that lets the documents stay as
    they are, so the class of defect this record was raised by still fails.
-4. The rule is enforced by `tests/test_source_is_ascii.py`, which reads the
+4. ASCII is bounded at both ends. Printable ASCII plus tab and newline is the
+   permitted set; a control character is a defect exactly as a homoglyph is,
+   and for the same reason — it is invisible to a reader. The tree carried a
+   NUL and a DEL in a journal code span, found while writing this record up.
+5. The rule is enforced by `tests/test_source_is_ascii.py`, which reads the
    tree as git tracks it and reports every offending character as
    `path:line:column U+XXXX`. It runs in the ordinary suite, so it gates on
    every pull request with no new tooling.
-5. `RUF002` comes off the `src/pyomb/errors.py` entry in the ruff
+6. `RUF002` comes off the `src/pyomb/errors.py` entry in the ruff
    `per-file-ignores` freeze, its two characters having been fixed. ADR-003
    calls shrinking that table the migration.
 

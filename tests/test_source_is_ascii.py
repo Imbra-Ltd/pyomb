@@ -18,6 +18,13 @@ a quoted exception name carried curly quotes; and an en dash stood in for a
 hyphen. The em dash allowance is deliberately the narrowest one that lets the
 documents stay as they are, so that class of defect still fails here.
 
+ASCII is a range rather than a ceiling, so the check bounds it at both ends.
+The low end is the half nobody looks for: a control character renders as
+nothing, which hides it better than any homoglyph. The journal carried a NUL
+and a DEL inside a code span for a day, in a sentence describing the very grep
+that mishandles that range, and the only outward sign was git and grep quietly
+reclassifying the file as binary.
+
 The guard is one-directional and needs no fixture: it reads the tree as git
 tracks it, so a local scratch file cannot fail a run that CI would pass.
 """
@@ -38,12 +45,23 @@ EM_DASH = "\u2014"
 # specifications are the only ones in the tree.
 BINARY_SUFFIXES = {".pdf"}
 
+# ASCII is a range, not a ceiling, and the low end of it is the half nobody
+# looks for. A control character reads as nothing at all, so it hides better
+# than any homoglyph: the journal carried a NUL and a DEL inside a code span
+# for a day, in a sentence about the very grep that mishandles them, and the
+# only outward sign was git and grep quietly reclassifying the file as binary.
+# Tab and newline are the two that legitimately appear in text; the reader
+# strips carriage returns before this sees them.
+LEGAL_CONTROL = "\t\n"
+
 NOT_A_CHECKOUT = "not a git checkout, so there is no tracked-file list to read"
 
 SUBSTITUTES = (
     "Use '--' for an em dash outside Markdown, '-' for a hyphen, and a "
     "straight quote for a quotation. A character that renders like a Latin "
-    "letter but is not one is a homoglyph; replace it with the Latin letter."
+    "letter but is not one is a homoglyph; replace it with the Latin letter. "
+    "A control character below U+0020 renders as nothing and is almost always "
+    "a byte written where the text of its escape was meant."
 )
 
 
@@ -88,11 +106,11 @@ class SourceIsAscii(unittest.TestCase):
         cls.tracked = tracked_files()
 
     def offenders(self, markdown, allowed):
-        """Locate characters outside ASCII in the selected half of the tree.
+        """Locate characters outside printable ASCII in one half of the tree.
 
         Args:
             markdown (bool) : Select Markdown files when True, the rest when False
-            allowed (str)   : Characters beyond ASCII that are permitted there
+            allowed (str)   : Characters beyond printable ASCII that are permitted
 
         Returns:
             list[str] : One 'path:line:column U+XXXX' entry per offending character
@@ -113,14 +131,21 @@ class SourceIsAscii(unittest.TestCase):
 
             text = path.read_text(encoding="utf-8")
 
-            for row, line in enumerate(text.splitlines(), start=1):
+            # split() rather than splitlines(), which also breaks on the
+            # vertical tab, the form feed and the Unicode line separators --
+            # so every one of those would be consumed as a line boundary and
+            # never appear within a line for this loop to see.
+            for row, line in enumerate(text.split("\n"), start=1):
                 for column, character in enumerate(line, start=1):
-                    if ord(character) > 127 and character not in allowed:
+                    if character in allowed or character in LEGAL_CONTROL:
+                        continue
+
+                    if not 32 <= ord(character) < 127:
                         found.append(f"{name}:{row}:{column} U+{ord(character):04X}")
 
         return found
 
-    def test_nothing_outside_markdown_carries_a_non_ascii_character(self):
+    def test_nothing_outside_markdown_leaves_printable_ascii(self):
         """Source, tests, configuration and workflows are ASCII without exception."""
 
         offenders = self.offenders(markdown=False, allowed="")
@@ -128,8 +153,8 @@ class SourceIsAscii(unittest.TestCase):
         self.assertEqual(
             offenders,
             [],
-            "non-ASCII characters outside Markdown, where the rule has no "
-            "exception:\n  " + "\n  ".join(offenders) + "\n" + SUBSTITUTES,
+            "characters outside printable ASCII found outside Markdown, where "
+            "the rule has no exception:\n  " + "\n  ".join(offenders) + "\n" + SUBSTITUTES,
         )
 
     def test_markdown_carries_nothing_beyond_the_em_dash(self):
@@ -140,8 +165,8 @@ class SourceIsAscii(unittest.TestCase):
         self.assertEqual(
             offenders,
             [],
-            "non-ASCII characters in Markdown other than the em dash, which "
-            "is the only one ADR-014 permits:\n  " + "\n  ".join(offenders) + "\n" + SUBSTITUTES,
+            "characters outside printable ASCII found in Markdown, other than "
+            "the em dash, which is the only one ADR-014 permits:\n  " + "\n  ".join(offenders) + "\n" + SUBSTITUTES,
         )
 
 
