@@ -93,6 +93,18 @@ class ServerFixture(unittest.TestCase):
         # Taking the port from the operating system and holding it beats naming
         # one: a guessed port is only occupied if nothing else got there first,
         # which is the assumption these tests exist to stop relying on.
+        #
+        # The empty host binds every interface on purpose. The point is to hold
+        # the port rather than to serve on it, and the server under test binds
+        # every interface too at its default, so the blocker has to cover the
+        # same set for the collision to be guaranteed. Narrowing it to loopback
+        # makes the test platform-dependent: Linux refuses a later wildcard bind
+        # over a loopback-only holder, Windows allows it, and there the server
+        # would start cleanly and the test would prove nothing.
+        #
+        # CodeQL reports this as py/bind-socket-all-network-interfaces. It is
+        # dismissed there as used in tests, and the reason is written here as
+        # well so it survives migrating off that platform.
         blocker = socket.socket()
         blocker.bind(("", 0))
         blocker.listen(1)
