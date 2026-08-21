@@ -85,6 +85,7 @@ ruff check src tests scripts     # lint
 ruff format src tests scripts    # format
 python -m build                  # build distribution
 twine check dist/*               # validate wheel and sdist metadata
+cyclonedx-py environment <venv>  # SBOM; the release workflow runs it
 python scripts/gen_test_certs.py # mint the throwaway TLS chain
 ```
 

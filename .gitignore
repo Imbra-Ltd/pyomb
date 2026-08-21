@@ -18,6 +18,11 @@ lib/
 lib64/
 parts/
 sdist/
+
+# The release workflow generates the SBOM beside dist/ and attaches it to the
+# release record. It describes one build, so a committed copy would pin a
+# description of whatever was last built locally.
+*.cdx.json
 var/
 wheels/
 share/python-wheels/

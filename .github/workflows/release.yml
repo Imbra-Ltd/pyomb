@@ -1,0 +1,139 @@
+name: Release
+
+# The tag is the trigger, which is what makes the assets belong to a version
+# rather than to a branch state. A tag can be pushed before or after the
+# release record is created; the upload step below handles either order.
+on:
+  push:
+    tags: ['v*']
+
+# Read-only by default. Only the job that attaches assets is granted more, at
+# job level, so the write scope cannot ride along with anything else.
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
+      # The dev extra carries build, twine and the SBOM generator, all pinned
+      # by uv.lock, so a release is built with the versions a human reviewed.
+      - name: Install
+        run: uv sync --locked --extra dev --python 3.13
+
+      # A tag naming one version while the package reports another means the
+      # bump was missed or the wrong commit was tagged. Both produce a release
+      # whose assets contradict its name, and neither is recoverable by
+      # deleting an asset afterwards -- so this refuses before anything is
+      # built. base/core/git.md asks for this check after a release; running it
+      # before is strictly better.
+      - name: Assert the tag names the version the package reports
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VERSION=$(uv run --no-sync python -c "import pyomb; print(pyomb.__version__)")
+          if [ "${TAG}" != "v${VERSION}" ]; then
+            echo "tag ${TAG} does not name version ${VERSION}" >&2
+            exit 1
+          fi
+          echo "tag ${TAG} matches __version__ ${VERSION}"
+
+      - name: Build
+        run: uv run --no-sync python -m build
+
+      - name: Check metadata
+        run: uv run --no-sync python -m twine check dist/*
+
+      # The release record is created here rather than by hand, so the tag is
+      # the single trigger and there is no window where a pushed tag has no
+      # release to attach to. devsecops.md tells a scan job to reach forward to
+      # a release it never creates; that rule keeps a side-car scan from having
+      # authority over the release record, and this workflow IS the release
+      # pipeline rather than a side-car. --verify-tag refuses to invent a
+      # release for a tag that is not there.
+      - name: Create the release record if the tag has none
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "release ${TAG} already exists"
+          else
+            gh release create "${TAG}" --verify-tag --title "${TAG}" --generate-notes
+          fi
+
+      # The distribution goes up before the SBOM is even generated. Anything
+      # that fails from here leaves a release carrying the artifacts a consumer
+      # actually needs, rather than an empty one -- which is the ordering
+      # devsecops.md is after when it says a scan must never block or erase a
+      # release.
+      - name: Attach the wheel and the sdist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: gh release upload "${TAG}" dist/* --clobber
+
+      # The SBOM describes what a consumer installs, so it is generated from an
+      # environment holding the built wheel and nothing else. Running the
+      # generator against the build environment instead would list pytest, ruff
+      # and the rest of the toolchain as components of pyomb, which is worse
+      # than shipping no SBOM: it is a machine-readable wrong answer.
+      #
+      # --output-reproducible drops the timestamp and serial number, so anyone
+      # can rebuild the tag and compare the SBOM byte for byte. The release
+      # record already carries the date.
+      #
+      # This step is allowed to fail the run, where devsecops.md marks the
+      # equivalent continue-on-error. That rule covers an advisory scan against
+      # a vulnerability service, where a red run means the service had a bad
+      # minute. This generation reads a local environment, reaches no network,
+      # and is byte-reproducible, so a failure is a defect worth seeing -- and
+      # the assets are already attached above, so red blocks nothing.
+      - name: Generate the SBOM
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          uv venv /tmp/consumer
+          uv pip install --python /tmp/consumer dist/*.whl
+          uv run --no-sync cyclonedx-py environment /tmp/consumer             --of JSON             --output-reproducible             -o "pyomb-${TAG#v}.cdx.json"
+          uv run --no-sync python - <<'PY'
+          import glob
+          import json
+          import sys
+
+          sbom = json.load(open(glob.glob("pyomb-*.cdx.json")[0], encoding="utf-8"))
+          names = sorted(c["name"] for c in sbom.get("components", []))
+
+          # An empty component list means the generator read an environment the
+          # wheel never reached, which produces a valid, useless document.
+          if names != ["pyomb"]:
+              sys.exit(f"SBOM lists {names}, expected ['pyomb']")
+
+          print("SBOM components:", names)
+          PY
+
+      - name: Attach the SBOM
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh release upload "${TAG}" "pyomb-${TAG#v}.cdx.json" --clobber
+          gh release view "${TAG}" --json assets --jq '.assets[].name'
