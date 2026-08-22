@@ -1244,3 +1244,89 @@ package, per ADR-002. See `README.md` for usage and
   divergence from the pinned templates, so the next submodule bump that moves
   the ASCII rule must be read against that record rather than as a gap to
   close.
+
+## 2026-08-22 — Land the stack, widen the de-stack recipe (wrap)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Landed the four open pull requests** — #83, #84 and #85 onto `main` in
+    that order, then #86. The previous session left all four green and
+    mergeable and recorded landing them as the owner's, merging having been
+    unavailable to the agent then.
+  - **Read the protection settings rather than assuming the batch cascade** —
+    the git template describes every remaining pull request going stale after
+    the first merge, at one update and one CI cycle each. That holds only
+    where protection requires branches be up to date, and `main` here reads
+    `strict: false`, so nothing needed updating between merges. This session
+    had predicted the cascade out loud before checking, which is the wrong
+    order.
+  - **Let the platform retarget the dependent pull request** — #85 merged with
+    no delete-branch flag, and the automatic head-branch deletion retargeted
+    #86 onto `main` and left it open, as PLAYBOOK 1.5 says it does.
+  - **De-stacked #86 by merging `main` in** — it conflicted the moment it
+    retargeted. Its merge base is the `main` tip from before the stack, where
+    the journal still carries the NUL byte #85 removed, so both sides had
+    rewritten the whole file over a base git cannot three-way merge. Resolved
+    to the branch's own version, taken after measuring that version as
+    `main`'s journal plus 119 added lines with nothing removed and nothing
+    changed.
+  - **Widened PLAYBOOK 1.5 to the squash case** — its closing paragraph gave
+    the de-stack verification for a rebase-merged lower pull request, and this
+    repository squash-merges, which is the case that actually ran. The
+    addition states why the merge base stays behind under a squash and names
+    the conflict-stage comparison as the check.
+  - **Finished retiring the `--limit 1` CI selector** — CLAUDE.md moved off
+    it a day ago, on the finding that with two workflows it reports whichever
+    finished last and hides the other. The PLAYBOOK kept instructing it in
+    two places, one of them the pull-request recipe a reader is most likely
+    to copy from, so the retired selector outlived its retirement on the
+    surface where it does the most damage. 3.9 now also says why the full
+    hash matters.
+- **PRs merged:** #83, #84, #85 and #86.
+- **Issues closed/created:** #76, #77 and #80 closed on merge, each read back
+  from the tracker rather than assumed. None created here. #70 and #68 are
+  untouched, and #68's trigger was re-checked rather than recalled: `v2.44.0`
+  is still the newest tag and still carries no `examples.md`.
+- **Lesson:** a conflict resolution is a claim about what it discards. Taking
+  one side of a whole-file conflict is easy to justify by narrative — the
+  branch is newer, it already contains the other side — and a narrative is not
+  evidence. Comparing the two conflict stages makes it a measurement: 119
+  lines added, none removed, none changed, so the side taken is provably a
+  superset. The squash landing exactly 119 insertions confirmed it afterwards.
+- **Lesson:** an abbreviated commit hash makes `gh run list --commit` answer
+  about nothing. It matches no run, prints an empty list and exits zero, so a
+  poll waiting for the run to appear spent its whole budget and reported
+  silence, which reads exactly like a workflow that never fired. CLAUDE.md
+  already prescribes the full form through `git rev-parse HEAD`, written after
+  the neighbouring `--limit 1` defect a day earlier; this session deviated
+  from a rule the project had already paid to learn.
+- **Lesson:** the working directory persists between commands. A `cd` into the
+  submodule made a later read of PLAYBOOK 1.5 return nothing, and the obvious
+  reading was that the section did not exist and the wrap should write it. It
+  exists, and it is thorough enough that writing it again would have been the
+  session's worst output. One `pwd` separates a documentation gap from a false
+  negative, and the rule saying so was already read this session.
+- **Lesson:** `--no-verify` went onto the merge-conflict commit out of habit,
+  which is the exact bypass the three-layer gate model names. The hooks and
+  the full suite ran immediately afterwards and passed, so the commit ended
+  verified in the wrong order rather than unverified — but ordering is the
+  whole point of a pre-commit gate, and a habit is not a reason.
+- **Lesson:** retiring a flag from the rule that names it does not retire it
+  from the documents that instruct it. The `--limit 1` correction landed in
+  CLAUDE.md a day ago and the PLAYBOOK kept two copies. The sweep is one grep
+  at the moment of retirement and it was not run; what surfaced it here was
+  opening the PLAYBOOK for an unrelated reason and reading the command that
+  happened to sit there.
+- **Upstream:** two filings, both against rules this session found silent
+  rather than wrong. braboj/solid-ai-templates#1048 against
+  `templates/base/core/git.md`: de-stacking gives two routes and no way to
+  verify the resolution, and under squash merge the merge base predates the
+  base's own content, so a whole-file conflict can arise over content neither
+  change touched. #1049 against `templates/platform/github.md`: the template
+  says nothing about selecting a run by commit, and the abbreviated hash
+  returns an empty list and exits zero. Related to #1044 and distinct from it
+  — there a selector picked the wrong member of a real population, here the
+  key matches nothing and the empty result reads as a clean answer.
+- **Pending:** nothing this session could resolve. #70 is the owner's decision
+  by their own instruction, and #68 waits on an upstream tag that does not yet
+  exist. Both were verified open and correctly labelled against the tracker.

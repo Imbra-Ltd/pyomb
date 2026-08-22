@@ -28,7 +28,7 @@ match is on the bare substring and fires even when negated.
 
 ```bash
 gh pr create --fill
-gh run list --limit 1        # CI must be green before merge
+gh run list --commit $(git rev-parse HEAD)   # every row must be green
 ```
 
 Before opening it, list every closing keyword the body actually contains and
@@ -106,6 +106,25 @@ so the resolution is the branch's own version throughout, and
 `git diff --stat HEAD` after resolving MUST be empty. Anything else means the
 merge brought in something the branch did not already have, which is worth
 reading before committing.
+
+A squash merge reaches the same answer by a longer route, and it is the
+route this repository takes. The lower branch's commits are replaced on
+`main` by one equivalent commit that the upper branch is not descended
+from, so the merge base stays the pre-stack `main`, and any file both
+sides rewrote conflicts whole — including a file neither change is about.
+
+The resolution is still the branch's own version, but assert that rather
+than reasoning to it. Before resolving, compare the two conflict stages,
+where stage 2 is the branch and stage 3 is `main`:
+
+```bash
+git show :2:<path> > /tmp/ours && git show :3:<path> > /tmp/theirs
+diff /tmp/theirs /tmp/ours
+```
+
+Added lines only means the branch side is a superset, so taking it
+discards nothing. A removed or changed line is the case to stop and read
+before committing.
 
 ### 1.6 Issue labels (gh)
 
@@ -325,9 +344,14 @@ reopened it.
 ### 3.9 CI
 
 ```bash
-gh run list --limit 1
+gh run list --commit $(git rev-parse HEAD)
 gh run view <id> --log-failed
 ```
+
+Both halves of that selector are load-bearing. `--limit 1` reports whichever
+workflow finished last and hides the other, and an abbreviated hash makes
+`--commit` match nothing, print an empty list and exit zero — a malformed
+query that reads exactly like a commit whose runs have not started.
 
 A local run is evidence about one platform. CI runs Linux under Python 3.10 and
 3.13; development is typically Windows. Read the run before calling a change
