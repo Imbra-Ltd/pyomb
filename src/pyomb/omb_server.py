@@ -81,7 +81,10 @@ class OmbServerSim(threading.Thread):
                                   built on mutual TLS.
         verify_hostname (bool)  : Verify client's hostname. Server contexts do
                                   not check hostnames; defaults to False.
-        ssl_options (int)       : Default SSL options.
+        ssl_options (int)       : SSL options OR-ed into the context. They can
+                                  only add a restriction, so a session may be
+                                  pinned above MINIMUM_TLS_VERSION but never
+                                  below it.
     """
 
     # None means "inherit the interpreter's secure default suite". The previous
@@ -94,6 +97,15 @@ class OmbServerSim(threading.Thread):
 
     PLAINTEXT_PORT = 502
     ENCRYPTED_PORT = 802
+
+    # The lowest protocol version the transport will negotiate. MB-TCP-Security
+    # v21 requires TLS 1.2 or better (R-32) and forbids negotiating down to TLS
+    # 1.1, TLS 1.0 or SSL 3.0 (R-34), so the floor is the specification's
+    # rather than a preference. Declaring it matters even where OpenSSL already
+    # defaults here: that default is a property of the linked library and its
+    # security level, so an older or differently configured build answers
+    # differently and nothing in this library would notice.
+    MINIMUM_TLS_VERSION = ssl.TLSVersion.TLSv1_2
 
     # Seconds start() waits for the listener before giving up on it.
     STARTUP_TIMEOUT = 10.0
@@ -185,6 +197,12 @@ class OmbServerSim(threading.Thread):
             self.ssl_context.check_hostname = verify_hostname
 
             self.ssl_context.options |= ssl_options
+
+            # Applied after the caller's options, which are OR-ed in and so can
+            # only add a restriction. ssl_options therefore still pins a session
+            # higher than the floor, and neither passing a mask that omits the
+            # protocol switches nor passing none at all can drop below it.
+            self.ssl_context.minimum_version = self.MINIMUM_TLS_VERSION
 
     ############################################################################
 
@@ -300,7 +318,16 @@ class OmbServerSim(threading.Thread):
         if 0 != self.ipAddress:
             ip_address_str = socket.inet_ntoa(struct.pack(">L", self.ipAddress))
 
-        # Create the server socket
+        # Create the server socket. An empty host binds every interface, which
+        # is what ipAddress = 0 asks for and is deliberate at the default: this
+        # server exists to accept connections from a device under test, and that
+        # device is normally on another host, so a loopback-only default would
+        # refuse the traffic the simulator is for. A caller wanting a narrower
+        # bind passes ipAddress and gets exactly the interface it names.
+        #
+        # CodeQL reports this as py/bind-socket-all-network-interfaces. It is
+        # dismissed there as intentional, and the reason is written here as well
+        # so it survives migrating off that platform.
         srv = socket.socket()
         srv.bind((ip_address_str, self.port))
         srv.setblocking(False)
