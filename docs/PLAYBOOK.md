@@ -107,6 +107,25 @@ so the resolution is the branch's own version throughout, and
 merge brought in something the branch did not already have, which is worth
 reading before committing.
 
+A squash merge reaches the same answer by a longer route, and it is the
+route this repository takes. The lower branch's commits are replaced on
+`main` by one equivalent commit that the upper branch is not descended
+from, so the merge base stays the pre-stack `main`, and any file both
+sides rewrote conflicts whole — including a file neither change is about.
+
+The resolution is still the branch's own version, but assert that rather
+than reasoning to it. Before resolving, compare the two conflict stages,
+where stage 2 is the branch and stage 3 is `main`:
+
+```bash
+git show :2:<path> > /tmp/ours && git show :3:<path> > /tmp/theirs
+diff /tmp/theirs /tmp/ours
+```
+
+Added lines only means the branch side is a superset, so taking it
+discards nothing. A removed or changed line is the case to stop and read
+before committing.
+
 ### 1.6 Issue labels (gh)
 
 Every issue carries exactly one type label and one priority label. GitHub has
