@@ -28,7 +28,7 @@ match is on the bare substring and fires even when negated.
 
 ```bash
 gh pr create --fill
-gh run list --limit 1        # CI must be green before merge
+gh run list --commit $(git rev-parse HEAD)   # every row must be green
 ```
 
 Before opening it, list every closing keyword the body actually contains and
@@ -344,9 +344,14 @@ reopened it.
 ### 3.9 CI
 
 ```bash
-gh run list --limit 1
+gh run list --commit $(git rev-parse HEAD)
 gh run view <id> --log-failed
 ```
+
+Both halves of that selector are load-bearing. `--limit 1` reports whichever
+workflow finished last and hides the other, and an abbreviated hash makes
+`--commit` match nothing, print an empty list and exit zero — a malformed
+query that reads exactly like a commit whose runs have not started.
 
 A local run is evidence about one platform. CI runs Linux under Python 3.10 and
 3.13; development is typically Windows. Read the run before calling a change
