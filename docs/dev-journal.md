@@ -1275,6 +1275,13 @@ package, per ADR-002. See `README.md` for usage and
     repository squash-merges, which is the case that actually ran. The
     addition states why the merge base stays behind under a squash and names
     the conflict-stage comparison as the check.
+  - **Finished retiring the `--limit 1` CI selector** — CLAUDE.md moved off
+    it a day ago, on the finding that with two workflows it reports whichever
+    finished last and hides the other. The PLAYBOOK kept instructing it in
+    two places, one of them the pull-request recipe a reader is most likely
+    to copy from, so the retired selector outlived its retirement on the
+    surface where it does the most damage. 3.9 now also says why the full
+    hash matters.
 - **PRs merged:** #83, #84, #85 and #86.
 - **Issues closed/created:** #76, #77 and #80 closed on merge, each read back
   from the tracker rather than assumed. None created here. #70 and #68 are
@@ -1304,6 +1311,12 @@ package, per ADR-002. See `README.md` for usage and
   the full suite ran immediately afterwards and passed, so the commit ended
   verified in the wrong order rather than unverified — but ordering is the
   whole point of a pre-commit gate, and a habit is not a reason.
+- **Lesson:** retiring a flag from the rule that names it does not retire it
+  from the documents that instruct it. The `--limit 1` correction landed in
+  CLAUDE.md a day ago and the PLAYBOOK kept two copies. The sweep is one grep
+  at the moment of retirement and it was not run; what surfaced it here was
+  opening the PLAYBOOK for an unrelated reason and reading the command that
+  happened to sit there.
 - **Upstream:** two filings, both against rules this session found silent
   rather than wrong. braboj/solid-ai-templates#1048 against
   `templates/base/core/git.md`: de-stacking gives two routes and no way to
