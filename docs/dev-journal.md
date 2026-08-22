@@ -1048,7 +1048,7 @@ package, per ADR-002. See `README.md` for usage and
   it back with `cat -A` and comparing the tokenised command is what found it,
   on the one workflow that cannot be dry-run on a pull request.
 - **Lesson:** the first measurement of the ASCII footprint said 96,965
-  non-ASCII characters in one source file. `grep -o '[^ -]'` does not
+  non-ASCII characters in one source file. `grep -o '[^\x00-\x7f]'` does not
   interpret that range and matched almost everything. The real number is 338
   across 23 files, and the implausible one should have been the tell before the
   method was.

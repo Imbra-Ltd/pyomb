@@ -151,7 +151,7 @@ class ModbusIllegalDataAddress(ModbusProtocolError):
     registers of 4, then this request will successfully operate (address-wise
     at least) on registers 96, 97, 98, 99. If a request is submitted with a
     starting register address of 96 and a quantity of registers of 5, then
-    this request will fail with Exception Code 0x02 “Illegal Data Address”
+    this request will fail with Exception Code 0x02 "Illegal Data Address"
     since it attempts to operate on registers 96, 97, 98, 99 and 100, and
     there is no register with address 100.
 
@@ -258,7 +258,7 @@ class ModbusSlaveDeviceBusy(ModbusProtocolError):
     """The slave device is busy processing a long-duration command.
 
     Specialized use in conjunction with programming commands. The server
-    (or slave) is engaged in processing a long–duration program command. The
+    (or slave) is engaged in processing a long-duration program command. The
     client (or master) should retransmit the message later when the server
     (or slave) is free.
 
