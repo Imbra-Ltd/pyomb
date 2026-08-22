@@ -318,7 +318,16 @@ class OmbServerSim(threading.Thread):
         if 0 != self.ipAddress:
             ip_address_str = socket.inet_ntoa(struct.pack(">L", self.ipAddress))
 
-        # Create the server socket
+        # Create the server socket. An empty host binds every interface, which
+        # is what ipAddress = 0 asks for and is deliberate at the default: this
+        # server exists to accept connections from a device under test, and that
+        # device is normally on another host, so a loopback-only default would
+        # refuse the traffic the simulator is for. A caller wanting a narrower
+        # bind passes ipAddress and gets exactly the interface it names.
+        #
+        # CodeQL reports this as py/bind-socket-all-network-interfaces. It is
+        # dismissed there as intentional, and the reason is written here as well
+        # so it survives migrating off that platform.
         srv = socket.socket()
         srv.bind((ip_address_str, self.port))
         srv.setblocking(False)
