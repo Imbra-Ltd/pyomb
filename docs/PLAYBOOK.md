@@ -488,21 +488,22 @@ block against the new pin in the same commit. Upstream adds and removes
 template files, and the block is a hand-maintained copy of what
 `templates/manifest.yaml` resolves to; a bump that adds one leaves the block
 short, and a bump backwards leaves it naming a file the pin does not carry.
-Every entry MUST exist at the pinned revision:
+
+Both directions are checked by the suite, so reconciling needs no separate
+step and cannot be forgotten:
 
 ```bash
-for f in $(sed -n 's/^- `\(templates\/[^`]*\)`.*/\1/p' CLAUDE.md); do
-  git -C docs/solid-ai-templates cat-file -e "HEAD:$f" 2>/dev/null \
-    || echo "MISSING $f"
-done
+pytest tests/test_startup_block_resolves.py
 ```
 
-Output MUST be empty. A `MISSING` line means the block cites a file the pin
-does not contain, which is a startup instruction that cannot be followed.
-Check the manifest for entries the block now lacks in the other direction:
-resolve the stack chain for `stack-python-lib` plus the platform, and expect
-the block to be that set plus `scope.md` and `ai-workflow.md`, which no stack
-declares. ADR-008 carries why those two are there.
+It resolves the manifest's core set and dependency edges over the two axes this
+repository sits on, `stack-python-lib` and `platform-github`, adds the two
+session-protocol templates no stack declares, and fails naming each file that
+differs and which side it sits on. A file the chain resolves and the block
+omits is governed scope silently lost; a file the block names and the chain
+does not resolve is scope never adopted. A failure is the block to correct
+rather than the test, unless this repository has changed stack or code host.
+ADR-008 carries why the two additions are there, ADR-015 why the check exists.
 
 ### 4.2 Record a decision
 
