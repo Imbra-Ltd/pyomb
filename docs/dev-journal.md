@@ -1396,3 +1396,71 @@ package, per ADR-002. See `README.md` for usage and
   ships it inside the release unlisted, with no gate reporting it.
 - **Pending:** nothing. Every checklist item was verified against the tree, the
   tracker or the remote rather than deferred.
+
+## 2026-08-24 — Gate the prose conventions (afternoon)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Reviewed whether ADR-016 was worth keeping**, at the owner's question,
+    and kept it. The record is cited as live policy by PLAYBOOK 1.6 and 5, and
+    retracting it would need a superseding record plus two PLAYBOOK rewrites --
+    more artifact to remove one than to keep it. The divergence it bounds also
+    survives retraction, since two tickets still sit closed against a pinned
+    rule that says carry them open. The fair criticism went in the reply: it
+    generalises from one instruction applied twice, and decisions 4 to 6
+    restate rules that already exist elsewhere.
+  - **Gated decision-record readability** as ADR-017: 40 words a sentence, 80 a
+    paragraph, enforced by `tests/test_decisions_are_readable.py`. Both numbers
+    are calibrated rather than picked. The 71 pinned template files put their
+    99th-percentile sentence at 42 words and the project's tightest prose, the
+    README and `CLAUDE.md`, tops out at 41, so 40 is where the prose this
+    project is measured by already sits. A limit of 35 would have been stricter
+    than the templates' own prose.
+  - **Edited 13 of the 16 merged records without superseding one.** The gate
+    reported 22 offenders, and every one shared a single shape: a list written
+    as a sentence. That is what made the edit safe, because rendering the list
+    as a list moves no word of the argument. ADR-017 bounds the divergence from
+    the format-migration rule at the claim rather than the byte, and 9 of the
+    22 sat in the `**Upstream:**` block, which is project front matter rather
+    than one of the four sections that rule names.
+  - **Gated Markdown width** as ADR-018, at 80 columns. The convention turned
+    out to be unwritten rather than unenforced: `.editorconfig` sets a width
+    under `[*.py]` only and CONTRIBUTING states 120 with 80 recommended under a
+    heading that reads Code style, so neither reaches prose. Of 165 lines past
+    80, 160 are in the tutorial imported with the v0.1.0 tree at its own width
+    and 2 are README badge links, which left three genuine offenders.
+- **PRs merged:** none. #96 is open, green on all ten checks, and carries all
+  four commits pending the owner's review.
+- **Issues closed/created:** none either way. The work was owner-directed in
+  conversation against an empty backlog and carried no tracking issue.
+- **Lesson:** a summary line is not a verification. The record introducing the
+  readability gate breached it, and the local run was reported green on content
+  that CI then failed. The cause was reading `pytest -q` through `tail -3` and
+  taking a pass line at face value; the byte-identical content ruled out any
+  environment difference. Read the count deliberately, especially when the
+  claim being made is that a new gate passes.
+- **Lesson:** near-total compliance is what hides a convention. The 80-column
+  wrap was kept by every document in the tree and written down nowhere, so
+  nothing looked wrong until a 98-column heading rode a fully green pipeline.
+  The tell was not the missing rule but the one line that broke it.
+- **Lesson:** measuring the threshold inverted the instinct. Intuition reached
+  for a tighter sentence limit than the corpus supports, and the distribution
+  showed that limit would have gated the project's prose more strictly than the
+  templates it inherits -- a gate the project would have fought rather than
+  kept.
+- **Lesson:** an issue number was written into a record and a pull request
+  before the issue was filed, twice, and matched by luck both times. Filing
+  first costs nothing and the alternative is a citation that points nowhere.
+- **Upstream:** two filings. braboj/solid-ai-templates#1054 against
+  `templates/base/core/docs.md`: the format-migration exemption enumerates
+  permitted operations, so it is under-inclusive by construction and omits the
+  one edit an immutable record most needs. #1055 against the same file: a width
+  rule stated for code does not reach the prose around it, since an
+  `.editorconfig` entry and a Code style heading both stop at the source tree.
+- **Pending:** #96 is unmerged and awaiting review, which is the owner's call
+  and the only blocked item. Two findings are recorded here rather than filed,
+  because the owner has deliberately kept the backlog empty and filing is their
+  decision: `src/pyomb/stream.py` and three test modules cite ADR numbers in
+  comments and docstrings, which `CLAUDE.md` forbids and no gate catches; and
+  the journal's own prose is gated for width but not readability, running to a
+  128-word sentence and list items past 200 words.
