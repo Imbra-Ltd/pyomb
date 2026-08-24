@@ -32,7 +32,8 @@ Titles are sentence case with an imperative verb and no type prefix; the
 labels carry the type. Describe the problem, not only the proposed fix, and
 include a reproduction where one applies.
 
-Security vulnerabilities do **not** go in issues — see [SECURITY.md](SECURITY.md).
+Security vulnerabilities do **not** go in issues — see
+[SECURITY.md](SECURITY.md).
 
 ## 3. Branches and commits
 
@@ -69,6 +70,12 @@ Keep pull requests small and focused on one concern.
 
 Some older code uses camelCase method names (`sendRequest`, `getPeers`). That
 is legacy, not the convention; do not add more.
+
+Markdown is a separate rule and a stricter one: every line wraps at 80 columns,
+with table rows, fenced blocks and lines carrying a URL exempt because none of
+them can be wrapped. The decision records are held tighter still, to 40 words a
+sentence and 80 a paragraph. Both run in the test suite, so a long line fails
+the pipeline rather than reaching review.
 
 Run the linter, the formatter and the type checker before opening a pull
 request:

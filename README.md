@@ -168,7 +168,7 @@ src/pyomb/              # The library
   errors.py             # Modbus exception codes as a Python hierarchy
   logger.py             # Logger that writes to stdout and optionally a file
   defines.py            # Protocol constants
-tests/                  # One module per source module, plus regression modules
+tests/                  # Per-module tests, regression modules, convention gates
 scripts/                # Certificate generation and standalone demos
 docs/                   # Specifications, tutorial, decisions, journal, audits
 assets/                 # Generated test certificates (gitignored)

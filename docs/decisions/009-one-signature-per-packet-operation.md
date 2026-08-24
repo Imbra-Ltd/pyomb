@@ -5,7 +5,7 @@
 **Upstream:** filed as braboj/solid-ai-templates#1033 against
 `templates/base/core/quality.md`. With the domain skin off, the convention is
 that a variadic parameter on an abstract operation is not a contract but a
-licence: it type-checks against every subclass and constrains none, so the
+licence. It type-checks against every subclass and constrains none, so the
 divergence it permits is only ever found by a checker looking somewhere else.
 
 ## Context

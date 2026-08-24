@@ -4,9 +4,9 @@
 **Date:** 2026-08-21
 **Upstream:** filed as braboj/solid-ai-templates#1045 against
 `templates/base/core/quality.md`. With the domain skin off, the convention is
-that a mechanically checkable content restriction must name its check, which
-`quality-gates-pair-check` already requires in general and which the ASCII rule
-itself does not do — so the one rule in the templates most likely to be
+that a mechanically checkable content restriction must name its check.
+`quality-gates-pair-check` already requires that in general, and the ASCII rule
+itself does not do it. So the one rule in the templates most likely to be
 violated by the templates' own prose is also the one with no way to notice.
 
 ## Context

@@ -195,6 +195,15 @@ follow the referenced templates. Project-specific additions only:
 - Markdown prose may use the em dash; every other tracked file is ASCII, and
   Markdown may use no other non-ASCII character either. Enforced by
   `tests/test_source_is_ascii.py`; see ADR-014
+- A decision record holds every sentence to 40 words and every paragraph to 80.
+  A sentence that runs long is almost always carrying a list — render it as
+  one. Enforced by `tests/test_decisions_are_readable.py`; see ADR-017
+- A readability edit to a merged decision record that changes no claim is a
+  format migration, not a new decision; say so in the commit and show it with a
+  word-level diff. An edit that changes a claim needs a new record; see ADR-017
+- Markdown wraps at 80 columns. Table rows, fenced blocks and lines carrying a
+  URL are exempt because none of them can be wrapped. Enforced by
+  `tests/test_markdown_line_width.py`; see ADR-018
 
 ## 4. Identity
 

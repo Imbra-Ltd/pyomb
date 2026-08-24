@@ -11,12 +11,14 @@ braboj/solid-ai-templates#1019.
 
 ADR-003 adopted ruff as the linter and deliberately left `ruff format` out of
 scope. Adopting it rewrites 53 of the 56 tracked Python files, and three
-reasons argued for thinking first: it churns `git blame` across the whole
-codebase days after a history rewrite had already cost the project its
-provenance once; `CLAUDE.md` says every rule binds new and modified code, not
-untouched code, and a blanket reformat is the opposite of that; and the
-per-file lint freeze already contains formatting drift on untouched files
-without rewriting them.
+reasons argued for thinking first:
+
+- it churns `git blame` across the whole codebase days after a history rewrite
+  had already cost the project its provenance once
+- `CLAUDE.md` says every rule binds new and modified code, not untouched code,
+  and a blanket reformat is the opposite of that
+- the per-file lint freeze already contains formatting drift on untouched
+  files without rewriting them
 
 Against that, `templates/stack/python-lib.md` makes `ruff format --check` a CI
 MUST, and Format has been the one mandated gate with nothing behind it. A

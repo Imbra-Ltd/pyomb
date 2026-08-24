@@ -5,7 +5,7 @@
 **Upstream:** the same retrofit-ratchet shape ADR-003 already filed upstream as
 braboj/solid-ai-templates#1014, so this went there as a comment rather than a
 second issue. The refinement it contributes is that a retrofit freezes at the
-granularity of the finding, never of the analysis producing it — disabling a
+granularity of the finding, never of the analysis producing it. Disabling a
 strict sub-flag also stops the checker looking, which would have discarded the
 findings in #51 instead of recording them.
 
@@ -17,8 +17,9 @@ errors across six of its eight modules; `__init__.py` and `defines.py` already
 pass.
 
 The `python-lib` template describes staged adoption for exactly this case:
-start non-strict with `ignore_missing_imports`, then flip `disallow_untyped_defs`
-and `strict_optional` per module, converging on `--strict`. Measuring before
+start non-strict with `ignore_missing_imports`, then flip
+`disallow_untyped_defs` and `strict_optional` per module, converging on
+`--strict`. Measuring before
 applying it showed the staged path does not fit this project.
 
 - Plain `mypy src/` reports no issues at all, once one annotation is added.

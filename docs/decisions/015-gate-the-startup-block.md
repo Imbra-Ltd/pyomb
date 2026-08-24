@@ -5,9 +5,9 @@
 **Upstream:** filed as braboj/solid-ai-templates#1050 against
 `templates/base/core/agents.md`. With the domain skin off, the convention is
 that a mandatory cache of a machine-readable source must be gated against that
-source — the templates already call a consumer's chain list a cache that can go
-stale and silently change governed scope, and name no check for it, which is
-the shape `quality-gates-pair-check` exists to refuse.
+source. The templates already call a consumer's chain list a cache that can go
+stale and silently change governed scope, and they name no check for it. That
+is the shape `quality-gates-pair-check` exists to refuse.
 
 ## Context
 
@@ -90,7 +90,7 @@ correction to a person. The rejected option's cost was its machinery; a test
 module carries none of it.
 
 The manifest is read at the pin rather than from the working tree or
-`origin/main`, per the same rule that governs reading any template here: those
+`origin/main`, per the same rule that governs reading any template here. Those
 describe a future state of this repository, and a chain resolved from one would
 report drift against rules that do not govern yet.
 

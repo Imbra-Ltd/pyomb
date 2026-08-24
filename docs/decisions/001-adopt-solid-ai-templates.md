@@ -14,12 +14,16 @@ ONBOARDING or PLAYBOOK, with `generated/stack-python-lib.md` named as the
 ready-made basis.
 
 Four agent-assisted sessions between 2026-08-15 and 2026-08-17 produced eight
-defect fixes, and their post-mortems in `docs/dev-journal.md` name recurring
-causes that no code change prevents: a suite that only round-trips through its
-own codec, work verified on one operating system, and claims asserted from
-memory rather than read from the file that would falsify them. Those are
-conventions, and conventions need somewhere to live that an agent reads on
-every turn.
+defect fixes. Their post-mortems in `docs/dev-journal.md` name recurring causes
+that no code change prevents:
+
+- a suite that only round-trips through its own codec
+- work verified on one operating system
+- claims asserted from memory rather than read from the file that would
+  falsify them
+
+Those are conventions, and conventions need somewhere to live that an agent
+reads on every turn.
 
 The templates offer three consumption models. Inline copies every rule into the
 project file; reference keeps the project file lean and relies on the agent
