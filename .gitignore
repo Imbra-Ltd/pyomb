@@ -172,3 +172,8 @@ cython_debug/
 *.csr
 *.srl
 assets/certificates/
+
+# Agent tool settings local to one machine. The project rules an agent must
+# follow are in CLAUDE.md, which is tracked; only the per-machine overrides
+# are ignored, so a shared .claude/settings.json can still be committed.
+.claude/settings.local.json
