@@ -1330,3 +1330,69 @@ package, per ADR-002. See `README.md` for usage and
 - **Pending:** nothing this session could resolve. #70 is the owner's decision
   by their own instruction, and #68 waits on an upstream tag that does not yet
   exist. Both were verified open and correctly labelled against the tracker.
+
+## 2026-08-24 — Ship v0.2.1, empty the backlog (wrap)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Released v0.2.1** — #90 squash-merged, then an annotated tag pushed on
+    the resulting commit. The release is entirely tag-driven: the workflow
+    asserted the tag names the version the package reports, built, created the
+    release record itself and attached the wheel, the sdist and the CycloneDX
+    SBOM. `gh release create` was deliberately not run, PLAYBOOK 5 saying it
+    only risks racing the workflow for the same record.
+  - **Landed #89** — the startup-block guard, which closed #88 on merge. Its
+    branch was updated onto the post-release `main` before merging, so its
+    checks ran against the tree it would actually join.
+  - **Closed #70 and #68 as deferred** — both by owner instruction, each with a
+    comment recording that the closure decides nothing. ADR-016 records the
+    divergence and bounds it, since `base-issues-defer` puts deferred work in
+    an open, unmilestoned issue and both tickets were written to exactly that
+    shape.
+  - **Swept the citations the closures broke** — PLAYBOOK 5 claimed "#70
+    carries whether it ever is" and "#70 tracks that work", and 1.6 said
+    deferral is the absence of a milestone, which ADR-016 contradicts.
+    ADR-015 describes #68 as open four times and was left alone, being merged
+    and immutable; ADR-016's Related section takes the reader who follows it.
+  - **Corrected the repository visibility in CLAUDE.md** — the identity block
+    had said private since it was written, and `gh repo view` reports `PUBLIC`.
+    That is the fact an agent reasons from when judging what is safe to commit,
+    in the one file loaded before anything else.
+- **PRs merged:** #90, #89, #91, #92, #93 and #94.
+- **Issues closed/created:** #88 closed on merge, read back from the tracker
+  rather than assumed. #70 and #68 closed as `NOT_PLANNED` by instruction. None
+  created here. The backlog is now empty, which it has not been before.
+- **Lesson:** the batch-merge cascade did not fire, and this session predicted
+  it would before checking — the same mistake the previous entry records, with
+  the same cause noted there, that protection reads `strict: false`. Reading a
+  lesson is not the same as it binding. The check is one field and it belongs
+  before the claim.
+- **Lesson:** a gate's scope is narrower than the rule it enforces. The claim
+  that a branch-tip submodule pin would now fail the #89 guard was wrong: that
+  guard compares the block against the chain the pin resolves and never asks
+  whether the pin is a tag, so a bump plus the matching block line passes it.
+  What forbids the bump is the rule in CLAUDE.md and nothing else. Attributing
+  a rule to a test that does not carry it makes the rule look cheaper to
+  satisfy than it is, and it took reading the test to notice.
+- **Lesson:** closing an issue silently transfers whatever it was holding.
+  #68 was the only thing tracking ADR-008's stale counts, and it held the
+  argument that a supersession ADR would be churn *because* something tracked
+  them; that argument survived the close and its tracker did not. The
+  second-order loss is invisible from the close button, which is why ADR-016
+  requires the closing comment to name it.
+- **Lesson:** the wrap-up checklist is not bookkeeping. Item 6 turned up a
+  false statement about repository exposure that had been sitting in CLAUDE.md
+  since it was written, and item 9 turned up an unstated release ordering that
+  would have shipped an incomplete changelog. Neither was in the session's
+  scope and neither would have been found by working the scope.
+- **Upstream:** two filings, both against rules that are silent rather than
+  wrong. braboj/solid-ai-templates#1052 against
+  `templates/base/workflow/issues.md`: a deferral's trigger has no watcher and
+  the open issue is not one, so an externally-triggered deferral accumulates
+  re-checking cost and, where it is also the sole tracker of a drift elsewhere,
+  drops that drift silently when closed. #1053 against
+  `templates/base/core/git.md`: the release procedure says nothing about other
+  ready pull requests, and merging one between the release commit and the tag
+  ships it inside the release unlisted, with no gate reporting it.
+- **Pending:** nothing. Every checklist item was verified against the tree, the
+  tracker or the remote rather than deferred.
