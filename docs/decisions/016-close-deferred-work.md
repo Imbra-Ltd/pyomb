@@ -125,4 +125,10 @@ triaged.
 - ADR-008 — the platform template resolution whose counts #68 was tracking
 - ADR-014 — the other recorded divergence from a pinned template rule, and the
   precedent for bounding a divergence rather than taking an amnesty
+- ADR-015 — merged the same day and describes #68 four times as open, once as
+  "the open reconciliation whose recurrence this prevents". Those readings were
+  accurate when written and are not corrected in place, because a merged record
+  is immutable. This record is where a reader who follows them lands: the guard
+  ADR-015 installs is unaffected by the closure, since it compares the block
+  against the chain the pin resolves and never consults the tracker
 - #68 and #70 — the two closures this record generalises from

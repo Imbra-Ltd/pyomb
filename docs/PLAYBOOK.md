@@ -582,7 +582,9 @@ with no signal that it has aged.
 ## 5. Release and deploy
 
 Releases are tagged and published on GitHub. The distribution is not on a
-package index; #70 carries whether it ever is.
+package index, and whether it ever is has not been decided. #70 held that
+question and was closed unanswered per ADR-016; reopen it rather than filing a
+replacement.
 
 To cut a release:
 
@@ -628,4 +630,6 @@ deliberately — assets built now from a later tree would not be what that tag
 was. See ADR-011.
 
 Before any publish to a package index: claim the name per ADR-002, and publish
-from CI only, never from a local machine. #70 tracks that work.
+from CI only, never from a local machine. #70 carries the acceptance criteria
+for that work, including Trusted Publishing over a long-lived token; it is
+closed rather than open, so nothing surfaces it until someone reopens it.
