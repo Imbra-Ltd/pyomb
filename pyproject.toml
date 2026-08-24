@@ -76,7 +76,12 @@ path = "src/pyomb/__init__.py"
 packages = ["src/pyomb"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/pyomb", "tests", "README.md", "LICENSE"]
+
+# Every pattern is anchored to the repository root. A bare name matches at any
+# depth, so an unanchored `tests` or `LICENSE` also selects the copy inside the
+# templates submodule and republishes it here. See
+# tests/test_sdist_includes_are_anchored.py.
+include = ["/src/pyomb", "/tests", "/README.md", "/LICENSE"]
 
 [tool.ruff]
 
