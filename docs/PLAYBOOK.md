@@ -146,8 +146,14 @@ and priority counts, so a `t: 0` is an unlabelled issue and a `t: 2` is a
 double-labelled one. Run it when triaging and before a release.
 
 There is no priority below `P3` and no holding-lane milestone. Work that is
-not scheduled carries an empty milestone field, which this repository uses for
-everything — deferral is the absence of a milestone, never a label.
+unscheduled but still live carries an empty milestone field — never a label
+and never a lane.
+
+Work deferred on a trigger outside this repository is closed rather than
+carried open, per ADR-016. The closing comment carries the trigger, the
+instruction to reopen rather than refile, and anything that loses its watcher
+by the closure. No triage label is applied: `wontdo` states the opposite of
+what is true for work that is expected back.
 
 ## 2. Domain operations
 
@@ -582,7 +588,9 @@ with no signal that it has aged.
 ## 5. Release and deploy
 
 Releases are tagged and published on GitHub. The distribution is not on a
-package index; #70 carries whether it ever is.
+package index, and whether it ever is has not been decided. #70 held that
+question and was closed unanswered per ADR-016; reopen it rather than filing a
+replacement.
 
 To cut a release:
 
@@ -628,4 +636,6 @@ deliberately — assets built now from a later tree would not be what that tag
 was. See ADR-011.
 
 Before any publish to a package index: claim the name per ADR-002, and publish
-from CI only, never from a local machine. #70 tracks that work.
+from CI only, never from a local machine. #70 carries the acceptance criteria
+for that work, including Trusted Publishing over a long-lived token; it is
+closed rather than open, so nothing surfaces it until someone reopens it.
