@@ -201,6 +201,9 @@ follow the referenced templates. Project-specific additions only:
 - A readability edit to a merged decision record that changes no claim is a
   format migration, not a new decision; say so in the commit and show it with a
   word-level diff. An edit that changes a claim needs a new record; see ADR-017
+- Markdown wraps at 80 columns. Table rows, fenced blocks and lines carrying a
+  URL are exempt because none of them can be wrapped. Enforced by
+  `tests/test_markdown_line_width.py`; see ADR-018
 
 ## 4. Identity
 

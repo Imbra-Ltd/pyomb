@@ -125,7 +125,8 @@ reopens this decision; neither is on the roadmap today.
 - A local run and CI resolve to the same checks, because both name the config
   file. Dropping `-c` silently produces a different, noisier run.
 - The project carries a documented reason for having half of what the stack
-  template names, rather than an unexplained gap that the next audit rediscovers.
+  template names, rather than an unexplained gap that the next audit
+  rediscovers.
 
 ## Related
 

@@ -17,8 +17,9 @@ errors across six of its eight modules; `__init__.py` and `defines.py` already
 pass.
 
 The `python-lib` template describes staged adoption for exactly this case:
-start non-strict with `ignore_missing_imports`, then flip `disallow_untyped_defs`
-and `strict_optional` per module, converging on `--strict`. Measuring before
+start non-strict with `ignore_missing_imports`, then flip
+`disallow_untyped_defs` and `strict_optional` per module, converging on
+`--strict`. Measuring before
 applying it showed the staged path does not fit this project.
 
 - Plain `mypy src/` reports no issues at all, once one annotation is added.

@@ -489,6 +489,21 @@ words. The fix is almost always the same: a sentence over the limit is carrying
 a list, so render it as a list and the words survive intact. A paragraph over
 the limit usually holds two subjects, so give the second its own paragraph.
 
+### 3.15 Markdown line width (pytest)
+
+```bash
+pytest tests/test_markdown_line_width.py
+```
+
+Every tracked Markdown line is held to 80 columns, counted in characters so an
+em dash costs one and not three. Table rows, fenced blocks and lines carrying a
+URL are exempt, each because it cannot be wrapped; a relative link is not.
+`docs/Open_Modbus_Tutorial.md` is outside the rule, having arrived with the
+v0.1.0 import at its own width. ADR-018 records the scope and the exemptions.
+
+A failure names each offender as `path:line (width)`. Wrap at or before column
+80. A heading that will not fit wants a shorter title, not a longer line.
+
 ## 4. Maintenance
 
 ### 4.1 Bump the templates submodule
