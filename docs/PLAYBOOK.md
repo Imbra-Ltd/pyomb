@@ -610,6 +610,14 @@ To cut a release:
    stale version to consumers
 8. Push the tag
 
+Merge the release pull request before any other pull request that is ready,
+and tag before merging the rest. The `CHANGELOG.md` entry written in step 4
+describes the tree as of the release commit, so anything merged between that
+commit and the tag ships inside the release with no entry naming it. The
+ordering is not enforced by anything — both pull requests are green and
+mergeable in either order, and the wrong order produces a correct build whose
+changelog is quietly incomplete.
+
 Pushing the tag is the last manual step. `.github/workflows/release.yml` fires
 on any `v*` tag and does the rest: it refuses a tag that does not name the
 version the package reports, builds the wheel and the sdist, creates the
