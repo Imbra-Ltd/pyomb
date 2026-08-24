@@ -1,8 +1,14 @@
+---
+id: "012"
+status: Superseded
+date: 2026-08-21
+category: tooling
+supersedes: ["007"]
+superseded_by: ["013"]
+---
+
 # ADR-012: Adopt CodeQL as the platform half of the SAST gate
 
-**Status:** Superseded by ADR-013
-**Date:** 2026-08-21
-**Supersedes:** ADR-007
 **Upstream:** filed as braboj/solid-ai-templates#1042 against
 `templates/platform/github.md`, and braboj/solid-ai-templates#1041 against
 `templates/base/core/quality.md`.

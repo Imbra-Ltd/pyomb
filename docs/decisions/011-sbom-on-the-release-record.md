@@ -1,7 +1,14 @@
+---
+id: "011"
+status: Accepted
+date: 2026-08-21
+category: release
+supersedes: []
+superseded_by: []
+---
+
 # ADR-011: Generate the SBOM from a consumer environment on tag
 
-**Status:** Accepted
-**Date:** 2026-08-21
 **Upstream:** filed as braboj/solid-ai-templates#1035 against
 `templates/base/security/devsecops.md`. With the domain skin off, the
 convention has two halves. An SBOM must describe what a consumer installs

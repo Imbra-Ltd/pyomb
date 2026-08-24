@@ -1,7 +1,14 @@
+---
+id: "018"
+status: Accepted
+date: 2026-08-24
+category: process
+supersedes: []
+superseded_by: []
+---
+
 # ADR-018: Markdown prose wraps at 80 columns
 
-**Status:** Accepted
-**Date:** 2026-08-24
 **Upstream:** filed as braboj/solid-ai-templates#1055 against
 `templates/base/core/docs.md`. With the domain skin off, the convention is that
 a formatting rule stated only for code is not stated for the prose around it.

@@ -1,7 +1,14 @@
+---
+id: "002"
+status: Accepted
+date: 2026-08-17
+category: repository
+supersedes: []
+superseded_by: []
+---
+
 # ADR-002: One project name, `pyomb`
 
-**Status:** Accepted
-**Date:** 2026-08-17
 **Upstream:** none — the naming rule is already generic in
 `templates/stack/python-lib.md`; only the chosen name is project-specific
 

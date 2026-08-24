@@ -1,7 +1,14 @@
+---
+id: "014"
+status: Accepted
+date: 2026-08-21
+category: process
+supersedes: []
+superseded_by: []
+---
+
 # ADR-014: Prose may use the em dash; everything else stays ASCII
 
-**Status:** Accepted
-**Date:** 2026-08-21
 **Upstream:** filed as braboj/solid-ai-templates#1045 against
 `templates/base/core/quality.md`. With the domain skin off, the convention is
 that a mechanically checkable content restriction must name its check.

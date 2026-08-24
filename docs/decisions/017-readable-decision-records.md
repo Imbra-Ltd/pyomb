@@ -1,7 +1,14 @@
+---
+id: "017"
+status: Accepted
+date: 2026-08-24
+category: process
+supersedes: []
+superseded_by: []
+---
+
 # ADR-017: Decision records stay readable, and merged ones are edited in place
 
-**Status:** Accepted
-**Date:** 2026-08-24
 **Upstream:** filed as braboj/solid-ai-templates#1054 against
 `templates/base/core/docs.md`. With the domain skin off, the convention is that
 a format-migration exemption which enumerates permitted operations is

@@ -1,7 +1,14 @@
+---
+id: "004"
+status: Accepted
+date: 2026-08-18
+category: tooling
+supersedes: []
+superseded_by: []
+---
+
 # ADR-004: Adopt ruff format across the tree
 
-**Status:** Accepted
-**Date:** 2026-08-18
 **Upstream:** the AST-equivalence proof below is reusable —
 `templates/base/core/testing.md` covers fingerprinting a refactor's output but
 not proving a formatter's rewrite mechanical. Filed as

@@ -1,7 +1,14 @@
+---
+id: "006"
+status: Accepted
+date: 2026-08-18
+category: repository
+supersedes: []
+superseded_by: []
+---
+
 # ADR-006: Migrate to a new repository with clean history
 
-**Status:** Accepted
-**Date:** 2026-08-18
 **Upstream:** `templates/base/core/git.md`, filed as
 braboj/solid-ai-templates#1021. This line first read `none`, on the reasoning
 that a platform rule is not a convention a template could carry. That was

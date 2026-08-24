@@ -1,8 +1,14 @@
+---
+id: "013"
+status: Accepted
+date: 2026-08-21
+category: tooling
+supersedes: ["012"]
+superseded_by: []
+---
+
 # ADR-013: A CodeQL baseline comes from the default branch, not a pull request
 
-**Status:** Accepted
-**Date:** 2026-08-21
-**Supersedes:** ADR-012
 **Upstream:** filed as braboj/solid-ai-templates#1043 against
 `templates/base/core/review.md`. With the domain skin off, the convention is
 that a measurement taken at the wrong scope answers a different question than

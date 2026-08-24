@@ -204,6 +204,14 @@ follow the referenced templates. Project-specific additions only:
 - Markdown wraps at 80 columns. Table rows, fenced blocks and lines carrying a
   URL are exempt because none of them can be wrapped. Enforced by
   `tests/test_markdown_line_width.py`; see ADR-018
+- A decision record opens with YAML front matter — `id`, `status`, `date`,
+  `category`, `supersedes`, `superseded_by` — which is the source of truth for
+  status and supersession. Copy `docs/decisions/TEMPLATE.md`; a new category
+  takes its own record. Enforced by `tests/test_decision_frontmatter.py`; see
+  ADR-019
+- Superseding a record updates both sides in the same change: `supersedes` on
+  the new one, `status` and `superseded_by` on the old. That metadata edit is
+  the one change a merged record accepts beyond readability; see ADR-019
 
 ## 4. Identity
 

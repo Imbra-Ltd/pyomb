@@ -504,6 +504,22 @@ v0.1.0 import at its own width. ADR-018 records the scope and the exemptions.
 A failure names each offender as `path:line (width)`. Wrap at or before column
 80. A heading that will not fit wants a shorter title, not a longer line.
 
+### 3.16 Decision-record schema (pytest)
+
+```bash
+pytest tests/test_decision_frontmatter.py
+```
+
+Every record opens with the YAML front matter the upstream governance record
+defines. The check reads it back: `id` matches the filename, `status` and
+`category` come from closed sets, `date` is `YYYY-MM-DD`, both link fields are
+present, and a supersession names the same pair from both sides. ADR-019
+records the schema and this project's category set.
+
+A new category is a decision that takes its own record. Widening the set in
+`CATEGORIES` to make a record pass inverts that, which is the same move the
+lint and type freezes forbid.
+
 ## 4. Maintenance
 
 ### 4.1 Bump the templates submodule
@@ -544,10 +560,16 @@ ADR-008 carries why the two additions are there, ADR-015 why the check exists.
 
 ### 4.2 Record a decision
 
-Add `docs/decisions/NNN-slug.md` with Status, Date, Context, Decision,
-Alternatives considered, Consequences, and an `Upstream:` line naming a
-candidate template file or `none`. Keep every sentence to 40 words and every
-paragraph to 80; 3.14 is the gate.
+Copy `docs/decisions/TEMPLATE.md` to `docs/decisions/NNN-slug.md`. Fill the
+YAML front matter — `id` matching the filename, `status`, `date`, a `category`
+from the closed set, and both link fields even when empty — then the
+`Upstream:` line naming a candidate template file or `none`, then the
+sections. Keep every sentence to 40 words and every paragraph to 80; 3.14 and
+3.16 are the gates.
+
+Superseding an earlier record updates both sides in the same change: the new
+record lists it in `supersedes`, and the old one gets `status: Superseded` and
+the new id in `superseded_by`. 3.16 fails if either side is missing.
 
 A merged record is immutable in what it claims, not in how it reads. Editing
 one for readability alone is a format migration: make the change, confirm with
