@@ -39,24 +39,21 @@ Security vulnerabilities do **not** go in issues — see
 
 Branch names: `feat/<scope>`, `fix/<scope>`, `docs/<scope>`, `chore/<scope>`.
 
-Commits: `<type>(<scope>): <summary>`, where type is one of `feat`, `fix`,
-`chore`, `docs`, `refactor`, `test`, `ci`. Write the body to explain why the
-change is needed, not what the diff already shows. Reference issues with
-`Refs #N` or `Closes #N`.
+Commits: `<type>(<scope>): <summary>` in the imperative, subject under 80
+characters, where type is one of `feat`, `fix`, `chore`, `docs`, `refactor`,
+`test`, `ci`. Write the body to explain why the change is needed, not what the
+diff already shows.
 
-Repeat the closing keyword before every number when a change closes more than
-one issue. `Closes #12, closes #13` closes both, while `Closes #12, #13` closes
-only the first — a bare `#13` is a plain reference, and it stays open after the
-merge. The keyword is matched as a bare substring, so a negation does not save
-you either: "does not close #14" closes #14. Write `part of #14` when you mean
-to reference without closing.
+Keep pull requests small and focused on one concern. Never force-push,
+`--force-with-lease` included; when a branch falls behind `main`, merge `main`
+into it. Reference an issue with `Refs #N`, and write a closing keyword only
+where the change genuinely resolves that issue — GitHub matches the bare
+substring, so it must be repeated before every number and it fires even when
+negated.
 
-Never force-push, `--force-with-lease` included. It rewrites history that other
-contributors and CI have already fetched, and it can discard commits that were
-never on your machine. When a branch falls behind `main`, merge `main` into it
-rather than rebasing.
-
-Keep pull requests small and focused on one concern.
+PLAYBOOK 1.1 to 1.4 carry the rest: the commands that check a pull request body
+for closing keywords before the merge and confirm afterwards what actually
+closed, and what to do with a branch that has fallen behind.
 
 ## 4. Code style
 
@@ -72,71 +69,35 @@ Some older code uses camelCase method names (`sendRequest`, `getPeers`). That
 is legacy, not the convention; do not add more.
 
 Markdown is a separate rule and a stricter one: every line wraps at 80 columns,
-with table rows, fenced blocks and lines carrying a URL exempt because none of
-them can be wrapped. The decision records are held tighter still, to 40 words a
-sentence and 80 a paragraph. Both run in the test suite, so a long line fails
-the pipeline rather than reaching review.
+and the decision records are held tighter still. Both run in the test suite, so
+a long line fails the pipeline rather than reaching review. PLAYBOOK 3.14 and
+3.15 carry the exemptions and what a failure prints.
 
 Run the linter, the formatter and the type checker before opening a pull
-request:
-
-```bash
-python -m ruff check src tests scripts
-python -m ruff format src tests scripts
-python -m mypy
-```
-
-Configuration is in `pyproject.toml`. The `per-file-ignores` table freezes the
-violations that existed when ruff replaced flake8, so a file you create is
-checked against the whole rule set while an existing one is held where it was.
-Do not add your file to that table to make the gate pass, and do not widen an
-existing entry — both defeat the point. The star imports that once needed
-`F403`/`F405` frozen are gone, so a new one fails the gate outright.
-
-CI runs the formatter as `ruff format --check`, which reports without
-rewriting. Formatting is not a review topic: run the command above and the
-check has nothing to say. ADR-004 records why the whole tree was reformatted
-in one go.
-
-mypy runs under `strict`, with the modules that predate the gate frozen by
-error code in `pyproject.toml`. The same two rules apply as to the lint table:
-a module you did not write is not added to make the gate pass, and an existing
-entry is not widened. A module you create is held to all of strict. ADR-005
-records why, and PLAYBOOK 3.5 has the detail.
+request; PLAYBOOK 3.4 and 3.5 carry the commands. Configuration is in
+`pyproject.toml`, including the two freezes — the `per-file-ignores` table for
+ruff and the per-module error codes for mypy. Both work the same way: a file
+you create is checked against the whole rule set, and neither table is a place
+to add your file to make a gate pass. ADR-003 and ADR-005 record why.
 
 ## 5. Tests
 
-Install the test tooling and run the suite:
+Add tests for any behaviour you change. A fix for a reported defect ships with
+a test that fails against the unfixed code — run it both ways and say so in the
+commit message.
 
-```bash
-pip install -e ".[test]"
-pytest tests
-```
-
-With coverage, as CI runs it:
-
-```bash
-pytest tests --cov=pyomb --cov-report=term-missing --cov-fail-under=80
-```
-
-Add tests for any behaviour you change. Protocol changes need a test asserting
-on the serialized bytes, not only on object state — the wire format is the
-contract.
+Protocol changes need a test asserting on the serialized bytes, not only on
+object state. The wire format is the contract, and a round trip through this
+library proves nothing about it; pair it with a vector from the specification.
 
 The coverage floor is deliberately below current coverage and is meant to be
-ratcheted upward, never lowered.
+ratcheted upward, never lowered. PLAYBOOK 3.1, 3.3 and 3.10 carry the commands.
 
 ## 6. Continuous integration
 
-`.github/workflows/ci.yml` runs lint, format, type check, tests and coverage on
-Python 3.10 and 3.13, plus a build, a static analysis pass and a secret scan,
-on every push to `main` and every pull request.
-
-A red pipeline blocks merge, and one job decides that. `gate` needs every other
-job and requires each to report exactly `success`, so any red job fails it —
-and so does a job that is skipped or cancelled, which is not the same as one
-that passed. It is the only required status check, which is what stops a newly
-added job from reporting without gating anything.
+A red pipeline blocks merge. Read the run rather than assume a green local one
+settles it — CI runs Linux under two Python versions, and development here is
+typically Windows.
 
 Install the hooks once and the same checks run before a commit lands, so a red
 pipeline is not the first you hear of a formatting or typing slip:
@@ -147,6 +108,9 @@ pre-commit install
 
 The hooks are skippable with `--no-verify`, which is why CI repeats every one
 of them.
+
+PLAYBOOK 3.6 covers the hooks and 3.9 the pipeline, including which checks gate
+a merge, why there are two of them, and how to read a failed run.
 
 ## 7. Documentation
 
