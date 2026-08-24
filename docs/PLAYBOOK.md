@@ -146,8 +146,14 @@ and priority counts, so a `t: 0` is an unlabelled issue and a `t: 2` is a
 double-labelled one. Run it when triaging and before a release.
 
 There is no priority below `P3` and no holding-lane milestone. Work that is
-not scheduled carries an empty milestone field, which this repository uses for
-everything — deferral is the absence of a milestone, never a label.
+unscheduled but still live carries an empty milestone field — never a label
+and never a lane.
+
+Work deferred on a trigger outside this repository is closed rather than
+carried open, per ADR-016. The closing comment carries the trigger, the
+instruction to reopen rather than refile, and anything that loses its watcher
+by the closure. No triage label is applied: `wontdo` states the opposite of
+what is true for work that is expected back.
 
 ## 2. Domain operations
 
