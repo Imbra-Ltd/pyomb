@@ -2,11 +2,11 @@
 
 **Status:** Accepted
 **Date:** 2026-08-24
-**Upstream:** candidate against `templates/base/workflow/issues.md`, not yet
-filed. With the domain skin off, the convention is that a deferral's trigger
-needs a named watcher whether or not the ticket stays open — the template's
-model assumes an open issue is one, and an open issue is not a watcher for a
-condition that fires in a different repository.
+**Upstream:** filed as braboj/solid-ai-templates#1052 against
+`templates/base/workflow/issues.md`. With the domain skin off, the convention is
+that a deferral's trigger needs a named watcher whether or not the ticket stays
+open — the template's model assumes an open issue is one, and an open issue is
+not a watcher for a condition that fires in a different repository.
 
 ## Context
 
