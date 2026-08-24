@@ -28,13 +28,13 @@ is 665 sentences, 128 prose paragraphs and 224 list items.
 
 The distribution is the argument. The records run half again the sentence
 length of the prose the project is measured by, and the tail is worse than the
-median suggests: 17 sentences past 40 words and 5 paragraphs past 80, spread
-across 13 of the 16 files.
+median suggests. It holds 17 sentences past 40 words and 5 paragraphs past 80,
+spread across 13 of the 16 files.
 
 The offenders shared one shape. Every one carried a list written as a sentence.
-The worst ran 73 words and held three reasons on semicolons; the most frequent
+The worst ran 73 words and held three reasons on semicolons. The most frequent
 was the `**Upstream:**` block, where 8 records each packed a whole argument into
-a single sentence, 7 of them hinged on an interpolated em dash.
+a single sentence. Seven of them hinged on an interpolated em dash.
 
 That shape is why the fix is safe. A sentence that already contains a list can
 be rendered as a list without touching a word of the argument, so the edit is
