@@ -49,7 +49,7 @@ outstanding — read them rather than inferring the gap.
 
 - Model: hybrid
 - Owner: Imbra Ltd — Branimir Georgiev
-- Repo: `github.com/Imbra-Ltd/pyomb` (private)
+- Repo: `github.com/Imbra-Ltd/pyomb` (public)
 - Stack: Python 3.10+, `pyproject.toml`, ruff, mypy, pytest
 - Distribution: PyPI as `pyomb`, imported as `pyomb`
 - Specifications: Modbus Application Protocol v1.1b3, Modbus Messaging
