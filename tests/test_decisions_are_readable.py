@@ -127,6 +127,11 @@ def units(text):
     opened = 0
     fenced = False
 
+    # The record's YAML front matter is metadata rather than prose: it holds
+    # fields, not sentences, so measuring it as a paragraph asks a question it
+    # has no answer to. Its width is still the width gate's business.
+    front_matter = False
+
     def flush():
         nonlocal buffered
         if buffered:
@@ -135,6 +140,15 @@ def units(text):
 
     for number, raw in enumerate(text.split("\n"), start=1):
         line = raw.strip()
+
+        # Only a delimiter on the very first line opens front matter, so a
+        # thematic break further down the document is not mistaken for one.
+        if line == "---" and (number == 1 or front_matter):
+            front_matter = number == 1
+            continue
+
+        if front_matter:
+            continue
 
         # A fence toggles rather than nests, so the diagrams between a pair of
         # them are skipped whatever they contain.

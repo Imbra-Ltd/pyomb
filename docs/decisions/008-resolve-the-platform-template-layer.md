@@ -1,7 +1,14 @@
+---
+id: "008"
+status: Accepted
+date: 2026-08-19
+category: process
+supersedes: []
+superseded_by: []
+---
+
 # ADR-008: Resolve the platform layer into the startup block
 
-**Status:** Accepted
-**Date:** 2026-08-19
 **Upstream:** filed as braboj/solid-ai-templates#1029 against
 `templates/base/workflow/scope.md`. With the domain skin off, the convention is
 that a manifest selecting layers on independent axes needs each axis resolved

@@ -1,7 +1,14 @@
+---
+id: "016"
+status: Accepted
+date: 2026-08-24
+category: process
+supersedes: []
+superseded_by: []
+---
+
 # ADR-016: Deferred work is closed, and the closure carries the trigger
 
-**Status:** Accepted
-**Date:** 2026-08-24
 **Upstream:** filed as braboj/solid-ai-templates#1052 against
 `templates/base/workflow/issues.md`. With the domain skin off, the convention is
 that a deferral's trigger needs a named watcher whether or not the ticket stays

@@ -1,7 +1,14 @@
+---
+id: "010"
+status: Accepted
+date: 2026-08-21
+category: tooling
+supersedes: []
+superseded_by: []
+---
+
 # ADR-010: Lock the development toolchain with uv
 
-**Status:** Accepted
-**Date:** 2026-08-21
 **Upstream:** filed as braboj/solid-ai-templates#1034 against
 `templates/stack/python-lib.md`. With the domain skin off, the convention is
 that a frozen-output lock file cannot serve a CI version or platform matrix,

@@ -1,7 +1,14 @@
+---
+id: "009"
+status: Accepted
+date: 2026-08-19
+category: protocol
+supersedes: []
+superseded_by: []
+---
+
 # ADR-009: One signature per packet operation
 
-**Status:** Accepted
-**Date:** 2026-08-19
 **Upstream:** filed as braboj/solid-ai-templates#1033 against
 `templates/base/core/quality.md`. With the domain skin off, the convention is
 that a variadic parameter on an abstract operation is not a contract but a

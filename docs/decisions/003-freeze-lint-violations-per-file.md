@@ -1,7 +1,14 @@
+---
+id: "003"
+status: Accepted
+date: 2026-08-17
+category: tooling
+supersedes: []
+superseded_by: []
+---
+
 # ADR-003: Freeze existing lint violations per file
 
-**Status:** Accepted
-**Date:** 2026-08-17
 **Upstream:** `templates/base/workflow/quality-gates.md` describes a ratchet for
 cognitive complexity but not for a linter retrofit — filed as
 braboj/solid-ai-templates#1014

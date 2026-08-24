@@ -1,7 +1,14 @@
+---
+id: "005"
+status: Accepted
+date: 2026-08-18
+category: tooling
+supersedes: []
+superseded_by: []
+---
+
 # ADR-005: Freeze existing type errors per module
 
-**Status:** Accepted
-**Date:** 2026-08-18
 **Upstream:** the same retrofit-ratchet shape ADR-003 already filed upstream as
 braboj/solid-ai-templates#1014, so this went there as a comment rather than a
 second issue. The refinement it contributes is that a retrofit freezes at the
@@ -19,8 +26,8 @@ pass.
 The `python-lib` template describes staged adoption for exactly this case:
 start non-strict with `ignore_missing_imports`, then flip
 `disallow_untyped_defs` and `strict_optional` per module, converging on
-`--strict`. Measuring before
-applying it showed the staged path does not fit this project.
+`--strict`. Measuring before applying it showed the staged path does not fit
+this project.
 
 - Plain `mypy src/` reports no issues at all, once one annotation is added.
   mypy asked for that one by name: `ModbusPduParser._registry`, which it could

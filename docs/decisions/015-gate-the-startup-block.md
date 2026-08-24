@@ -1,7 +1,14 @@
+---
+id: "015"
+status: Accepted
+date: 2026-08-22
+category: process
+supersedes: []
+superseded_by: []
+---
+
 # ADR-015: Gate the startup block against the chain the pin resolves
 
-**Status:** Accepted
-**Date:** 2026-08-22
 **Upstream:** filed as braboj/solid-ai-templates#1050 against
 `templates/base/core/agents.md`. With the domain skin off, the convention is
 that a mandatory cache of a machine-readable source must be gated against that

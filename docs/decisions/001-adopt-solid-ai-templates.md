@@ -1,7 +1,14 @@
+---
+id: "001"
+status: Accepted
+date: 2026-08-17
+category: process
+supersedes: []
+superseded_by: []
+---
+
 # ADR-001: Adopt solid-ai-templates in the hybrid model
 
-**Status:** Accepted
-**Date:** 2026-08-17
 **Upstream:** none — the decision is about consuming the templates, not a
 convention to contribute back
 

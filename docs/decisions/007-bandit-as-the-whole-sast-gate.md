@@ -1,7 +1,14 @@
+---
+id: "007"
+status: Superseded
+date: 2026-08-19
+category: tooling
+supersedes: []
+superseded_by: ["012"]
+---
+
 # ADR-007: Bandit is the whole SAST gate, and platform SAST is declined
 
-**Status:** Superseded by ADR-012
-**Date:** 2026-08-19
 **Upstream:** filed as braboj/solid-ai-templates#1026 against
 `templates/base/workflow/quality-gates.md`. With the domain skin off, the
 convention is that a gate category naming more than one tool is satisfied by
