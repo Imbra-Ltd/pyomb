@@ -1,4 +1,4 @@
-# ADR-017: Decision records carry bounded sentences, and a readability edit preserves immutability
+# ADR-017: Decision records stay readable, and merged ones are edited in place
 
 **Status:** Accepted
 **Date:** 2026-08-24
