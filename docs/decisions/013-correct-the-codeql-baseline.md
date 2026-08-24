@@ -6,7 +6,7 @@
 **Upstream:** filed as braboj/solid-ai-templates#1043 against
 `templates/base/core/review.md`. With the domain skin off, the convention is
 that a measurement taken at the wrong scope answers a different question than
-the claim it is offered for — the section already covers a measurement in the
+the claim it is offered for. The section already covers a measurement in the
 wrong unit and a silently partial extraction, and a diff-scoped tool run is a
 third axis that looks like neither.
 

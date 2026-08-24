@@ -5,7 +5,7 @@
 **Upstream:** filed as braboj/solid-ai-templates#1052 against
 `templates/base/workflow/issues.md`. With the domain skin off, the convention is
 that a deferral's trigger needs a named watcher whether or not the ticket stays
-open — the template's model assumes an open issue is one, and an open issue is
+open. The template's model assumes an open issue is one, and an open issue is
 not a watcher for a condition that fires in a different repository.
 
 ## Context
@@ -39,7 +39,7 @@ exactly, and having no way to tell a decision from an oversight.
 The closures also cost something the template does not discuss, because the
 template assumes the question never arises. An open ticket was the only thing
 watching for #68's trigger, and #68 additionally held a judgement about
-`docs/decisions/008-resolve-the-platform-template-layer.md`: three of its
+`docs/decisions/008-resolve-the-platform-template-layer.md`. Three of its
 passages carry counts computed against an older submodule pin, and the ticket
 argued a supersession ADR would be churn precisely because something tracked
 the drift. Closing the tracker does not make the counts accurate.

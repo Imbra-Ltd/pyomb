@@ -473,6 +473,22 @@ a curly quote, an en dash standing in for a hyphen, or a homoglyph — a Cyrilli
 letter that renders identically to its Latin twin, which is the case a reader
 cannot catch by reading and the check exists for.
 
+### 3.14 Decision-record readability (pytest)
+
+```bash
+pytest tests/test_decisions_are_readable.py
+```
+
+Every sentence in `docs/decisions/` is held to 40 words and every prose
+paragraph to 80. Fenced blocks, tables, headings and block quotes are read
+past; a quotation of a pinned template is the rule a record is measured
+against, not this project's prose. ADR-017 records where the limits came from.
+
+A failure names each offender as `path:line`, its length, and its opening
+words. The fix is almost always the same: a sentence over the limit is carrying
+a list, so render it as a list and the words survive intact. A paragraph over
+the limit usually holds two subjects, so give the second its own paragraph.
+
 ## 4. Maintenance
 
 ### 4.1 Bump the templates submodule
@@ -515,7 +531,14 @@ ADR-008 carries why the two additions are there, ADR-015 why the check exists.
 
 Add `docs/decisions/NNN-slug.md` with Status, Date, Context, Decision,
 Alternatives considered, Consequences, and an `Upstream:` line naming a
-candidate template file or `none`.
+candidate template file or `none`. Keep every sentence to 40 words and every
+paragraph to 80; 3.14 is the gate.
+
+A merged record is immutable in what it claims, not in how it reads. Editing
+one for readability alone is a format migration: make the change, confirm with
+`git diff --word-diff` that only connectives and capitalisation moved, and say
+readability-only in the commit. Anything that changes a claim needs a new
+record instead.
 
 ### 4.3 Write a journal entry
 

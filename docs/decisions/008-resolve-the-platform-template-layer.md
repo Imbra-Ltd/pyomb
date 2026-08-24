@@ -18,6 +18,7 @@ was re-derived from a defect rather than read.
 
 ADR-001 describes the block as "the twelve template files in the resolved
 chain". That is close, and the distance is where the answer sits.
+
 `templates/manifest.yaml` is the machine-readable dependency graph. Resolving
 `stack-python-lib` through it yields ten files: the six in `core`, plus
 `base-quality-gates` and `base-examples` from the stack entry, plus

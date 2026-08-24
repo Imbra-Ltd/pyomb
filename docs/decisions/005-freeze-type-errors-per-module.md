@@ -5,7 +5,7 @@
 **Upstream:** the same retrofit-ratchet shape ADR-003 already filed upstream as
 braboj/solid-ai-templates#1014, so this went there as a comment rather than a
 second issue. The refinement it contributes is that a retrofit freezes at the
-granularity of the finding, never of the analysis producing it — disabling a
+granularity of the finding, never of the analysis producing it. Disabling a
 strict sub-flag also stops the checker looking, which would have discarded the
 findings in #51 instead of recording them.
 

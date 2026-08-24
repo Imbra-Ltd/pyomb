@@ -4,11 +4,11 @@
 **Date:** 2026-08-21
 **Upstream:** filed as braboj/solid-ai-templates#1035 against
 `templates/base/security/devsecops.md`. With the domain skin off, the
-convention is that an SBOM must describe what a consumer installs rather than
-what CI built with — every generator's most convenient mode reads the build
-environment, which produces a schema-valid document naming the toolchain as
-part of the product — and that the component set must be asserted, because a
-misdirected generator succeeds.
+convention has two halves. An SBOM must describe what a consumer installs
+rather than what CI built with, because every generator's most convenient mode
+reads the build environment and produces a schema-valid document naming the
+toolchain as part of the product. The component set must then be asserted,
+because a misdirected generator succeeds.
 
 ## Context
 

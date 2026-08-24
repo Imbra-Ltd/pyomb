@@ -5,12 +5,13 @@
 **Supersedes:** ADR-007
 **Upstream:** filed as braboj/solid-ai-templates#1042 against
 `templates/platform/github.md`, and braboj/solid-ai-templates#1041 against
-`templates/base/core/quality.md`. With the domain skin off, the first is that
-isolating an elevated-scope scan into its own workflow costs the
-single-required-context property unless that workflow carries its own fan-in,
-which the template asks for both of without noting they collide. The second is
-that a recorded revisit trigger has no watcher, so the obligation to reopen a
-decision belongs to whoever fires the trigger.
+`templates/base/core/quality.md`.
+
+With the domain skin off, the first is that isolating an elevated-scope scan
+into its own workflow costs the single-required-context property unless that
+workflow carries its own fan-in. The template asks for both without noting they
+collide. The second is that a recorded revisit trigger has no watcher, so the
+obligation to reopen a decision belongs to whoever fires the trigger.
 
 ## Context
 
@@ -85,7 +86,7 @@ They are not redundant, and the difference is not severity coverage:
 
 Bandit gates on findings. CodeQL gates on having run. Blocking a merge on a
 CodeQL alert is a separate platform control and is not turned on here, so the
-`codeql` context is honest about being narrower than it looks: it proves the
+`codeql` context is honest about being narrower than it looks. It proves the
 scan happened, which is the property the fan-in exists to hold.
 
 ### Why `security-extended`

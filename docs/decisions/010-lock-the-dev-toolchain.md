@@ -24,16 +24,21 @@ dev  = ["pyomb[test]", "pre-commit", "build", "twine"]
 Ruff, mypy and bandit carry minor ranges because each backs a freeze recorded
 in `pyproject.toml` that a new rule or error code would break on untouched
 legacy code; ADR-003 and ADR-005 carry that reasoning. The remaining five --
-pytest, pytest-cov, pre-commit, build and twine -- float completely. CI and a
-contributor's machine resolve those independently, so a pytest release that
-changes collection, a coverage release that changes accounting, or a twine
-release that changes metadata validation lands here with no version bump
-anywhere in the repository and no way to say afterwards what a green run ran
-against.
+pytest, pytest-cov, pre-commit, build and twine -- float completely.
+
+CI and a contributor's machine resolve those five independently, so any of
+these lands here with no version bump anywhere in the repository, and no way to
+say afterwards what a green run ran against:
+
+- a pytest release that changes collection
+- a coverage release that changes accounting
+- a twine release that changes metadata validation
 
 The template asks for a lock file in one line and names
 `requirements-dev.lock`, which implies `pip freeze` output. That is the part
-that does not fit. Frozen output has its markers already resolved, so it is
+that does not fit.
+
+Frozen output has its markers already resolved, so it is
 specific to the interpreter and platform that produced it, and this project
 spans three: CI runs a 3.10/3.13 matrix on Linux, development is Windows. The
 difference is real rather than theoretical -- 3.10 needs `tomli`, which 3.13
@@ -59,13 +64,13 @@ uv lock             the requires-python range    the leg's own markers
 
 1. Lock the toolchain with `uv lock`, committing `uv.lock` at the repository
    root. The lock is universal: it is resolved across the whole
-   `requires-python` range rather than for one interpreter, so a single file
-   serves 3.10 CI, 3.13 CI and a Windows contributor, and each leg selects the
-   markers that apply to it at install time.
+   `requires-python` range rather than for one interpreter. A single file
+   therefore serves 3.10 CI, 3.13 CI and a Windows contributor, and each leg
+   selects the markers that apply to it at install time.
 2. Every CI job installs with `uv sync --locked`. The flag is the decision, not
    a convenience: uv refuses a lock that no longer matches `pyproject.toml`
-   rather than quietly re-resolving, so a dependency edit that skipped
-   `uv lock` fails the run instead of installing a set the lock does not
+   rather than quietly re-resolving. A dependency edit that skipped `uv lock`
+   therefore fails the run instead of installing a set the lock does not
    record. This is `quality-gates-pair-check` applied to the lock -- the
    constraint and its check land together.
 3. Every gate step runs under `uv run --no-sync`, so the install step above is

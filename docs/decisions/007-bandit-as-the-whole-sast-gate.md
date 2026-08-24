@@ -5,8 +5,8 @@
 **Upstream:** filed as braboj/solid-ai-templates#1026 against
 `templates/base/workflow/quality-gates.md`. With the domain skin off, the
 convention is that a gate category naming more than one tool is satisfied by
-the tools that can run plus a recorded decline carrying a revisit trigger —
-never left blank because one of them is unavailable.
+the tools that can run plus a recorded decline carrying a revisit trigger. It
+is never left blank because one of them is unavailable.
 
 ## Context
 
@@ -85,8 +85,8 @@ Two rules govern the suppressions, inherited from ADR-005:
 
 That scoping was verified rather than asserted: a throwaway module carrying an
 assert, a hardcoded password, `shell=True` and an MD5 digest was dropped into
-`src/pyomb/`, and the gate failed on all four — the assert included, which is
-what proves the skip did not leak out of `tests/`. The tree is green again
+`src/pyomb/`, and the gate failed on all four. The assert was included, which
+is what proves the skip did not leak out of `tests/`. The tree is green again
 once the module is removed.
 
 Platform SAST is declined for as long as the 403 above holds. It is declined
