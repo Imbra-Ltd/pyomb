@@ -6,6 +6,8 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-24
+
 ### Added
 
 - CodeQL analyses every pull request and every push to `main`, over both
@@ -15,6 +17,38 @@ numbers follow [Semantic Versioning](https://semver.org/).
   write scope it needs stays off the CI jobs. Bandit is unchanged, and
   remains the half that fails a build on a finding. See ADR-012, and
   ADR-013 for the baseline it corrects
+- Every tracked file is checked for characters outside printable ASCII. The
+  em dash is permitted in Markdown prose and nowhere else, which is the
+  narrowest allowance that lets the documents stand as written. The first run
+  found four defects sitting among several hundred deliberate em dashes: a
+  Cyrillic capital Te opening a sentence where a Latin T belongs and renders
+  identically, curly quotes around a quoted exception name, and an en dash
+  standing in for a hyphen. See ADR-014
+
+### Changed
+
+- The README quick start installs the wheel from the latest release by URL,
+  and a test pins that URL to the version the package reports. A bump that
+  misses the README fails rather than pointing readers at the previous
+  release's asset. See #73
+
+### Security
+
+- The client and server TLS contexts declare a minimum protocol version
+  rather than inheriting whatever the linked OpenSSL and its security level
+  allow. MB-TCP-Security v21 fixes the value rather than leaving it to taste:
+  R-32 requires TLS 1.2 or better, and R-34 forbids negotiating down to TLS
+  1.1, TLS 1.0 or SSL 3.0. The floor is applied after the caller's
+  `ssl_options`, which are OR-ed in and so can only add a restriction — a
+  caller may still pin a session above the floor, and neither a mask that
+  omits the protocol switches nor no mask at all can drop below it. No
+  exposure was observed, because the development platform's own floor is
+  already TLS 1.2; the library stated nothing, so the value was right by
+  accident of the platform and a consumer on a permissive build could have
+  negotiated lower. See #83
+- `SECURITY.md` records why the plain and the TLS listener both bind every
+  interface, so a reader can tell a deliberate default from an oversight.
+  See #84
 
 ## [0.2.0] - 2026-08-21
 
@@ -119,6 +153,7 @@ no upgrade path to describe and no consumer to break.
   committed chain was rotated; it was self-signed and installed in no trust
   store
 
-[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Imbra-Ltd/pyomb/releases/tag/v0.1.0
