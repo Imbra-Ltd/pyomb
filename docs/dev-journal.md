@@ -1464,3 +1464,64 @@ package, per ADR-002. See `README.md` for usage and
   comments and docstrings, which `CLAUDE.md` forbids and no gate catches; and
   the journal's own prose is gated for width but not readability, running to a
   128-word sentence and list items past 200 words.
+
+## 2026-08-24 — Adopt the ADR front-matter schema (evening)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Traced why this project and `imbra-explore` write records in two
+    formats.** The answer was upstream and not in either repository. The
+    templates repository decided the schema in its own ADR-010 on 2026-06-02
+    and lists the reconciliation of `templates/base/core/docs.md` among that
+    record's own consequences. The follow-up never landed, so the shipped
+    template still carries the pre-ADR-010 form. The sibling copied the
+    repository's own template and this project read the shipped one.
+  - **Migrated all 18 records to the schema** and recorded it as ADR-019. The
+    diff is metadata-only: the three bold-label fields become the front-matter
+    block, and the single prose line that moves is a ragged wrap left by the
+    width fix in the previous session, which re-flows without changing a word.
+  - **Declined ADR-010's prose rule**, which forbids naming another record in a
+    body. Measured first: all 18 records do it, 75 times. Removing a citation
+    removes the sentence's subject, since ADR-013 exists to correct the
+    baseline ADR-012 set and cannot say what was wrong without naming it. It
+    also contradicts a rule in `CLAUDE.md` that outranks a pinned template by
+    that file's own precedence order.
+  - **Built the schema gate** as `tests/test_decision_frontmatter.py`, which is
+    the smoke check ADR-010 defers to a follow-up. It found a live defect on
+    its first run: neither superseded record pointed forward. ADR-007 and
+    ADR-012 said so in prose and nothing carried the reverse link.
+  - **Bumped `imbra-explore`'s templates pin** from a branch-tip commit 64 past
+    v2.17.0 to the v2.44.0 tag, as pull request 263 in that repository. It is
+    deliberately not ready to merge: the bump spans 147 commits and 2377 lines
+    of rule change, and the reconciliation against that repository's own
+    conventions needs a session with its documents read.
+- **PRs merged:** #96 and #97 here, in that order and bottom-up. Pull request
+  263 in `imbra-explore` is open and waiting on its reconciliation.
+- **Issues closed/created:** none here. Upstream, braboj/solid-ai-templates#1056
+  against `templates/base/core/docs.md`.
+- **Lesson:** when two consumers of one authority disagree, the authority's own
+  decision log outranks what it ships. This session checked the shipped
+  template, found it prescribed bold labels, and concluded the sibling had
+  invented its format and mislabelled it as conformance. That was wrong in both
+  halves. The record that settles it sits in the upstream repository's own
+  `docs/decisions/`, which is not part of the chain a consumer resolves and so
+  is never read by accident.
+- **Lesson:** the de-stack went by the book because the book was already
+  written. PLAYBOOK 1.5 described this exact squash-merge conflict shape and
+  said to compare the two conflict stages rather than reason about which side
+  wins. Following it turned six conflicts into six one-line judgements, and two
+  of them would have been missed entirely: the merge output was read through
+  `tail`, and only `git diff --name-only --diff-filter=U` showed `CLAUDE.md`
+  and PLAYBOOK were also unresolved.
+- **Lesson:** declining part of an inherited rule needs the measurement rather
+  than the instinct. The reasons for keeping prose citations were clear before
+  counting them, but 75 across all 18 records is what makes the decline a
+  recorded decision instead of a preference.
+- **Upstream:** one filing. braboj/solid-ai-templates#1056: a decision recorded
+  in a repository's own log does not reach the consumers of what it ships, and
+  the follow-up that would carry it across is itself a consequence of that
+  decision, so nothing outside the repository fires when it never lands. The
+  filing carries a second point, that ADR-010's closed category set names the
+  template repository's own domains and describes nothing in a consumer.
+- **Pending:** the `imbra-explore` reconciliation, which is that repository's
+  work and is listed in its pull request. Nothing here.
