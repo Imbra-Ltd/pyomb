@@ -12,11 +12,18 @@ including that one. A rule with an exception for the entries that happen to be
 safe by accident asks a reader to work out which kind each entry is; a rule
 that reads the same for all four does not.
 
-The result reached PyPI. The source distribution built from the v0.2.0 tag
-carries 57 files from `docs/solid-ai-templates`, out of 125 in the archive --
-a vendored copy of another project's test suite, republished under this
-project's name. Anchoring the four patterns drops the archive to 68 files and
-removes the submodule entirely, changing nothing else.
+A build from a working checkout shows it. With the submodule populated, the
+source distribution carries 57 files from `docs/solid-ai-templates` -- its
+licence, its readme and the whole of its test suite -- out of 125 in the
+archive. Anchoring the four patterns drops it to 68 and removes the submodule
+entirely, changing nothing else.
+
+The released archives escaped it, and not by design. `release.yml` checks out
+without submodules, so `docs/solid-ai-templates` is an empty directory in CI
+and the unanchored patterns match nothing to select; the v0.2.0 and v0.2.1
+assets are clean. Anything that populates the submodule in that job -- a
+`submodules: recursive`, added for an SBOM or a docs build -- ships the leak
+on the next tag. The anchors are what removes the dependency on that.
 
 The check reads the patterns rather than building a distribution. A build takes
 tens of seconds and needs an isolated environment; the defect is visible in the
