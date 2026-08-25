@@ -530,9 +530,13 @@ Every pattern in the sdist `include` list carries a leading slash. Hatchling
 reads a pattern the way git reads a `.gitignore` line, so one without a
 separator matches at any depth: an unanchored `tests`, `README.md` or `LICENSE`
 selects the templates submodule's file of that name as well as this project's.
-Every sdist up to and including v0.2.0 shipped 57 such files out of 125 — the
-submodule's licence, its readme and the whole of its test suite, republished
-under this project's name.
+A build from a working checkout carries 57 such files out of 125 — the
+submodule's licence, its readme and the whole of its test suite.
+
+The released archives are clean, because `release.yml` checks out without
+submodules and the patterns find nothing to select. That is the checkout
+configuration covering for the include list, not a safeguard: populating the
+submodule in that job would ship the leak on the next tag.
 
 The check reads `pyproject.toml` rather than building one, because an
 unanchored pattern is the whole of the defect and a build costs tens of

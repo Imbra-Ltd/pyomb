@@ -1548,12 +1548,11 @@ package, per ADR-002. See `README.md` for usage and
     restated what PLAYBOOK 1.1 to 1.4, 3.1, 3.3 to 3.6 and 3.9 already own, in
     less detail and different words. Each now keeps the rule a contributor
     needs before starting and cites the numbered section for the commands.
-  - **Fixed a packaging defect the analysis surfaced.** Every published sdist
-    carried 57 files from `docs/solid-ai-templates` -- its licence, its readme
-    and the whole of its test suite -- out of 125 in the archive. A hatchling
-    include pattern with no separator matches at any depth, so `tests`,
-    `README.md` and `LICENSE` each selected the submodule's copy as well.
-    Anchoring all four drops the archive to 68 files.
+  - **Fixed a packaging defect the analysis surfaced.** A hatchling include
+    pattern with no separator matches at any depth, so `tests`, `README.md` and
+    `LICENSE` each selected the templates submodule's copy as well as this
+    project's. A build from a working checkout carries 57 such files out of
+    125; anchoring all four drops the archive to 68.
   - **Wrote the new gate down where the other gates are.** PLAYBOOK 3.17
     carries the command, what the static check cannot see and the archive
     listing that covers it; `CLAUDE.md` section 3 carries the one-line rule.
@@ -1571,6 +1570,14 @@ package, per ADR-002. See `README.md` for usage and
   one; the tell was that the leaked set was exactly the three patterns lacking
   a separator, which turned a vague packaging cleanup into a one-line fix with
   a test that fails against the unfixed manifest.
+- **Lesson:** a local artifact is not the published one, and the wrap caught it
+  rather than the work. The defect was written up from `dist/` in the working
+  tree and described as having reached PyPI. Neither half held: this project has
+  no PyPI presence at all, and `release.yml` checks out without submodules, so
+  the released sdists never carried the leak. The correction was three committed
+  files and an upstream issue already filed. Downloading the release asset is
+  one command and it was never run, because a tarball on disk with the right
+  version in its name reads exactly like the thing that shipped.
 - **Lesson:** thinning a document means checking who cites the parts being cut.
   `pyproject.toml` describes its ruff line length as the ceiling CONTRIBUTING
   sets, so removing that file's style bullets as duplicate would have left the
