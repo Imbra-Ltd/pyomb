@@ -1525,3 +1525,68 @@ package, per ADR-002. See `README.md` for usage and
   template repository's own domains and describes nothing in a consumer.
 - **Pending:** the `imbra-explore` reconciliation, which is that repository's
   work and is listed in its pull request. Nothing here.
+
+## 2026-08-24 — Settle the governance files, fix the sdist (late)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Settled whether `CONTRIBUTING.md` and `SECURITY.md` belong at the root.**
+    Both, and they stay where they are. The argument offered for the question
+    was an external Python blueprint, and reading it turned the question
+    around: that repository carries both files too, in `docs/`, so it argues
+    about placement rather than existence. Its copies are unfilled stubs
+    carrying `[[REPO_NAME]]` and `[[EMAIL]]`, and a supported-versions table
+    pinned to a version it never shipped.
+  - **Found the pinned templates silent on the whole question.** A grep of the
+    submodule at v2.44.0 returns no mention of `CONTRIBUTING.md`,
+    `SECURITY.md` or `CODE_OF_CONDUCT.md`, and none of the synonyms either.
+    `templates/base/core/readme.md` section 8 is the single acknowledgement
+    that a contribution guide may exist, and it neither names the file nor
+    says where it lives. `templates/base/security/security.md` is application
+    security rules and is not in this project's chain.
+  - **Thinned `CONTRIBUTING.md` from 161 lines to 125.** Sections 3 to 6
+    restated what PLAYBOOK 1.1 to 1.4, 3.1, 3.3 to 3.6 and 3.9 already own, in
+    less detail and different words. Each now keeps the rule a contributor
+    needs before starting and cites the numbered section for the commands.
+  - **Fixed a packaging defect the analysis surfaced.** Every published sdist
+    carried 57 files from `docs/solid-ai-templates` -- its licence, its readme
+    and the whole of its test suite -- out of 125 in the archive. A hatchling
+    include pattern with no separator matches at any depth, so `tests`,
+    `README.md` and `LICENSE` each selected the submodule's copy as well.
+    Anchoring all four drops the archive to 68 files.
+  - **Wrote the new gate down where the other gates are.** PLAYBOOK 3.17
+    carries the command, what the static check cannot see and the archive
+    listing that covers it; `CLAUDE.md` section 3 carries the one-line rule.
+- **PRs merged:** #101 then #102, in that order.
+- **Issues closed/created:** created and closed #99 and #100 here. Upstream,
+  braboj/solid-ai-templates#1057 against `templates/base/core/docs.md`.
+- **Lesson:** a template repository carrying a file is not evidence that a real
+  project needs one. The blueprint's own `SECURITY.md` and `CONTRIBUTING.md`
+  are placeholders, so their presence says only that templates ship stubs. What
+  actually settled the question was the two files' content here: a scope
+  carve-out for the simulator's deliberately weak TLS settings that nothing
+  else in the repository states, and a GitHub affordance no other document has.
+- **Lesson:** probing a symptom to its mechanism changed the size of the work.
+  The sdist bloat was filed as an observation and would have been actioned as
+  one; the tell was that the leaked set was exactly the three patterns lacking
+  a separator, which turned a vague packaging cleanup into a one-line fix with
+  a test that fails against the unfixed manifest.
+- **Lesson:** thinning a document means checking who cites the parts being cut.
+  `pyproject.toml` describes its ruff line length as the ceiling CONTRIBUTING
+  sets, so removing that file's style bullets as duplicate would have left the
+  configuration pointing at nothing. Two more paragraphs survived the same
+  test: the camelCase legacy note and the rule that a protocol change is
+  asserted against serialized bytes.
+- **Upstream:** two filings. braboj/solid-ai-templates#1057: the docs template's
+  Standard documents table names six documents and says nothing about the
+  community health files a code host recognises, so every public consumer
+  answers the question alone and the structure audit cannot check for a file no
+  template names. It also carries a comment on what such a file may hold, since
+  a contribution guide sits beside ONBOARDING and PLAYBOOK and absorbs both
+  without a boundary. And #1058: `python-lib.md` tells a project to anchor the
+  path-based excludes in its tool configuration and says nothing about the
+  include patterns of a build target, which is the same defect seen from the
+  other side.
+- **Pending:** #1057 is filed and not implemented. It edits a document in the
+  templates repository, which has its own conventions and its own backlog, and
+  the copy here is a pinned checkout.

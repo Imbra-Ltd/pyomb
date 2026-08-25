@@ -192,6 +192,10 @@ follow the referenced templates. Project-specific additions only:
 - Suppress a bandit finding at the line with `# nosec <ID>` naming the one
   check, and put the reason above it. Never add to the config-level `skips`,
   which stops the check firing tree-wide; see ADR-012
+- Every pattern in the sdist `include` list carries a leading slash. An
+  unanchored pattern matches at any depth, so it also selects the templates
+  submodule's file of that name and republishes it. Enforced by
+  `tests/test_sdist_includes_are_anchored.py`
 - Markdown prose may use the em dash; every other tracked file is ASCII, and
   Markdown may use no other non-ASCII character either. Enforced by
   `tests/test_source_is_ascii.py`; see ADR-014

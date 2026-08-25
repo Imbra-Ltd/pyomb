@@ -520,6 +520,35 @@ A new category is a decision that takes its own record. Widening the set in
 `CATEGORIES` to make a record pass inverts that, which is the same move the
 lint and type freezes forbid.
 
+### 3.17 Sdist include anchors (pytest)
+
+```bash
+pytest tests/test_sdist_includes_are_anchored.py
+```
+
+Every pattern in the sdist `include` list carries a leading slash. Hatchling
+reads a pattern the way git reads a `.gitignore` line, so one without a
+separator matches at any depth: an unanchored `tests`, `README.md` or `LICENSE`
+selects the templates submodule's file of that name as well as this project's.
+Every sdist up to and including v0.2.0 shipped 57 such files out of 125 — the
+submodule's licence, its readme and the whole of its test suite, republished
+under this project's name.
+
+The check reads `pyproject.toml` rather than building one, because an
+unanchored pattern is the whole of the defect and a build costs tens of
+seconds. It skips on Python 3.10, which has no standard-library TOML parser,
+and the 3.13 leg of the matrix carries it.
+
+What it cannot see is a pattern that is anchored and still wrong. After
+changing the include list, confirm against a real archive:
+
+```bash
+python -m build --sdist
+tar -tzf dist/pyomb-*.tar.gz | grep -c solid-ai-templates
+```
+
+The count must be `0`.
+
 ## 4. Maintenance
 
 ### 4.1 Bump the templates submodule
