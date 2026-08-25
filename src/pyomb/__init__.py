@@ -6,20 +6,15 @@ Serialization and deserialization of Modbus TCP and RTU packets, fragmented
 stream transport, and a scriptable server/client pair for testing Modbus
 implementations.
 
-The names re-exported here are the supported public API, alongside two
-submodules that are equally public: pyomb.packets for the function-code packet
-classes (ModbusRequestFC1, ModbusResponseFC3, ...), and pyomb.omb_client and
-pyomb.omb_server for the simulators.
+The names re-exported here are the supported public API, alongside one
+submodule that is equally public: pyomb.packets for the function-code packet
+classes (ModbusRequestFC1, ModbusResponseFC3, ...). The two simulators are
+re-exported as well, bound on first use rather than on import.
 """
 
-# The simulators stay out of this module because importing them costs every
-# caller the ssl import, measured at roughly 32ms against this package's own
-# 45ms on CPython 3.13 -- a caller who only needs the codec should not pay a
-# 70% import penalty for a transport it never opens. Note that socket,
-# threading and select are NOT part of that saving: stream.py is re-exported
-# here and imports all three, so they are already paid before this comment
-# applies. Re-measure with `python -X importtime -c "import pyomb"` before
-# treating the number as current.
+from importlib import import_module
+from typing import TYPE_CHECKING
+
 from .errors import ModbusAcknowledge
 from .errors import ModbusBaseError
 from .errors import ModbusGatewayPathUnavailable
@@ -47,6 +42,26 @@ from .stream import ModbusFragmenter
 from .stream import ModbusTcpReceiver
 from .stream import ModbusTcpSender
 from .stream import ModbusTcpStream
+
+# The simulators are named below but not imported here, because importing them
+# costs every caller the ssl import: roughly 13ms against this package's own
+# 35ms on CPython 3.13, so a caller who only needs the codec would pay a 38%
+# penalty for a transport it never opens. __getattr__ binds them on the first
+# access that names one, which puts them in the public API without moving that
+# cost onto import. Note that socket, threading and select are NOT part of the
+# saving: stream.py is re-exported above and imports all three, so they are
+# already paid before this comment applies. Re-measure with
+# `python -X importtime -c "import pyomb"` before treating the numbers as
+# current.
+if TYPE_CHECKING:
+    from .omb_client import OmbClientSim
+    from .omb_server import OmbServerSim
+
+# Each deferred name against the submodule that defines it.
+_DEFERRED = {
+    "OmbClientSim": "omb_client",
+    "OmbServerSim": "omb_server",
+}
 
 __version__ = "0.2.1"
 
@@ -83,4 +98,27 @@ __all__ = [
     "ModbusGatewayTargetDeviceFailedToRespond",
     # Logging
     "Logger",
+    # Simulators
+    "OmbClientSim",
+    "OmbServerSim",
 ]
+
+
+def __getattr__(name: str) -> object:
+    """Bind a simulator class on the first access that names it.
+
+    Args:
+        name (str) : The attribute being read from this module
+
+    Returns:
+        object : The class the name refers to
+
+    Raises:
+        AttributeError : The name is not one this module exports
+    """
+    submodule = _DEFERRED.get(name)
+
+    if submodule is None:
+        raise AttributeError(name)
+
+    return getattr(import_module("." + submodule, __name__), name)
