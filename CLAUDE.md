@@ -21,6 +21,7 @@ working tree after a bare fetch:
 - `templates/base/core/testing.md`
 - `templates/base/core/review.md`
 - `templates/base/core/config.md`
+- `templates/base/core/examples.md`
 - `templates/base/workflow/quality-gates.md`
 - `templates/base/workflow/scope.md`
 - `templates/base/workflow/ai-workflow.md`
