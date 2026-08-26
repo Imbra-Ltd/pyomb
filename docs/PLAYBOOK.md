@@ -835,8 +835,13 @@ To cut a release:
 2. Run a 360 audit per 4.4; do not ship with critical findings open
 3. Branch `chore/release-vX.Y.Z`, set `__version__` in `src/pyomb/__init__.py`
    — hatchling reads it, so that literal is the only place a version lives
-4. Cut the `Unreleased` block of `CHANGELOG.md` into an `[X.Y.Z]` entry and add
-   the compare link beside the others at the foot of the file
+4. Cut the `Unreleased` block of `CHANGELOG.md` into a dated `[X.Y.Z]` entry,
+   add its compare link beside the others at the foot of the file, and move
+   the `Unreleased` link to compare from the version just cut.
+   `tests/test_changelog_release_entry.py` fails until all three are done.
+   Doing it on this branch is what puts the entry inside the tagged sdist —
+   done afterwards it corrects `main` and leaves the published archive
+   describing the release before this one, which no later edit reaches
 5. Point the README quick start install command at the wheel the new tag will
    carry. `tests/test_readme_install_command.py` fails until it matches. Doing
    it on this branch is what keeps the README inside the tagged sdist naming
