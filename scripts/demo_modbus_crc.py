@@ -33,6 +33,7 @@ refer to the wikipedia page:
 """
 
 import struct
+import sys
 
 from pyomb.packets import CRC_FMT, calc_crc16
 
@@ -50,6 +51,10 @@ def demo(payload):
 
 
 if __name__ == "__main__":
+    # State the encoding rather than inheriting the console's, so what this
+    # prints is what the reader sees on any machine.
+    sys.stdout.reconfigure(encoding="utf-8")
+
     # Read holding registers, slave 17, two registers from address 0. The
     # published checksum for this frame ends C6 9B.
     demo(bytes.fromhex("110300000002"))

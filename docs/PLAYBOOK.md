@@ -583,6 +583,28 @@ python -X importtime -c "import pyomb; import pyomb.omb_client; import pyomb.omb
 
 Read the cumulative column on the `pyomb` line and on the two that follow it.
 
+### 3.19 Entry-point output encoding (pytest)
+
+```bash
+pytest tests/test_entry_points_set_the_encoding.py
+```
+
+A program that writes text states its encoding rather than inheriting the
+console's, and does so inside its `__main__` guard. The check reads both
+directions: every module with a guard that prints or builds a `Logger` calls
+`sys.stdout.reconfigure`, and nothing under `src/pyomb/` calls it anywhere but
+inside a guard.
+
+The second half is the one that matters. `sys.stdout` belongs to the process,
+so a library module reconfiguring it at import reaches into an application that
+only wanted to send a Modbus frame. `src/pyomb/logger.py` is the case that
+looks like an exception: it builds a handler on `sys.stdout` and sets no
+encoding on it, for the reason its own docstring gives for not touching the
+root logger.
+
+A new script that prints fails this until it carries the call. A script that
+prints nothing is not asked for one.
+
 ## 4. Maintenance
 
 ### 4.1 Bump the templates submodule
