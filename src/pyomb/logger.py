@@ -21,6 +21,11 @@ class Logger(logging.Logger):
         self.addHandler(self.console_handler())
 
     def console_handler(self):
+        # The handler writes through whatever encoding the application gave
+        # sys.stdout, and does not set one. Reconfiguring the stream here would
+        # reach every other writer in the process, which is the same overreach
+        # as touching the root logger, one layer down. An entry point sets its
+        # own encoding; a library takes what it is handed.
         stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setLevel(logging.INFO)
         stdout_handler.setFormatter(logging.Formatter(str(self.log_format)))

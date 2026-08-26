@@ -238,4 +238,8 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
+    # State the encoding rather than inheriting the console's, so what this
+    # prints is what the reader sees on any machine.
+    sys.stdout.reconfigure(encoding="utf-8")
+
     sys.exit(main())
