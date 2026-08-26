@@ -436,33 +436,36 @@ or a wheel that starts carrying `tests/` fails the pull request rather than
 the release. The build that produces the artifacts a consumer downloads is a
 different one, in `release.yml` on a tag; see 5.
 
-### 3.12 Line endings (.gitattributes, .editorconfig)
+### 3.12 Line endings (pytest)
 
 ```bash
-git ls-files --eol | grep -c "i/crlf"
-git ls-files --eol | grep "i/-text" | grep -v "\.pdf"
+pytest tests/test_line_endings.py
 ```
 
-Zero for the first and no output from the second is the pass condition.
-`.gitattributes` normalises every text file to LF in the index, so whatever
-`core.autocrlf` does in a working tree never reaches a commit; `.editorconfig`
-is the editor-side half, for editors that read it. Development is Windows and
-CI is Linux, which is the split the pair exists for.
+Every text file is stored LF in the index. `.gitattributes` normalises on the
+way in, so whatever `core.autocrlf` does in a working tree never reaches a
+commit; `.editorconfig` is the editor-side half, for editors that read it.
+Development is Windows and CI is Linux, which is the split the pair exists for.
 
-A non-zero first count means a CRLF file was committed before the
-normalisation covered it. `git add --renormalize .` rewrites the index, and the
-diff it produces is the fix.
+A failure names each offending path. A file the index stores with a carriage
+return got in before the normalisation covered it: `git add --renormalize .`
+rewrites the index, and the diff it produces is the fix. Both `crlf` and
+`mixed` count, so a file carrying one CRLF line among LF ones fails too — a
+plain count of `crlf` does not report that one.
 
-The second command exists because the first cannot see the worst case. A file
-git classifies as binary reports `i/-text`, not `i/crlf`, and `text=auto`
-skips normalising it — so its CRLF endings go into the index unconverted and
-the count stays zero. One NUL byte anywhere in a file is enough to trigger
-that classification, which is how this journal came to be stored with 1127
-CRLF endings while the check reported a clean tree. The specifications are the
-only files here that are legitimately binary, hence the exclusion. Anything
-else the second command prints is a text file with something in it that should
-not be there; `tests/test_source_is_ascii.py` names the character and its
-line.
+The second rule reaches what counting carriage returns cannot. A file git
+classifies as binary reports `-text` in place of a line-ending value, and
+`text=auto` skips normalising it, so its carriage returns enter the index
+unconverted while a count stays at zero. One NUL byte anywhere is enough to
+trigger that classification, which is how this journal came to be stored with
+1127 CRLF endings while the check reported a clean tree. The specifications
+are declared binary in `.gitattributes` and the test reads that declaration
+rather than naming them, so a new binary file is one line there. Anything else
+reporting `-text` is a text file with a byte in it that does not belong, and
+`tests/test_source_is_ascii.py` names the character and its line.
+
+`git ls-files --eol` is the raw view the test reads, one record per tracked
+path.
 
 ### 3.13 Character set (pytest)
 
