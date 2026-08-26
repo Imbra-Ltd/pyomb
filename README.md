@@ -76,6 +76,12 @@ Reading them in order: transaction identifier `0000`, protocol identifier
 The simulators log to standard output, so the runs below print protocol
 description lines alongside the values shown.
 
+Each of the four snippets below has a runnable counterpart in
+[examples/](examples/), which CI executes on every change. The two that need a
+server bind a port the operating system assigns rather than 502, which is what
+lets them run without privileges; [examples/README.md](examples/README.md)
+indexes them with the output each produces.
+
 ### Serialize and deserialize a packet
 
 ```python
@@ -168,6 +174,7 @@ src/pyomb/              # The library
   logger.py             # Logger that writes to stdout and optionally a file
   defines.py            # Protocol constants
 tests/                  # Per-module tests, regression modules, convention gates
+examples/               # Runnable usage patterns, executed by CI
 scripts/                # Certificate generation and standalone demos
 docs/                   # Specifications, tutorial, decisions, journal, audits
 assets/                 # Generated test certificates (gitignored)
@@ -227,6 +234,7 @@ hardened for production control networks.
 
 | Document | What it covers |
 | --- | --- |
+| [examples/README.md](examples/README.md) | Runnable usage patterns, with output |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to propose a change |
 | [SECURITY.md](SECURITY.md) | How to report a vulnerability |

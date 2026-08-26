@@ -81,9 +81,9 @@ uv lock --upgrade                # refresh the lock; review the diff
 pre-commit install               # run the gates before every commit
 pytest                           # run tests
 mypy                             # type check; settings in pyproject.toml
-bandit -c pyproject.toml -r src scripts tests   # static analysis
-ruff check src tests scripts     # lint
-ruff format src tests scripts    # format
+bandit -c pyproject.toml -r src scripts tests examples   # static analysis
+ruff check src tests scripts examples     # lint
+ruff format src tests scripts examples    # format
 python -m build                  # build distribution
 twine check dist/*               # validate wheel and sdist metadata
 cyclonedx-py environment <venv>  # SBOM; the release workflow runs it
