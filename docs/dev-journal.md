@@ -1685,3 +1685,119 @@ package, per ADR-002. See `README.md` for usage and
   ADR-018 here. Nothing is inherited while the pin holds a tag, and the startup
   block guard checks chain membership rather than rule content, so the next
   bump needs those two records reconciled deliberately.
+
+## 2026-08-26 — Bump to v2.46.0, then empty the backlog
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Bumped the templates pin to `v2.46.0` and reconciled both recorded
+    divergences.** The previous entry flagged that the next bump would need
+    ADR-014 and ADR-018 read first. It did, and the reading went the opposite
+    way to what the diff suggested: both records were filed upstream as #1045
+    and #1055, both were taken, and the tag that looked like two fresh
+    violations was this project's own filings coming back.
+  - **Read ADR-014's divergence as resolved rather than refuted.** The rule now
+    restricts identifiers and exempts comments, docstrings, string content and
+    documentation, so the em dash in prose is compliant outright. What survives
+    is a tightening, kept on the record's own evidence: the four defects its
+    first measurement found were traced back to the commit that fixed them, and
+    all three locations -- a Cyrillic Te in the tutorial's prose, curly quotes
+    and an en dash in an `errors.py` docstring -- are exactly what the narrowed
+    rule exempts.
+  - **Left ADR-018 intact and moved its number into configuration.**
+    `.editorconfig` already declared 80 and the test carried a second copy, so
+    the module now reads the declaration and a tree declaring no width fails
+    outright rather than falling back to a default. `CLAUDE.md`, CONTRIBUTING
+    and PLAYBOOK stopped restating the number.
+  - **Gave the gitleaks download a retry.** `--retry-all-errors` rather than
+    `--retry`, because curl counts only timeouts and 408, 429 and 5xx as
+    transient, and the fault that failed this gate was a connection reset.
+    `tests/test_workflow_downloads_retry.py` pins the retry and the fail-fast
+    flags on every download any workflow makes.
+  - **Set the output encoding at every entry point that prints.** Six sites,
+    not the nine the issue claimed: only four of seven scripts write text. The
+    two package modules call it inside their `__main__` guard and check the
+    attribute first, which is what mypy demanded and what a replaced or absent
+    stdout demands anyway. `demo_metaclass.py` gained a guard rather than a
+    bare call, which also removed an import side effect it already had.
+  - **Shipped `examples/` with a job that runs it.** Four journeys, an index
+    pairing each with real output, and a job that installs the project with
+    plain pip and no extras on 3.10, globs the directory, counts what it ran
+    and fails on zero. The directory joined the ruff and bandit scopes, so it
+    is clean against the whole rule set with no freeze entry.
+  - **Scoped the new prose-citation rule to records from 020 forward.** ADR-020
+    and `tests/test_decision_citations.py`; the fourteen merged records that
+    cite another keep their prose.
+  - **Recorded the examples port divergence as ADR-021.** The directory shipped
+    without a record, which the end-of-session audit caught rather than the
+    rule preventing.
+- **PRs merged:** #113, then #114 and #115, then #116, then #117. #118 and the
+  wrap follow.
+- **Issues closed/created:** #107, #108, #110 and #111 closed by the pull
+  requests above. #112 closed as not planned, having been filed in error.
+  Nothing new opened; the backlog is empty.
+- **Post-mortem (#112, filed against work that already existed):**
+  - **Symptom:** an issue asserting that nothing opens the built wheel, with
+    acceptance criteria that were already met in full.
+  - **Root cause:** the claim came from reading the `v2.46.0` diff of
+    `python-lib.md`, which adds a wheel-contents check, and inferring the gap.
+    The workflow that would have settled it was never opened.
+  - **Why missed:** nothing distinguishes a template rule the project already
+    satisfies from one it does not, and a diff cannot say. Three other new
+    checks were verified against the tree that morning; this one was not,
+    because the template's own prose asserts no other gate covers it, which
+    read as confirmation.
+  - **Fix:** closed with a comment naming the existing step in `ci.yml` and
+    PLAYBOOK 3.11.
+  - **Prevention:** when a template diff names a missing check, grep the
+    workflows and the playbook for it before filing. `base-review` already
+    covers this under "From an extraction" -- absence of evidence from a
+    partial view is not evidence of absence -- and a template diff is exactly
+    such a view.
+- **Lesson:** a divergence can close from the other side, and the diff does not
+  say so. Reading the divergence record before the diff, which `base-docs`
+  asks for, turned a supposed two-record migration into one deleted constant.
+- **Lesson:** taking a narrowed rule verbatim would have re-hidden the defects
+  the original was raised by. Every homoglyph and smart character ADR-014 found
+  sat in a comment, a docstring or prose -- precisely what `v2.46.0` exempts.
+  The evidence for keeping the local rule stricter predates the change by five
+  days and was still sitting in the record.
+- **Lesson:** the coverage guard on a meta-test earned its place twice in one
+  session, both times before the thing it guards was written. The workflow
+  retry check's first curl pattern anchored at the bare start of a line and
+  matched nothing under a `run` block's indentation; the citation check found
+  no records because the new one was not yet staged and `git ls-files` reads
+  the index. Both would have passed while reading nothing.
+- **Lesson:** a rule arriving after a corpus is already immutable needs a
+  stated scope, and the count that decides it is not the obvious one. Fourteen
+  of nineteen records cite another in prose, which sounds like a migration;
+  eight carry the citation inside a Decision section, which is what makes it
+  impossible. Measuring the second number turned a fourteen-file rewrite into
+  one record and one check.
+- **Lesson:** the wrap-up audit found a rule the session had broken. `examples/`
+  is a new directory and `base-docs` wants the record written before the files,
+  so ADR-021 is late by four hours. Nothing else in the session would have
+  surfaced it, which is the argument for executing the checklist rather than
+  summarizing it.
+- **Upstream:** two filings. braboj/solid-ai-templates#1104 against
+  `templates/base/core/docs.md`: a rule constraining the form of documents that
+  are immutable once merged has to say whether it binds forward or
+  retroactively, since the two readings differ by an unbounded amount of work
+  and by whether an existing corpus is compliant or in violation. Recorded on
+  the `Upstream:` line of ADR-020 at decision time rather than at the wrap. And
+  #1107 against `templates/base/core/testing.md`: a meta-test that enumerates a
+  corpus needs a companion assertion that the corpus was not empty, because an
+  empty enumeration is indistinguishable from full compliance -- the template
+  already names two patterns of this shape and neither carries the guard.
+  ADR-021 records `none` with a revisit trigger: one project meeting a
+  privileged-port collision once is not evidence the rule generalizes.
+- **Pending:** nothing in this repository. Upstream sits at `v2.49.0`, three
+  tags past the pin, touching four chain files -- `docs.md`, `git.md`,
+  `testing.md` and `quality-gates.md`. The citation rule is unchanged there, so
+  ADR-020 is not at risk of same-day supersession, but that bump is its own
+  session and wants the same read-the-record-first treatment this one needed.
+  braboj/solid-ai-templates#1057, #1058, #1076, #1077, #1104 and #1107 remain
+  open upstream. One residual was recorded rather than filed: `release.yml`
+  builds its own artifacts on a tag without repeating the wheel-contents
+  assertion, which needs a build-configuration change landing between a merged
+  commit and its tag to matter, so there is no window.
