@@ -133,8 +133,7 @@ MODBUS TCP RSP -> | HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 4, Unit-ID: 1) | P
 ### Run the server and client simulators
 
 ```python
-from pyomb.omb_client import OmbClientSim
-from pyomb.omb_server import OmbServerSim
+from pyomb import OmbClientSim, OmbServerSim
 
 server = OmbServerSim(port=502)
 server.start()

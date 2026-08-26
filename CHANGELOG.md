@@ -6,6 +6,16 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `OmbClientSim` and `OmbServerSim` are exported from the package root, so
+  `from pyomb import OmbServerSim` works alongside the submodule import that
+  the README showed before. They are bound on first use rather than on
+  import, which keeps the ssl import off a caller that only needs the codec:
+  measured at roughly 13ms against the package's own 35ms. A new test module
+  pins both halves -- that every name in `__all__` resolves, and that a plain
+  `import pyomb` still loads neither simulator nor ssl
+
 ## [0.2.1] - 2026-08-24
 
 ### Added
