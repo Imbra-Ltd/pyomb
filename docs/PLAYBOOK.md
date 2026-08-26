@@ -754,6 +754,17 @@ on the citation scope. The divergence may still hold, or upstream may have
 adopted it, in which case the record now describes an inherited rule rather
 than a departure from one.
 
+Three of the four are in that second state as of `v2.54.0`, and the reading
+that established it is not owed again. Upstream took the format-migration
+boundary at `v2.47.0` and the citation scope at `v2.54.0`, each from this
+project's own filing, so ADR-017 and ADR-020 now describe inherited rules.
+ADR-019's decline of the citation rule was narrowed by ADR-020 before either
+landed, and none of it is live. ADR-014 is the one still standing apart, and it
+stands the other way: `quality.md` narrowed its ASCII rule to identifiers at
+`v2.46.0`, so this project's rule is the stricter of the two rather than a
+departure from it. A pin that re-widens that rule puts it back in the first
+state, which is why it stays on the list.
+
 A clause can also be correct upstream and wrong here. The templates repository
 writes rules for itself as well as for its consumers, so a rule about how it
 governs its own records can ship inside a template and read as binding on this
