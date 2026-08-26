@@ -1597,3 +1597,91 @@ package, per ADR-002. See `README.md` for usage and
 - **Pending:** #1057 is filed and not implemented. It edits a document in the
   templates repository, which has its own conventions and its own backlog, and
   the copy here is a pinned checkout.
+
+## 2026-08-25 — Bump the chain, export the simulators
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Bumped the templates pin to `v2.45.0` and restored `examples.md` to the
+    startup block.** Upstream cut the tag roughly a day after #68 was closed as
+    not-planned for want of it. The manifest adds `base-examples` to the
+    `stack-python-lib` chain, so the resolution went from thirteen files to
+    fourteen. ADR-015's guard did the reconciliation rather than a person:
+    against the new pin with the block untouched it failed naming the file and
+    the side it sat on, and passed once the entry went back where #65 had
+    removed it from.
+  - **Confirmed `base-examples` is a no-op here, against the tagged text rather
+    than the untagged text #68 judged it from.** It governs a project that
+    ships an `examples/` directory and states that a project without one
+    inherits nothing. The two other block files the tag moved, `readme.md` and
+    `python-lib.md`, only delegate their examples rules to the new template, so
+    neither adds an obligation.
+  - **Left ADR-008 untouched, having checked rather than assumed.** Its Context
+    counts ten files on the stack axis, its diagram names examples among them,
+    and its Consequences count fourteen in the block. All three read accurate
+    again at this pin, which is the self-reversing state #68 described when it
+    declined to write a supersession.
+  - **Exported `OmbClientSim` and `OmbServerSim` from the package root.** They
+    were reachable only through their submodules, while `CLAUDE.md` 2.2
+    requires the public API be exported explicitly with `__all__`. They now
+    bind through a module `__getattr__`, which puts them in the flat API and
+    leaves the ssl import to the first caller that asks for a simulator; a
+    `TYPE_CHECKING` block hands the checker the real classes so nothing in the
+    public API becomes `Any`.
+  - **Gave `CLAUDE.md` 2.2 its first check.** Nothing asserted that a name in
+    `__all__` resolves, and the list is a literal rather than a reference, so
+    an advertised name can have nothing behind it and no gate reports it.
+    `tests/test_package_exports.py` pins that contract, and pins the deferral
+    from a fresh interpreter, because in-process the suite has already imported
+    both submodules for other reasons and would always answer yes.
+- **PRs merged:** #105 then #106, in that order.
+- **Issues closed/created:** #68 closed by #105. Created #107 and #108, both
+  open and neither shipped.
+- **Lesson:** a deferred issue's closing comment predicted its own blind spot
+  and was right inside a day. #68 was closed recording that upstream cutting a
+  tag "will now produce no signal on this side", and that whoever next read the
+  startup block was the detection mechanism. The tag landed about
+  twenty-four hours later. What caught it was the session-start check of
+  submodule state, not anything built for the purpose, which is the argument
+  for leaving a triggered-but-unsignalled issue open rather than closing it
+  tidily.
+- **Lesson:** re-measuring an audit comment turned an override into a
+  re-scope. `__init__.py` refused this export in a comment citing 32ms of ssl
+  against the package's own 45ms, a 70% penalty, and ended by telling the
+  reader to re-measure before treating the number as current. Six paired runs
+  put it at 13ms against 35ms, a 38% penalty -- half the recorded cost and
+  still real. Honouring the constraint through a different mechanism was then
+  the obvious move, where overriding a 70% figure would not have been.
+- **Lesson:** a finding read off one line was wrong, and the same file said so
+  ten lines higher. The simulators were reported as missing from the public API
+  on the strength of `__all__` alone. The module docstring declares
+  `pyomb.omb_client` and `pyomb.omb_server` as equally public submodules, so
+  the README's import was the documented form rather than a reach past the
+  surface. `review.md` asks that a finding be demonstrated before it is
+  reported; reading the whole file it sits in is the cheapest half of that, and
+  it was the user who caught the gap.
+- **Lesson:** an infra failure read as a diff failure until the log was opened.
+  The `secrets` gate failed on #106 and took the fan-in `gate` with it. The log
+  carried `curl: (35) Recv failure: Connection reset by peer`, so gitleaks was
+  never downloaded and nothing scanned the diff. One announced re-run passed.
+  The habit `review.md` warns against is retry-until-green, and the only thing
+  separating that from a legitimate re-run is whether the log was read first.
+- **Upstream:** two filings, both generic once the domain skin comes off.
+  braboj/solid-ai-templates#1076 against `templates/base/core/testing.md`: an
+  export list is a hand-written manifest of what a module binds, kept beside
+  the bindings and drifting from them silently, which is the shape
+  `testing-drift-guard` already names three instances of and does not name this
+  one. The linter cannot substitute, because `F401` asks whether an import is
+  used and `__all__` membership counts as use; it never asks the reverse.
+  And #1077 against `templates/stack/python-lib.md`: "All public API exported
+  from `__init__.py`" is right as a default and collides with import cost when
+  the surface spans a cheap core and an expensive edge, leaving a project to
+  break the rule or tax every caller when a third option exists.
+- **Pending:** #107 and #108 are filed and unshipped. Upstream,
+  braboj/solid-ai-templates#1057 and #1058 remain open; #1056 closed as
+  completed. Separately, `origin/main` upstream now sits ten commits past
+  `v2.45.0` carrying content changes to `quality.md` and `docs.md` that narrow
+  the ASCII rule and stop naming a line-length number. Both bear on ADR-014 and
+  ADR-018 here. Nothing is inherited while the pin holds a tag, and the startup
+  block guard checks chain membership rather than rule content, so the next
+  bump needs those two records reconciled deliberately.

@@ -553,6 +553,36 @@ tar -tzf dist/pyomb-*.tar.gz | grep -c solid-ai-templates
 
 The count must be `0`.
 
+### 3.18 Public API exports (pytest)
+
+```bash
+pytest tests/test_package_exports.py
+```
+
+Every name in `__all__` resolves against the package. The list is a literal
+rather than a reference, so a name can sit in it with nothing bound behind it;
+`from pyomb import ThatName` then fails for a name the package advertises, and
+no other gate reports it. CLAUDE.md 2.2 states the export rule and this is what
+holds it.
+
+The module also pins the deferral the simulators rest on. `OmbClientSim` and
+`OmbServerSim` are bound through the package's `__getattr__` rather than
+imported at the top, because importing them costs every caller the ssl import
+for a transport most callers never open — roughly 13ms against the package's
+own 35ms. A plain `import pyomb` must therefore load neither simulator nor ssl.
+
+That half runs a fresh interpreter and reads `sys.modules` in it. In-process
+the suite has already imported both submodules for other reasons, so asking
+there would always answer yes.
+
+Re-measure before treating the numbers above as current:
+
+```bash
+python -X importtime -c "import pyomb; import pyomb.omb_client; import pyomb.omb_server"
+```
+
+Read the cumulative column on the `pyomb` line and on the two that follow it.
+
 ## 4. Maintenance
 
 ### 4.1 Bump the templates submodule

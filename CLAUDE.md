@@ -125,7 +125,8 @@ python scripts/gen_test_certs.py # mint the throwaway TLS chain
 - No mutable default arguments
 - Export the public API explicitly from `__init__.py` with `__all__`; no star
   imports anywhere. Check: `grep -rn "import \*" src/`, which MUST print
-  nothing
+  nothing. That `__all__` is a literal, so a name in it can have nothing bound
+  behind it; `tests/test_package_exports.py` asserts every one resolves
 - One name for the project across repository, distribution and import package
 
 ### 2.3 Protocol rules
