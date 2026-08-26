@@ -1904,3 +1904,93 @@ package, per ADR-002. See `README.md` for usage and
   161 added lines -- `docs.md`, `git.md`, `review.md`, `testing.md` and
   `quality-gates.md`. That is the next bump and wants its own session, read
   against the divergence records the way 4.1 now says.
+## 2026-08-26 — Gate the two unenforced rules (evening)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Gated the line-ending rule the playbook documented and nothing ran.**
+    Two rules: no index entry carries a carriage return, and nothing the
+    project declares text is stored as binary. The second is what a count
+    cannot express -- a blob git classifies as binary stops being normalised,
+    so its carriage returns enter the index unconverted while the count reads
+    zero, which is how this journal came to hold 1127 of them under a clean
+    report. Which files are legitimately binary now comes from git's own
+    attribute column rather than a list in the test: the specifications are
+    declared binary in `.gitattributes` and report `-text` in both columns,
+    while a file detected as binary under a `text=auto` declaration is the
+    incident shape exactly. `mixed` joined the carriage-return set, which the
+    documented count of `i/crlf` never reported though it commits the same
+    bytes. PLAYBOOK 3.12 becomes a pytest section like its siblings.
+  - **Gated the changelog entry beside the wheel URL it sits next to.** Five
+    rules against the version the package reports: a dated section records
+    it, the `Unreleased` link compares from it, every section carries a link
+    definition, no definition outlives its section, and none resolves to a
+    version other than its label. The last catches a link copied from its
+    neighbour and not retargeted, which resolves and is wrong, so a reader
+    meets it only by following it. Release step 4 names the test the way step
+    5 names its own, and the `Unreleased` block now records both gates --
+    step 4 presupposes that block accumulates and it was empty.
+  - **Committed the negative controls rather than only running them.** Both
+    modules express their rules as pure functions over parsed records, so a
+    planted record of each break sits in the suite as a test rather than as a
+    claim in a commit message. The end-to-end controls stayed out of the
+    tree: a throwaway repository carrying a real CRLF blob, a real mixed blob
+    and a real NUL byte for one, and a reproduction of the tree `v0.3.0` was
+    tagged in for the other.
+- **PRs merged:** #125 then #126.
+- **Issues closed/created:** #122 and #123 closed by the pull requests that
+  carry them, which emptied the backlog. #127 and #128 created during the
+  wrap-up audit. Upstream, filed braboj/solid-ai-templates#1140.
+- **Lesson:** a negative control needs proof the break landed. Three
+  structural assertions were controlled by patching the module under test,
+  and two of the patterns did not match, because the anchor carried an escape
+  the pattern miscounted. The run then reported that neither assertion fired,
+  which reads exactly like a coverage guard that is decorative. It was caught
+  only because three breaks ran back to back and the failing pair was
+  identical every time, so the edit had made no difference at all. One break
+  on its own would have shown a plausible result with nothing to compare it
+  against. An edit that matches nothing exits zero, so a break that never
+  landed and a check that never fired produce the same evidence.
+- **Lesson:** the acceptance criteria named a behaviour and the cheaper
+  implementation was already in hand. "A file reporting `i/-text` that is not
+  one of the specification PDFs fails" invites hardcoding four paths, or a
+  suffix set that would let a stray byte excuse itself by the file's name.
+  git resolves the attributes itself and prints them in the same record, so
+  the declaration is readable rather than restatable, and the rule that falls
+  out -- declared binary passes, detected binary fails -- is the incident
+  shape rather than an approximation of it. Reading the tool's whole output
+  before designing against a summary of it is what surfaced the column.
+- **Lesson:** a synthetic fixture is shaped by whoever imagined it. The
+  changelog gate carries a clean synthetic file and one break per rule, and
+  every one passed first time, because the fixture and the readers came out
+  of the same head. Reproducing the tree `v0.3.0` was actually tagged in is
+  what made the control independent: it failed two rules naming both faults,
+  which is the evidence that this gate would have stopped the release that
+  prompted it. No file written for the occasion could have said that.
+- **Lesson:** the wrap-up audit found the class of claim nothing reads. Every
+  document gate in the suite checks what is inside a file -- characters,
+  widths, front matter, citations, links, versions -- and none of them reads
+  a sentence about the state of the tree. `docs/ONBOARDING.md` still tells a
+  new contributor that the repository, the distribution and the import
+  package do not yet share a name, which ADR-006 settled when it carried
+  `pyomb` to a clean repository. True when written, false since the v0.1.0
+  import, and invisible to every check because it is prose about the world
+  rather than content in a file. #127 carries it.
+- **Upstream:** one filing. braboj/solid-ai-templates#1140 against
+  `templates/base/workflow/quality-gates.md`: the negative-control rule
+  governs the control and not the step that plants the break. The file
+  already legislates the same shape one bullet away, where a check must state
+  what it inspected because reaching zero files and finding zero violations
+  print the same thing. A second candidate -- expressing a rule as a pure
+  function so its negative control can be committed -- was considered and not
+  filed, because `testing-characterization-fingerprint` rules the other way
+  for its own scaffold and a filing that does not engage that tension is not
+  worth the maintainer's time.
+- **Pending:** #127 and #128 are filed and unshipped. The pin sits at
+  `v2.51.0` while upstream has cut `v2.52.0` and `v2.53.0` -- six chain files
+  and 199 added lines -- which #128 now carries rather than a line here, so
+  the next session reads it from the tracker. The templates repository's own
+  release procedure still wants the `v2.51.0` cut recorded as its own
+  unmilestoned journal entry, which remains unwritten. Upstream,
+  braboj/solid-ai-templates#1057, #1058, #1076, #1077, #1127, #1133 and #1140
+  are open; #1104 closed since the previous entry named it.
