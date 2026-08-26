@@ -6,6 +6,25 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- The line-ending rule runs as a test rather than as two commands the playbook
+  documented and nothing executed. No tracked file may reach the index
+  carrying a carriage return, and nothing the project declares text may be
+  stored as binary. The second is the case a count cannot see: a blob git
+  classifies as binary stops being normalised, so its carriage returns enter
+  the index unconverted while the count stays at zero, which is how this
+  project's journal came to hold 1127 of them under a clean report. Which
+  files are legitimately binary is read from git's own attribute column rather
+  than listed in the test. See #122
+- The changelog is pinned to the version the package reports, the way the
+  README's wheel URL already was. A release whose `Unreleased` block was never
+  cut now fails a pull request rather than shipping inside a tagged sdist that
+  no later edit reaches. The compare links are checked alongside it: the
+  unreleased range starts at the reported version, every version section
+  carries a definition, and no definition names a version other than its own.
+  See #123
+
 ## [0.3.0] - 2026-08-26
 
 ### Added
