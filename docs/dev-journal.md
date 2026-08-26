@@ -1994,3 +1994,80 @@ package, per ADR-002. See `README.md` for usage and
   unmilestoned journal entry, which remains unwritten. Upstream,
   braboj/solid-ai-templates#1057, #1058, #1076, #1077, #1127, #1133 and #1140
   are open; #1104 closed since the previous entry named it.
+
+## 2026-08-26 — Clear the backlog, bump the pin (late)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Dropped the naming claim ONBOARDING carried past its own settlement.**
+    Section 5 told a new contributor that the repository, the distribution and
+    the import package do not yet share a name. All three read `pyomb` and
+    have since the v0.1.0 import: ADR-002 decided the last two while leaving
+    the repository as `protocol-modbus`, and ADR-006 then carried the name to
+    a clean repository without touching the sentence describing the gap. The
+    paragraph goes rather than being restated, because a settled fact needs no
+    sentence and section 5 is a domain overview beside its links. The sweep
+    for other survivors found only ADR-002 and ADR-006, which are merged
+    records of what was true when written, and the second says so itself.
+  - **Bumped the pin to `v2.53.0` and reconciled four divergences.** Two tags,
+    six chain files, 199 lines added, every one of them in the startup block.
+    The range has a single theme: a check reports what it inspected, and a
+    count of zero is a failure rather than a clean result. None of ADR-014,
+    ADR-017, ADR-019 or ADR-020 is refuted by it. ADR-014's rule lives in
+    `quality.md`, which the range does not contain at all. The other three
+    point at `docs.md`, which it does contain -- and all three hunks there
+    touch the checks that file ships rather than the immutability or citation
+    text the records bound.
+  - **Corrected the reconciliation instruction while executing it.** PLAYBOOK
+    4.1 named ADR-014, ADR-019 and ADR-020 as the records to re-read on a
+    bump and omitted ADR-017, whose own Consequences ask for exactly that
+    reading. Fixed in the same change rather than filed, because it is the
+    procedure the change was running.
+- **PRs merged:** #130 then #132.
+- **Issues closed/created:** #127 and #128 closed by the pull requests that
+  carry them. #131 created from a negative control run during the bump.
+  Upstream, filed braboj/solid-ai-templates#1150.
+- **Lesson:** the gates that enforce the divergences are the ones that cannot
+  report having run. `testing.md` arrived with a rule that the coverage
+  assertion belongs in its own test, so every document gate was controlled by
+  patching its enumeration to return nothing and rerunning the module. Three
+  of six passed on an empty corpus, and they are the checks implementing
+  ADR-014, ADR-017 and ADR-019 -- each divergence record's own enforcement
+  mechanism. Nothing about those three is unusual. Each was written to assert
+  a property of file content, and whether any file was read was never the
+  property. The previous entry closed on a claim that no gate reads; this is
+  the same shape one level up, where the assertion is real and the corpus
+  behind it is not proven. #131 carries the measurement.
+- **Lesson:** a file in the range is not a rule in the range. Three of the
+  four records name `docs.md`, so the first reading of the diffstat is that
+  three divergences are in play at once. Every hunk in that file adds a count
+  and a zero guard to an embedded check, which is a neighbour moving rather
+  than the rule. Separating the two is the reconciliation, and it took
+  grepping the range for the rule text to say so -- reading the file list
+  alone reports the opposite and reads as three gaps to close.
+- **Lesson:** an instruction that enumerates its own subjects goes stale in
+  the direction nothing watches. PLAYBOOK 4.1 listed three of the four
+  records carrying a divergence, and the omitted one is the most recent to
+  state the requirement in its Consequences. A list of instances drifts as
+  instances are added, and the addition is a different pull request from the
+  one that maintains the list, so neither side ever sees both. It surfaced
+  only because the list was executed rather than read.
+- **Upstream:** one filing. braboj/solid-ai-templates#1150 against
+  `templates/platform/github.md`: the label conformance check was rewritten
+  from jq into Python and kept the jq form's pass condition three paragraphs
+  below the new one, so the file states both `Output MUST be []` and that the
+  command reports a count. The rewritten check prints `issues inspected: N`
+  and never `[]`, so a reader taking the literal instruction reads a correct
+  run as a violation. Found by running the check in the form it ships rather
+  than reading it. A second candidate -- that a procedure enumerating the
+  records it governs should derive them rather than list them -- was
+  considered and not filed, because `base-docs` already rules that a
+  hand-maintained restatement of a self-documenting source drifts, and a
+  filing that only re-states it in a new setting is not worth the
+  maintainer's time.
+- **Pending:** #131 is filed and unshipped, and it is the only open issue.
+  The templates repository's own release procedure still wants the `v2.51.0`
+  cut recorded as its own unmilestoned journal entry, which remains unwritten
+  and is now two tags behind. Upstream, braboj/solid-ai-templates#1058,
+  #1076, #1077, #1127, #1133, #1140 and #1150 are open; #1057 closed since
+  the previous entry named it.
