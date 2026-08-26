@@ -220,6 +220,11 @@ follow the referenced templates. Project-specific additions only:
 - Superseding a record updates both sides in the same change: `supersedes` on
   the new one, `status` and `superseded_by` on the old. That metadata edit is
   the one change a merged record accepts beyond readability; see ADR-019
+- A decision record numbered 020 or above names no other record in its prose:
+  a supersession goes in the front matter and a context-only pointer goes in a
+  closing `## Related` section. Records below that number keep the prose
+  citations they merged with and are not to be rewritten. Enforced by
+  `tests/test_decision_citations.py`, which skips fenced blocks; see ADR-020
 
 ## 4. Identity
 
