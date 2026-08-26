@@ -1,15 +1,22 @@
-"""Markdown prose wraps at 80 columns.
+"""Markdown prose wraps at the width the project declares.
 
 The documents already do this. Every governance and reference file the project
 maintains -- the agent context file, the README, CONTRIBUTING, PLAYBOOK,
 ONBOARDING, the journal, the audits and the decision records -- holds its prose
-to 80 columns, and did so before anything checked. What was missing is the
-rule: `.editorconfig` sets a maximum width for Python and says nothing about
-Markdown, and CONTRIBUTING states 120 with 80 recommended under a heading that
-reads Code style. So the convention was real, unwritten, and held by hand.
+to 80 columns, and did so before anything checked. What was missing was the
+rule: nothing declared a width for Markdown at all, and CONTRIBUTING states 120
+with 80 recommended under a heading that reads Code style. So the convention
+was real, unwritten, and held by hand.
 
 It was also already slipping. A 98-column heading reached a green pipeline,
-because no gate in the project reads the width of a Markdown line.
+because no gate in the project read the width of a Markdown line.
+
+The width is declared once, in `.editorconfig` under the Markdown section, and
+this module reads it from there rather than restating it. A number written in
+both places is one fact represented twice, and two copies drift with nothing to
+say which one won. A tree that declares no width fails here rather than falling
+back to a default, because an unstated width is the defect itself and not a gap
+for the check to fill in.
 
 Three kinds of line are exempt, and each is exempt because it cannot be wrapped
 rather than because it is inconvenient:
@@ -32,11 +39,18 @@ import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
-# The width the documents already keep. It is the recommendation CONTRIBUTING
-# makes for code, applied to the prose that surrounds it, and the measurement
-# that introduced this module found the whole tree already inside it but for
-# three lines.
-MAX_COLUMNS = 80
+# The one place the width is written down. Reading it here rather than
+# restating it keeps the number to a single copy, so an edit to the declaration
+# moves the gate with it instead of leaving the two disagreeing.
+EDITORCONFIG = REPO / ".editorconfig"
+
+# An EditorConfig section header naming Markdown, whether on its own or inside
+# a brace list of extensions. Matched against the bracketed line so the closing
+# bracket is available as a delimiter, which keeps a section such as [*.cmd]
+# from answering to it.
+MARKDOWN_SECTION = re.compile(r"[.{,]md[},\]]")
+
+WIDTH_KEY = "max_line_length"
 
 # Imported with the v0.1.0 tree rather than written to this convention, and
 # wrapped at about 96 throughout: its prose sits at a median of 35 columns and a
@@ -53,12 +67,51 @@ IMPORTED = {"docs/Open_Modbus_Tutorial.md"}
 URL = re.compile(r"https?://")
 
 REMEDY = (
-    "Wrap the line at or before column 80. A heading that will not fit wants a "
-    "shorter title rather than a longer line, and a table or a fenced block "
-    "does not need wrapping because neither is measured here."
+    "Wrap the line at or before the declared column. A heading that will not "
+    "fit wants a shorter title rather than a longer line, and a table or a "
+    "fenced block does not need wrapping because neither is measured here."
 )
 
 NOT_A_CHECKOUT = "not a git checkout, so there is no tracked-file list to read"
+
+UNDECLARED = (
+    f"no Markdown width is declared: .editorconfig carries no {WIDTH_KEY} under "
+    "a section naming Markdown, so the rule has no number and this check has "
+    "nothing to read. An unstated width is the defect rather than a gap for "
+    "the check to fill in with a default, so declare one there."
+)
+
+
+def configured_width():
+    """Read the Markdown width the project declares in .editorconfig.
+
+    Returns:
+        int | None : The declared width, or None when the file is absent or
+            no section naming Markdown declares one
+    """
+
+    if not EDITORCONFIG.is_file():
+        return None
+
+    in_markdown = False
+
+    for line in EDITORCONFIG.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+
+        if stripped.startswith("[") and stripped.endswith("]"):
+            in_markdown = bool(MARKDOWN_SECTION.search(stripped))
+            continue
+
+        # EditorConfig has no continuations and no interpolation, so a key is
+        # whatever precedes the first '=' on its own line. A full parser would
+        # be a dependency bought for one integer.
+        if in_markdown and stripped.startswith(WIDTH_KEY):
+            key, sep, value = stripped.partition("=")
+
+            if sep and key.strip() == WIDTH_KEY and value.strip().isdigit():
+                return int(value.strip())
+
+    return None
 
 
 def tracked_markdown():
@@ -85,11 +138,12 @@ def tracked_markdown():
     return [name for name in listing.split("\0") if name and not name.startswith("docs/solid-ai-templates/")]
 
 
-def overlong(text):
+def overlong(text, limit):
     """Locate the lines in one document that exceed the width.
 
     Args:
-        text (str) : The document's full Markdown source
+        text (str)  : The document's full Markdown source
+        limit (int) : The declared width, in characters
 
     Returns:
         list[tuple[int, int, str]] : One (line, width, content) triple per
@@ -111,14 +165,14 @@ def overlong(text):
         if fenced or stripped.startswith("|") or URL.search(line):
             continue
 
-        if len(line) > MAX_COLUMNS:
+        if len(line) > limit:
             found.append((number, len(line), line))
 
     return found
 
 
 class MarkdownLineWidth(unittest.TestCase):
-    """Pins the 80-column wrap the documents already keep."""
+    """Pins the wrap the documents already keep, at the declared width."""
 
     @classmethod
     def setUpClass(cls):
@@ -128,24 +182,32 @@ class MarkdownLineWidth(unittest.TestCase):
         if not (REPO / ".git").exists():
             raise unittest.SkipTest(NOT_A_CHECKOUT)
 
+        cls.limit = configured_width()
         cls.documents = [name for name in tracked_markdown() if name not in IMPORTED]
 
+    def test_the_width_is_declared_in_configuration(self):
+        """The rule carries no number of its own; the declaration holds it."""
+
+        self.assertIsNotNone(self.limit, UNDECLARED)
+
     def test_no_markdown_line_runs_past_the_width(self):
-        """Prose, headings and list items stay within 80 columns."""
+        """Prose, headings and list items stay within the declared width."""
+
+        self.assertIsNotNone(self.limit, UNDECLARED)
 
         offenders = []
 
         for name in self.documents:
             text = (REPO / name).read_text(encoding="utf-8")
 
-            for number, width, line in overlong(text):
+            for number, width, line in overlong(text, self.limit):
                 offenders.append(f"{name}:{number} ({width}) {line[:56]}")
 
         self.assertEqual(
             offenders,
             [],
-            f"Markdown lines past {MAX_COLUMNS} columns, the width every "
-            "document in the tree already keeps:\n  " + "\n  ".join(offenders) + "\n" + REMEDY,
+            f"Markdown lines past {self.limit} columns, the width .editorconfig "
+            "declares and every document in the tree already keeps:\n  " + "\n  ".join(offenders) + "\n" + REMEDY,
         )
 
     def test_the_imported_tutorial_is_the_only_document_outside_the_rule(self):

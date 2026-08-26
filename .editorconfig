@@ -20,9 +20,10 @@ max_line_length = 80
 indent_size = 2
 
 # Two trailing spaces are a hard line break in Markdown, so trimming them
-# changes what the document renders as. The width is the editor-side half of
-# the wrap rule; tests/test_markdown_line_width.py is the half that gates,
-# since nothing in CI reads this file.
+# changes what the document renders as. The width below is where the wrap
+# rule's number lives, and tests/test_markdown_line_width.py reads it from
+# here rather than carrying a copy of its own. Editing this line moves the
+# gate with it.
 [*.md]
 indent_size = 2
 trim_trailing_whitespace = false

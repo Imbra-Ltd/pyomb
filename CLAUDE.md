@@ -207,9 +207,11 @@ follow the referenced templates. Project-specific additions only:
 - A readability edit to a merged decision record that changes no claim is a
   format migration, not a new decision; say so in the commit and show it with a
   word-level diff. An edit that changes a claim needs a new record; see ADR-017
-- Markdown wraps at 80 columns. Table rows, fenced blocks and lines carrying a
-  URL are exempt because none of them can be wrapped. Enforced by
-  `tests/test_markdown_line_width.py`; see ADR-018
+- Markdown wraps at the width `.editorconfig` declares under its Markdown
+  section, which is the only place that number is written down. Table rows,
+  fenced blocks and lines carrying a URL are exempt because none of them can be
+  wrapped. Enforced by `tests/test_markdown_line_width.py`, which reads the
+  declaration rather than restating it; see ADR-018
 - A decision record opens with YAML front matter — `id`, `status`, `date`,
   `category`, `supersedes`, `superseded_by` — which is the source of truth for
   status and supersession. Copy `docs/decisions/TEMPLATE.md`; a new category
