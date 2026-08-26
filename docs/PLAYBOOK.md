@@ -306,6 +306,15 @@ repository was imported at v0.1.0 and has never carried key material, so the
 full range is in scope. Push protection is enabled on the repository and blocks
 a secret at the client before it reaches CI.
 
+The job downloads the gitleaks binary from a release asset before it can scan
+anything, and that download retries. A connection reset there once failed the
+job with `curl: (35) Recv failure` and took the required gate with it, having
+scanned nothing. `tests/test_workflow_downloads_retry.py` pins the retry and
+the fail-fast flags on every download a workflow makes, so the next one added
+cannot omit them. A red run here still wants the log read before it is called
+transient: a download that failed and a scan that found a secret look the same
+in the checks list and mean opposite things.
+
 ### 3.8 Static analysis (bandit)
 
 ```bash
