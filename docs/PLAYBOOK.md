@@ -715,6 +715,22 @@ does not resolve is scope never adopted. A failure is the block to correct
 rather than the test, unless this repository has changed stack or code host.
 ADR-008 carries why the two additions are there, ADR-015 why the check exists.
 
+The guard checks chain membership, not rule content. A bump can leave the block
+correct while a rule this project deliberately diverges from moves underneath
+it, and nothing reports that. Re-read every record carrying a divergence
+against the text the new pin ships -- ADR-014 on the character set, ADR-019 on
+the prose rule it declines, ADR-020 on the citation scope. The divergence may
+still hold, or upstream may have adopted it, in which case the record now
+describes an inherited rule rather than a departure from one.
+
+A clause can also be correct upstream and wrong here. The templates repository
+writes rules for itself as well as for its consumers, so a rule about how it
+governs its own records can ship inside a template and read as binding on this
+project, where the same words mean something else. Fixing that at the source
+beats recording a local divergence, which then needs maintaining forever. The
+precedence clause `v2.49.0` shipped was this case, and was scoped upstream
+rather than declined here.
+
 ### 4.2 Record a decision
 
 Copy `docs/decisions/TEMPLATE.md` to `docs/decisions/NNN-slug.md`. Fill the

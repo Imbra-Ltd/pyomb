@@ -6,6 +6,8 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-26
+
 ### Added
 
 - `OmbClientSim` and `OmbServerSim` are exported from the package root, so
@@ -15,6 +17,27 @@ numbers follow [Semantic Versioning](https://semver.org/).
   measured at roughly 13ms against the package's own 35ms. A new test module
   pins both halves -- that every name in `__all__` resolves, and that a plain
   `import pyomb` still loads neither simulator nor ssl
+- An `examples/` directory of runnable usage patterns, each executed by CI
+  against an installation built the way a consumer builds one, with no dev or
+  test extras. A snippet that stops working now fails a pull request instead
+  of misleading a reader. The examples bind a port the operating system
+  assigns rather than the registered Modbus port, so they run without
+  privileges and cannot collide with a real device; see ADR-021
+
+### Fixed
+
+- The sdist include patterns are anchored to the repository root. An
+  unanchored pattern matches at any depth, so it also selected the templates
+  submodule's file of that name -- a source archive built from a populated
+  checkout carried 57 files that belong to another project. Released archives
+  were unaffected, because the release workflow checks out without
+  submodules, which was the checkout configuration covering for the include
+  list rather than a safeguard
+- Every entry point that prints states its output encoding rather than
+  inheriting the console's, so output is the same text on a console that does
+  not default to UTF-8. The check reads both directions: a module with a
+  `__main__` guard that prints sets the encoding, and nothing under
+  `src/pyomb/` sets it outside such a guard
 
 ## [0.2.1] - 2026-08-24
 
@@ -163,7 +186,8 @@ no upgrade path to describe and no consumer to break.
   committed chain was rotated; it was self-signed and installed in no trust
   store
 
-[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Imbra-Ltd/pyomb/releases/tag/v0.1.0

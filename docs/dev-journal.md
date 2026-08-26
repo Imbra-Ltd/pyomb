@@ -1801,3 +1801,106 @@ package, per ADR-002. See `README.md` for usage and
   builds its own artifacts on a tag without repeating the wheel-contents
   assertion, which needs a build-configuration change landing between a merged
   commit and its tag to matter, so there is no window.
+
+## 2026-08-26 — Scope the precedence rule, ship v0.3.0 (afternoon)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Fixed the ADR-vs-template precedence conflict at the source rather than
+    carrying it here.** `v2.49.0` added a clause to `docs.md` ruling that where
+    a merged record and the templates disagree, the templates govern and the
+    record stands as history. This project's precedence order puts the records
+    above the pinned chain, which is the rung ADR-014, ADR-019 and ADR-020 sit
+    on. Taking it verbatim would have expired all three the moment upstream
+    restated the rule each departs from, with a pointer bump as the trigger and
+    nothing reporting it. All three survived anyway, but only because each is
+    also written into `CLAUDE.md`, which outranks the chain either way -- safe
+    by being recorded twice rather than by design.
+  - **Scoped the clause upstream, in two halves.** It was written for
+    braboj/solid-ai-templates#1098, where a record carries a stale claim that
+    can be neither edited nor superseded. That reasoning holds in a repository
+    that owns the rules its records describe, where a record drafts the spec and
+    the spec winning is right. Shipped inside a template it bound every
+    consuming project to a ruling written for the inverse relationship, where a
+    record is a written refusal rather than a draft. `docs.md` now leaves
+    precedence to the consuming project's own context file; templates-govern
+    moved to the templates repository's `CLAUDE.md`, beside the immutability
+    rule it already carries. Scoping beat deleting because deletion leaves the
+    question unanswered and makes the next consumer invent a ruling.
+  - **Bumped the pin from `v2.46.0` to `v2.51.0` with no divergence recorded.**
+    Five tags, three chain files -- `docs.md`, `git.md` and
+    `platform/github.md`. Nothing needed changing here: the precedence order
+    `CLAUDE.md` already declares is what the scoped clause now defers to. The
+    range also carried rules this project already satisfies, several derived
+    from its own filings -- administrator-bound protection at a zero review
+    count, minor-pinned linters, a full-history secret scan, an isolated CodeQL
+    workflow carrying its own fan-in, and run selection by full commit SHA.
+  - **Released `v0.3.0`.** Twenty-four pull requests since `v0.2.1`. The tag is
+    annotated at the release commit rather than at whatever `main` pointed to,
+    `release.yml` built and attached the wheel, sdist and SBOM, and the README's
+    install URL was confirmed live against the published wheel rather than
+    assumed. `tests/test_readme_install_command.py` failed the bump until the
+    quick start moved with it, which is the whole reason that guard exists.
+- **PRs merged:** #120 then #121. Upstream, braboj/solid-ai-templates#1118;
+  #1121 closed as a duplicate of #1120.
+- **Issues closed/created:** created #122 and #123. Upstream, filed #1117 and
+  shipped it the same session; filed #1127, open.
+- **Lesson:** a duplicate shipped because external state was checked early and
+  not again at the moment of acting. Upstream #1049 was read as open, then a
+  fix for it was written, reviewed and pushed while the owner merged his own as
+  #1120. `ai-workflow` puts the check immediately before the visible action for
+  exactly this reason; a reading several minutes stale is not a reading, and
+  the wasted work was the cheap half of the cost.
+- **Lesson:** a check returned a plausible number for the wrong reason and was
+  nearly believed. The pre-release orphan scan compared unreachable commit
+  subjects against `main` by exact string, so squash-merge's appended `(#N)`
+  made 118 of them read as lost work. The tell was the size of the result on a
+  tree with no unmerged branches. `review.md` asks that a measurement be
+  hand-checked against one flagged item before it is reported, and one would
+  have settled it instantly.
+- **Lesson:** reading the target before filing turned a wrong issue into a
+  sharp one. A line-ending gate was about to be filed as an unconsidered gap;
+  PLAYBOOK 3.12 already documents both commands, the binary-reclassification
+  trap, and the incident where this journal sat with 1127 CRLF endings while
+  the check reported clean. The real gap is narrower and worth more: the check
+  is manual while its sibling 3.13 runs as pytest on every pull request.
+- **Lesson:** a filtered tracker query hid the item that mattered. Listing a
+  milestone by title showed four issues and read as complete once two moved;
+  the API listing showed a fifth, open, that the title query never returned.
+  Milestone state drove a release decision, so the cheaper query was the one
+  that could have shipped a half-done milestone.
+- **Lesson:** the release shipped without its changelog entry, and the wrap-up
+  audit is what caught it. PLAYBOOK 5 step 4 cuts the `Unreleased` block into
+  a versioned entry; step 5 points the README at the new wheel. Step 5 is
+  gated by `tests/test_readme_install_command.py` and failed the bump on cue.
+  Step 4 is gated by nothing, so it was simply not done, and its neighbour
+  passing made the procedure feel complete. `v0.3.0` is tagged with a
+  changelog that does not name it -- unrecoverable for that archive, since
+  re-tagging a published release is worse than the gap. #123 carries the
+  missing gate. Two adjacent steps, one enforced, and only the unenforced one
+  was missed.
+- **Upstream:** two filings beyond the shipped fix.
+  braboj/solid-ai-templates#1127 against `templates/base/core/git.md`:
+  pre-release step 4 verifies that every issue closed since the previous tag
+  carries the milestone being released, while `platform/github.md` holds that a
+  routine release never scoped as a milestone gets none and MUST NOT have one
+  backfilled. A project using milestones selectively runs the check on a
+  routine release and gets every closed issue back, correct and unactionable,
+  in the same shape as a real finding. Observed here: eight lines, none
+  actionable, release correct to cut. And #1133 against
+  `templates/base/workflow/quality-gates.md`, generalised from the changelog
+  miss: the existing rules cover a constraint with no check and a check never
+  run, but not a procedure mixing gated and ungated steps, where the gated
+  ones supply confidence the others have not earned. Enforcement is not
+  transitive across adjacent steps, and the step to gate first is the one
+  whose omission cannot be corrected afterwards.
+- **Pending:** #122 and #123 are filed and unshipped. The templates
+  repository's own release procedure wants the `v2.51.0` cut recorded as its
+  own unmilestoned journal entry, which has not been written. Upstream,
+  braboj/solid-ai-templates#1057, #1058, #1076, #1077, #1104, #1127 and #1133
+  remain open; #1107 closed since the previous entry named it, which is signal
+  that the older filings are being worked rather than accumulating. Upstream
+  also cut `v2.52.0` while this session ran, touching five chain files across
+  161 added lines -- `docs.md`, `git.md`, `review.md`, `testing.md` and
+  `quality-gates.md`. That is the next bump and wants its own session, read
+  against the divergence records the way 4.1 now says.
