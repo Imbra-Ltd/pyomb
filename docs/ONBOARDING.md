@@ -131,9 +131,6 @@ Read `docs/dev-journal.md` before touching the wire format. Its post-mortems
 record defects that a passing test suite did not catch, and section 2.3 of
 `CLAUDE.md` states the resulting rules in one line each.
 
-The repository, the distribution and the import package do not yet share a
-name; ADR-002 settles what they become.
-
 ## 6. Daily workflow
 
 Branch, commit, review and release steps are in `docs/PLAYBOOK.md` — see
