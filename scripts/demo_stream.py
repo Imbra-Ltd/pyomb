@@ -2,6 +2,7 @@ from pyomb.stream import ModbusTcpSender, ModbusTcpReceiver
 from pyomb.packets import ModbusTcpPacket, ModbusHeader, ModbusPdu
 from pyomb.logger import Logger
 import socket
+import sys
 import threading
 
 
@@ -80,6 +81,10 @@ class SimpleTest(object):
 
 
 if __name__ == "__main__":
+    # State the encoding rather than inheriting the console's, so what this
+    # prints is what the reader sees on any machine.
+    sys.stdout.reconfigure(encoding="utf-8")
+
     # Start the server thread
     server = threading.Thread(target=SimpleTest().run_server)
     server.start()

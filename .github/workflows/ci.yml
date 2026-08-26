@@ -179,7 +179,22 @@ jobs:
           # writes the response body into the archive, so the run fails two
           # lines down at tar with "not in gzip format" -- a corrupt-archive
           # error standing in for a release that is not there.
+          #
+          # --retry-all-errors rather than --retry alone. curl counts a
+          # timeout and an HTTP 408, 429 or 5xx as transient and retries
+          # those; a connection reset mid-transfer is none of them, and a
+          # reset is what failed this gate once already, with
+          # "curl: (35) Recv failure" and nothing scanned. The cost is that a
+          # genuine 404 is attempted three times before failing, which buys
+          # keeping the real fault loud for a few seconds.
+          #
+          # This step is a required context, so its failure blocks a merge. A
+          # fault here says nothing about the diff, and the alternative to
+          # retrying is a person re-running the job and calling it green --
+          # which is the retry-until-green habit the review rules name.
           curl -sSfL -o gitleaks.tar.gz \
+            --retry 3 --retry-delay 2 --retry-all-errors \
+            --connect-timeout 10 --max-time 120 \
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
           tar -xzf gitleaks.tar.gz gitleaks
           ./gitleaks detect --source . --redact --verbose --exit-code 1

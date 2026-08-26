@@ -306,6 +306,15 @@ repository was imported at v0.1.0 and has never carried key material, so the
 full range is in scope. Push protection is enabled on the repository and blocks
 a secret at the client before it reaches CI.
 
+The job downloads the gitleaks binary from a release asset before it can scan
+anything, and that download retries. A connection reset there once failed the
+job with `curl: (35) Recv failure` and took the required gate with it, having
+scanned nothing. `tests/test_workflow_downloads_retry.py` pins the retry and
+the fail-fast flags on every download a workflow makes, so the next one added
+cannot omit them. A red run here still wants the log read before it is called
+transient: a download that failed and a scan that found a secret look the same
+in the checks list and mean opposite things.
+
 ### 3.8 Static analysis (bandit)
 
 ```bash
@@ -495,14 +504,19 @@ the limit usually holds two subjects, so give the second its own paragraph.
 pytest tests/test_markdown_line_width.py
 ```
 
-Every tracked Markdown line is held to 80 columns, counted in characters so an
-em dash costs one and not three. Table rows, fenced blocks and lines carrying a
-URL are exempt, each because it cannot be wrapped; a relative link is not.
-`docs/Open_Modbus_Tutorial.md` is outside the rule, having arrived with the
-v0.1.0 import at its own width. ADR-018 records the scope and the exemptions.
+Every tracked Markdown line is held to the width `.editorconfig` declares under
+its Markdown section, counted in characters so an em dash costs one and not
+three. That declaration is the only place the number is written down, and the
+check reads it rather than carrying a copy. Table rows, fenced blocks and lines
+carrying a URL are exempt, each because it cannot be wrapped; a relative link
+is not. `docs/Open_Modbus_Tutorial.md` is outside the rule, having arrived with
+the v0.1.0 import at its own width. ADR-018 records the scope and the
+exemptions.
 
-A failure names each offender as `path:line (width)`. Wrap at or before column
-80. A heading that will not fit wants a shorter title, not a longer line.
+A failure names each offender as `path:line (width)`. Wrap at or before the
+declared column. A heading that will not fit wants a shorter title, not a
+longer line. Removing the declaration fails the check outright rather than
+falling back to a default, because a width nothing states is the defect itself.
 
 ### 3.16 Decision-record schema (pytest)
 
@@ -582,6 +596,28 @@ python -X importtime -c "import pyomb; import pyomb.omb_client; import pyomb.omb
 ```
 
 Read the cumulative column on the `pyomb` line and on the two that follow it.
+
+### 3.19 Entry-point output encoding (pytest)
+
+```bash
+pytest tests/test_entry_points_set_the_encoding.py
+```
+
+A program that writes text states its encoding rather than inheriting the
+console's, and does so inside its `__main__` guard. The check reads both
+directions: every module with a guard that prints or builds a `Logger` calls
+`sys.stdout.reconfigure`, and nothing under `src/pyomb/` calls it anywhere but
+inside a guard.
+
+The second half is the one that matters. `sys.stdout` belongs to the process,
+so a library module reconfiguring it at import reaches into an application that
+only wanted to send a Modbus frame. `src/pyomb/logger.py` is the case that
+looks like an exception: it builds a handler on `sys.stdout` and sets no
+encoding on it, for the reason its own docstring gives for not touching the
+root logger.
+
+A new script that prints fails this until it carries the call. A script that
+prints nothing is not asked for one.
 
 ### 3.20 Examples (CI job)
 

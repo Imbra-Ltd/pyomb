@@ -5,6 +5,7 @@ import logging
 import socket
 import ssl
 import struct
+import sys
 
 from .errors import ModbusIllegalDataValue, ModbusIllegalFunction, ModbusNetworkError
 from .logger import Logger
@@ -897,4 +898,15 @@ def run_client():
 
 
 if __name__ == "__main__":
+    # Inside the guard, never at import. Reconfiguring stdout mutates a stream
+    # the importing application owns, and this is a library module first; run
+    # as a script it is the entry point and the choice is its own to make.
+    #
+    # The attribute is checked rather than assumed. Only a text stream over a
+    # buffer carries reconfigure, and sys.stdout is whatever the host put
+    # there -- a capture object under a test runner, and None under a
+    # windowed interpreter with no console attached.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
     run_client()

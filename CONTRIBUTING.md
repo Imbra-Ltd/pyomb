@@ -68,10 +68,11 @@ closed, and what to do with a branch that has fallen behind.
 Some older code uses camelCase method names (`sendRequest`, `getPeers`). That
 is legacy, not the convention; do not add more.
 
-Markdown is a separate rule and a stricter one: every line wraps at 80 columns,
-and the decision records are held tighter still. Both run in the test suite, so
-a long line fails the pipeline rather than reaching review. PLAYBOOK 3.14 and
-3.15 carry the exemptions and what a failure prints.
+Markdown is a separate rule and a stricter one: every line wraps at the width
+`.editorconfig` declares for it, and the decision records are held tighter
+still. Both run in the test suite, so a long line fails the pipeline rather
+than reaching review. PLAYBOOK 3.14 and 3.15 carry the exemptions and what a
+failure prints.
 
 Run the linter, the formatter and the type checker before opening a pull
 request; PLAYBOOK 3.4 and 3.5 carry the commands. Configuration is in
