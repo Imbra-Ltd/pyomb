@@ -649,6 +649,34 @@ An example is documentation that runs, so a failure here is usually the
 documentation going stale rather than a defect in the library. Read what the
 example claims before changing what it does.
 
+### 3.21 Decision-record citations (pytest)
+
+```bash
+pytest tests/test_decision_citations.py
+```
+
+A record numbered 020 or above names no other record in its prose. A
+supersession goes in the front matter, where a check can validate it, and a
+context-only pointer goes in a closing `## Related` section. A prose reference
+rots silently: the record it names gets superseded and the sentence pointing at
+it reads exactly as it did before.
+
+Records below 020 merged before the rule existed and keep their citations.
+Fourteen of the nineteen carry one, and eight of those carry it inside a
+Decision section, where moving it would change what was decided rather than
+reformat it. ADR-020 records the boundary and why rewriting them was refused.
+
+The check skips fenced blocks, so a record may quote the rule or the command
+that measures compliance without failing itself. It also skips everything from
+the `## Related` heading onward. What that section may not carry is
+decision-bearing text, which no check can judge — moving or superseding
+anything it names must not change what the Decision section means, and only
+review can tell.
+
+A failure names the record, the line and the reference. Raising the boundary to
+silence one is the one edit that constant must never take: it would exempt a
+record written under the rule.
+
 ## 4. Maintenance
 
 ### 4.1 Bump the templates submodule
