@@ -229,8 +229,8 @@ number written down in a document goes stale without anyone editing it.
 ### 3.4 Lint and format (ruff)
 
 ```bash
-python -m ruff check src tests scripts
-python -m ruff format src tests scripts
+python -m ruff check src tests scripts examples
+python -m ruff format src tests scripts examples
 ```
 
 Configuration is in `pyproject.toml`. The `per-file-ignores` table freezes the
@@ -242,8 +242,8 @@ fix what ruff then reports, and commit both together — the gate holds the gain
 Never add a file to that table to make the gate pass. Regenerate it only after
 a cleanup, and empty the block before you do: with the entries in place ruff
 suppresses exactly the findings the table has to be rebuilt from, so
-`ruff check src tests scripts --output-format=json` reports nothing and the
-table would come back empty.
+`ruff check src tests scripts examples --output-format=json` reports nothing
+and the table would come back empty.
 
 ruff is pinned to a minor range in `pyproject.toml`, because a release that
 adds rules to an already-selected family, or that changes what the formatter
@@ -318,7 +318,7 @@ in the checks list and mean opposite things.
 ### 3.8 Static analysis (bandit)
 
 ```bash
-python -m bandit -c pyproject.toml -r src scripts tests
+python -m bandit -c pyproject.toml -r src scripts tests examples
 ```
 
 The `-c` is not optional. Bandit reads nothing from `pyproject.toml` unless
@@ -618,6 +618,36 @@ root logger.
 
 A new script that prints fails this until it carries the call. A script that
 prints nothing is not asked for one.
+
+### 3.20 Examples (CI job)
+
+```bash
+python -m venv /tmp/consumer
+/tmp/consumer/bin/python -m pip install .
+for f in examples/*.py; do /tmp/consumer/bin/python "$f" || break; done
+```
+
+The `examples` job in `ci.yml` runs every file in `examples/` against an
+install of the project with no extras, on Python 3.10. Reproduce it in a throw
+away virtual environment rather than the development one: the point of the job
+is that an example needs nothing a consumer would not have, and running it
+inside `.venv` proves the opposite of what is wanted, since every gate tool is
+already there.
+
+The job globs the directory rather than listing files, so a new example is
+covered by existing. It also counts what it ran and fails on zero — an empty
+directory, a renamed suffix or a mistyped path would otherwise look exactly
+like every example passing.
+
+The two socket examples start the server simulator on port 0 rather than 502.
+A port below 1024 needs privileges on Linux, so an example fixed at the
+registered Modbus port could not run here at all. `examples/README.md` states
+that beside the commands, and the project README keeps 502 because that is what
+a real device listens on.
+
+An example is documentation that runs, so a failure here is usually the
+documentation going stale rather than a defect in the library. Read what the
+example claims before changing what it does.
 
 ### 3.21 Decision-record citations (pytest)
 
