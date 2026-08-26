@@ -680,6 +680,33 @@ A failure names the record, the line and the reference. Raising the boundary to
 silence one is the one edit that constant must never take: it would exempt a
 record written under the rule.
 
+### 3.22 Gate coverage (pytest)
+
+```bash
+pytest tests/test_document_gates_are_not_blind.py
+```
+
+Every check above that reads a tracked-file listing — the line endings, the
+character set, the Markdown width and the three over the decision records —
+first asserts that the listing reached a floor its corpus is known to hold. A
+test asserting no violations were found passes identically when nothing was
+examined, so without that a broken enumeration reports a clean tree in the same
+words as a clean one.
+
+This is the control that keeps them honest. It discovers each gate by how it
+reads its corpus, replaces that read with an empty result, and fails any gate
+that still passes. A gate added later is covered without being registered
+anywhere, and the same discovery is what fails a new gate written without a
+coverage test.
+
+Two reds are worth telling apart. A coverage test failing names the
+enumeration, and the usual cause is a document written but not staged: the
+listing reads git's index rather than the working tree, so `git add` is the
+fix. A rule failing names the document and the line.
+
+ADR-022 records the floors, where each number came from, and why the unstaged
+gap is stated rather than closed.
+
 ## 4. Maintenance
 
 ### 4.1 Bump the templates submodule

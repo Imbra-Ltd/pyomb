@@ -225,6 +225,12 @@ follow the referenced templates. Project-specific additions only:
   closing `## Related` section. Records below that number keep the prose
   citations they merged with and are not to be rewritten. Enforced by
   `tests/test_decision_citations.py`, which skips fenced blocks; see ADR-020
+- A check asserting that a set of violations is empty asserts, in a test of its
+  own, that its enumeration reached a floor the corpus is known to hold. Those
+  listings read git's index, so a document written but not staged is invisible
+  to every one of them and `git add` is the fix. Enforced by
+  `tests/test_document_gates_are_not_blind.py`, which discovers each gate and
+  fails one that passes on an empty corpus; see ADR-022
 
 ## 4. Identity
 

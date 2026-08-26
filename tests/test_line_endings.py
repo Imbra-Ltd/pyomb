@@ -61,6 +61,15 @@ NOT_TEXT = "-text"
 
 NOT_A_CHECKOUT = "not a git checkout, so there is no index to read line endings from"
 
+# What the index held when this floor was set: 136 paths. The floor sits at
+# roughly half, because the tree churns -- a retired module or workflow is an
+# ordinary deletion and must not fail a line-ending rule. Every way this
+# enumeration breaks returns nothing at all, so the margin costs no detection.
+# It is a floor rather than the non-empty check it replaces because a listing
+# that comes back holding one path satisfies non-emptiness while measuring
+# almost nothing.
+TRACKED_AT_LEAST = 64
+
 RENORMALISE = (
     "A carriage return reached the index before the normalisation covered the "
     "file. `git add --renormalize .` rewrites the index, and the diff it "
@@ -247,14 +256,17 @@ class LineEndings(unittest.TestCase):
         )
 
     def test_the_index_listing_reached_the_tracked_files(self):
-        """An empty listing satisfies both rules below without reading anything."""
+        """A short listing satisfies both rules below without reading much."""
 
-        self.assertNotEqual(
-            self.tracked,
-            set(),
-            "git reported no tracked files at all, so both rules below would "
-            "pass having examined nothing. Either the working directory is not "
-            "the repository or the index is empty.",
+        self.assertGreaterEqual(
+            len(self.tracked),
+            TRACKED_AT_LEAST,
+            f"git reported {len(self.tracked)} tracked path(s) where the index "
+            f"holds at least {TRACKED_AT_LEAST}, so both rules below would "
+            "pass having examined almost nothing. A file that is written but "
+            "not staged is invisible here, because the listing reads git's "
+            "index rather than the working tree; anything else means the "
+            "working directory is not the repository.",
         )
 
     def test_a_record_was_read_for_every_tracked_path(self):

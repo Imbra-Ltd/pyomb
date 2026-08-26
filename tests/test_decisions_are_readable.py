@@ -62,6 +62,23 @@ MAX_PARAGRAPH_WORDS = 2 * MAX_SENTENCE_WORDS
 # pinned templates, and the run that set these two numbers is recorded in the
 # decision record that introduced this module, under its measurement heading.
 
+# What the directory held when this floor was set, template included, measured
+# with `git ls-files docs/decisions/*.md`. A record is append-only -- it merges
+# and is never deleted, since a superseded one stays in the tree carrying the
+# link to what replaced it -- so the measured count is a floor that only ever
+# rises. It is a floor rather than a non-empty check because a listing holding
+# one record satisfies non-emptiness while measuring almost nothing.
+RECORDS_AT_LEAST = 23
+
+# The corpus reached 967 sentences across 501 units on the day this was set,
+# and the floor sits at roughly half of that. The file list being right does
+# not mean the prose was read: a parser that returns no units, or a sentence
+# split that returns no sentences, leaves both limits below asserting over an
+# empty set. Every break mode of that kind returns nothing at all, so the
+# margin costs no detection -- it is there for a parser correction that
+# legitimately reads past less of a record, not for the failure this catches.
+SENTENCES_AT_LEAST = 450
+
 NOT_A_CHECKOUT = "not a git checkout, so there is no tracked-file list to read"
 
 REMEDY = (
@@ -225,18 +242,52 @@ class DecisionsAreReadable(unittest.TestCase):
 
         cls.records = tracked_decisions()
 
+        # Parsed once here rather than in each test below, so the coverage
+        # assertion and the two limits all report on the same reading.
+        cls.measured = [
+            (name, kind, number, prose)
+            for name in cls.records
+            for kind, number, prose in units((REPO / name).read_text(encoding="utf-8"))
+        ]
+
+    def test_the_enumeration_reached_the_records_and_their_prose(self):
+        """A pass below means the prose was measured, not that none was found."""
+
+        self.assertGreaterEqual(
+            len(self.records),
+            RECORDS_AT_LEAST,
+            f"the enumeration returned {len(self.records)} record(s) where the "
+            f"directory holds at least {RECORDS_AT_LEAST}, so both limits "
+            "below would pass having read almost nothing. A new record that is "
+            "written but not staged is invisible here, because the listing "
+            "reads git's index rather than the working tree; anything else "
+            "means the path this module looks under has moved.",
+        )
+
+        counted = sum(len(sentences(prose)) for _, _, _, prose in self.measured)
+
+        self.assertGreaterEqual(
+            counted,
+            SENTENCES_AT_LEAST,
+            f"the records parsed to {len(self.measured)} unit(s) carrying "
+            f"{counted} sentence(s), where the corpus holds at least "
+            f"{SENTENCES_AT_LEAST}. The file list is reached and the prose is "
+            "not, so the limits below are measuring an empty set. Either the "
+            "unit reader or the sentence split has stopped returning what the "
+            "records hold.",
+        )
+
     def test_a_decision_record_carries_no_sentence_past_the_limit(self):
         """No sentence in a decision record exceeds the calibrated word limit."""
 
         offenders = []
 
-        for name in self.records:
-            for _, number, prose in units((REPO / name).read_text(encoding="utf-8")):
-                for sentence in sentences(prose):
-                    length = len(sentence.split())
+        for name, _, number, prose in self.measured:
+            for sentence in sentences(prose):
+                length = len(sentence.split())
 
-                    if length > MAX_SENTENCE_WORDS:
-                        offenders.append(f"{name}:{number} {length} words: {sentence[:60]}...")
+                if length > MAX_SENTENCE_WORDS:
+                    offenders.append(f"{name}:{number} {length} words: {sentence[:60]}...")
 
         self.assertEqual(
             offenders,
@@ -251,12 +302,11 @@ class DecisionsAreReadable(unittest.TestCase):
 
         offenders = []
 
-        for name in self.records:
-            for kind, number, prose in units((REPO / name).read_text(encoding="utf-8")):
-                length = len(prose.split())
+        for name, kind, number, prose in self.measured:
+            length = len(prose.split())
 
-                if kind == "paragraph" and length > MAX_PARAGRAPH_WORDS:
-                    offenders.append(f"{name}:{number} {length} words")
+            if kind == "paragraph" and length > MAX_PARAGRAPH_WORDS:
+                offenders.append(f"{name}:{number} {length} words")
 
         self.assertEqual(
             offenders,

@@ -60,6 +60,16 @@ REMEDY = (
 
 NOT_A_CHECKOUT = "not a git checkout, so there is no tracked-file list to read"
 
+# What the directory held when these floors were set: twenty-two numbered
+# records, of which three sit at or above the boundary. A record is append-only
+# -- it merges and is never deleted, since a superseded one stays in the tree
+# carrying the link to what replaced it -- so both counts only ever rise. They
+# are floors rather than non-empty checks because a listing that comes back
+# holding one record satisfies non-emptiness while measuring almost nothing.
+RECORDS_AT_LEAST = 22
+
+GATED_AT_LEAST = 3
+
 
 def tracked_decisions():
     """Every numbered decision record git tracks.
@@ -137,15 +147,26 @@ class DecisionCitations(unittest.TestCase):
         cls.records = tracked_decisions()
         cls.gated = [name for name in cls.records if number(name) >= FIRST_GATED]
 
-    def test_there_are_records_in_scope(self):
+    def test_the_enumeration_reached_the_records_in_scope(self):
         """A pass means the rule was applied, not that nothing was read."""
 
-        self.assertNotEqual(
-            self.gated,
-            [],
-            f"no tracked record is numbered {FIRST_GATED:03d} or above, so the "
-            "assertion below would pass having read nothing. Either the "
-            "boundary is wrong or the records are not where this looks.",
+        self.assertGreaterEqual(
+            len(self.records),
+            RECORDS_AT_LEAST,
+            f"the enumeration returned {len(self.records)} numbered record(s) "
+            f"where the directory holds at least {RECORDS_AT_LEAST}. A new "
+            "record that is written but not staged is invisible here, because "
+            "the listing reads git's index rather than the working tree; "
+            "anything else means the path this module looks under has moved.",
+        )
+
+        self.assertGreaterEqual(
+            len(self.gated),
+            GATED_AT_LEAST,
+            f"{len(self.gated)} tracked record(s) are numbered "
+            f"{FIRST_GATED:03d} or above, where at least {GATED_AT_LEAST} are, "
+            "so the assertion below would pass having read almost nothing. "
+            "Either the boundary moved or the records did.",
         )
 
     def test_a_gated_record_cites_no_other_record_in_its_prose(self):
@@ -173,7 +194,10 @@ class DecisionCitations(unittest.TestCase):
     def test_the_boundary_names_a_record_that_exists(self):
         """A boundary pointing past the last record would gate nothing."""
 
-        highest = max(number(name) for name in self.records)
+        # The default keeps an empty listing reporting the boundary rather than
+        # raising on an empty max(), so the coverage test above is what names
+        # a broken enumeration and this one keeps naming a stale boundary.
+        highest = max((number(name) for name in self.records), default=0)
 
         self.assertLessEqual(
             FIRST_GATED,
