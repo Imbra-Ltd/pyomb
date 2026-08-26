@@ -54,6 +54,15 @@ CATEGORIES = {
 
 REQUIRED = ("id", "status", "date", "category", "supersedes", "superseded_by")
 
+# What the directory held when this floor was set, less the template this
+# module skips, measured with `git ls-files docs/decisions/*.md`. A record is
+# append-only -- it merges and is never deleted, since a superseded one stays
+# in the tree carrying the link to what replaced it -- so the measured count is
+# a floor that only ever rises. It is a floor rather than a non-empty check
+# because a listing that comes back holding one record satisfies non-emptiness
+# while measuring almost nothing.
+RECORDS_AT_LEAST = 22
+
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 SCALAR = re.compile(r'^(\w+):\s*"?([^"]*)"?\s*$')
@@ -138,6 +147,20 @@ class DecisionFrontMatter(unittest.TestCase):
 
         cls.records = tracked_decisions()
         cls.parsed = {name: front_matter((REPO / name).read_text(encoding="utf-8")) for name in cls.records}
+
+    def test_the_enumeration_reached_the_record_directory(self):
+        """A pass below means the schema was read, not that nothing was."""
+
+        self.assertGreaterEqual(
+            len(self.records),
+            RECORDS_AT_LEAST,
+            f"the enumeration returned {len(self.records)} record(s) where the "
+            f"directory holds at least {RECORDS_AT_LEAST}, so every assertion "
+            "below would pass having read almost nothing. A new record that is "
+            "written but not staged is invisible here, because the listing "
+            "reads git's index rather than the working tree; anything else "
+            "means the path this module looks under has moved.",
+        )
 
     def test_every_record_opens_with_a_complete_front_matter_block(self):
         """The block is present and carries all six required fields."""

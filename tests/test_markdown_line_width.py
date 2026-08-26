@@ -74,6 +74,15 @@ REMEDY = (
 
 NOT_A_CHECKOUT = "not a git checkout, so there is no tracked-file list to read"
 
+# What the tree held when this floor was set: 33 documents inside the rule, out
+# of 34 tracked. The floor sits at roughly half, because Markdown churns -- a
+# retired guide is an ordinary deletion and must not fail a width rule. Every
+# way this enumeration breaks returns nothing at all, so the margin costs no
+# detection. The stale-exclusion test below happens to fail on an empty listing
+# too, but it reports a renamed tutorial rather than a broken enumeration, and
+# those are different failures wanting different fixes.
+DOCUMENTS_AT_LEAST = 16
+
 UNDECLARED = (
     f"no Markdown width is declared: .editorconfig carries no {WIDTH_KEY} under "
     "a section naming Markdown, so the rule has no number and this check has "
@@ -189,6 +198,20 @@ class MarkdownLineWidth(unittest.TestCase):
         """The rule carries no number of its own; the declaration holds it."""
 
         self.assertIsNotNone(self.limit, UNDECLARED)
+
+    def test_the_enumeration_reached_the_tracked_documents(self):
+        """A pass below means the widths were read, not that none were."""
+
+        self.assertGreaterEqual(
+            len(self.documents),
+            DOCUMENTS_AT_LEAST,
+            f"the enumeration returned {len(self.documents)} document(s) where "
+            f"the tree holds at least {DOCUMENTS_AT_LEAST}, so the width rule "
+            "below would pass having read almost nothing. A document that is "
+            "written but not staged is invisible here, because the listing "
+            "reads git's index rather than the working tree; anything else "
+            "means the pattern has stopped matching.",
+        )
 
     def test_no_markdown_line_runs_past_the_width(self):
         """Prose, headings and list items stay within the declared width."""

@@ -56,6 +56,17 @@ LEGAL_CONTROL = "\t\n"
 
 NOT_A_CHECKOUT = "not a git checkout, so there is no tracked-file list to read"
 
+# What each half held when these floors were set: 34 Markdown files and 97
+# other readable ones, out of 136 tracked. Each floor sits at roughly half its
+# half, because the tree churns -- a retired module or workflow is an ordinary
+# deletion and must not fail a character-set rule. Every way this enumeration
+# breaks returns nothing at all, so the margin costs no detection. The two
+# halves are counted separately because the rules below read one each: a floor
+# on the total would pass while the Markdown rule read an empty list.
+MARKDOWN_AT_LEAST = 16
+
+OTHER_AT_LEAST = 48
+
 SUBSTITUTES = (
     "Use '--' for an em dash outside Markdown, '-' for a hyphen, and a "
     "straight quote for a quotation. A character that renders like a Latin "
@@ -91,6 +102,33 @@ def tracked_files():
     return [name for name in listing.split("\0") if name]
 
 
+def readable_halves(tracked):
+    """Split the tracked paths into the two populations the rules read.
+
+    Args:
+        tracked (list[str]) : Every tracked path, in git's own order
+
+    Returns:
+        tuple[list[str], list[str]] : The Markdown paths and the other
+            readable ones, with binaries and the submodule gitlink dropped
+    """
+
+    markdown = []
+    other = []
+
+    for name in tracked:
+        path = REPO / name
+
+        # A submodule is tracked as a gitlink rather than a file, and its
+        # contents are the upstream project's business, not this rule's.
+        if not path.is_file() or path.suffix.lower() in BINARY_SUFFIXES:
+            continue
+
+        (markdown if path.suffix.lower() == ".md" else other).append(name)
+
+    return markdown, other
+
+
 class SourceIsAscii(unittest.TestCase):
     """Pins the ASCII rule to the single exception ADR-014 records."""
 
@@ -104,13 +142,14 @@ class SourceIsAscii(unittest.TestCase):
             raise unittest.SkipTest(NOT_A_CHECKOUT)
 
         cls.tracked = tracked_files()
+        cls.markdown, cls.other = readable_halves(cls.tracked)
 
-    def offenders(self, markdown, allowed):
+    def offenders(self, names, allowed):
         """Locate characters outside printable ASCII in one half of the tree.
 
         Args:
-            markdown (bool) : Select Markdown files when True, the rest when False
-            allowed (str)   : Characters beyond printable ASCII that are permitted
+            names (list[str]) : The paths to read, already filtered to one half
+            allowed (str)     : Characters beyond printable ASCII that are permitted
 
         Returns:
             list[str] : One 'path:line:column U+XXXX' entry per offending character
@@ -118,16 +157,8 @@ class SourceIsAscii(unittest.TestCase):
 
         found = []
 
-        for name in self.tracked:
+        for name in names:
             path = REPO / name
-
-            # A submodule is tracked as a gitlink rather than a file, and its
-            # contents are the upstream project's business, not this rule's.
-            if not path.is_file() or path.suffix.lower() in BINARY_SUFFIXES:
-                continue
-
-            if (path.suffix.lower() == ".md") != markdown:
-                continue
 
             text = path.read_text(encoding="utf-8")
 
@@ -145,10 +176,33 @@ class SourceIsAscii(unittest.TestCase):
 
         return found
 
+    def test_the_enumeration_reached_both_halves_of_the_tree(self):
+        """A pass below means the characters were read, not that none were."""
+
+        self.assertGreaterEqual(
+            len(self.markdown),
+            MARKDOWN_AT_LEAST,
+            f"the enumeration returned {len(self.markdown)} Markdown file(s) "
+            f"where the tree holds at least {MARKDOWN_AT_LEAST}, so the em-dash "
+            "rule below would pass having read almost nothing. A document that "
+            "is written but not staged is invisible here, because the listing "
+            "reads git's index rather than the working tree.",
+        )
+
+        self.assertGreaterEqual(
+            len(self.other),
+            OTHER_AT_LEAST,
+            f"the enumeration returned {len(self.other)} readable non-Markdown "
+            f"file(s) where the tree holds at least {OTHER_AT_LEAST}, so the "
+            "rule below would pass having read almost nothing. Either the "
+            "listing is not reaching the repository or the binary filter has "
+            "started dropping files it was never meant to.",
+        )
+
     def test_nothing_outside_markdown_leaves_printable_ascii(self):
         """Source, tests, configuration and workflows are ASCII without exception."""
 
-        offenders = self.offenders(markdown=False, allowed="")
+        offenders = self.offenders(self.other, allowed="")
 
         self.assertEqual(
             offenders,
@@ -160,7 +214,7 @@ class SourceIsAscii(unittest.TestCase):
     def test_markdown_carries_nothing_beyond_the_em_dash(self):
         """Prose may use the em dash; a homoglyph or a curly quote is still a defect."""
 
-        offenders = self.offenders(markdown=True, allowed=EM_DASH)
+        offenders = self.offenders(self.markdown, allowed=EM_DASH)
 
         self.assertEqual(
             offenders,
