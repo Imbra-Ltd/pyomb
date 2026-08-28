@@ -2361,3 +2361,44 @@ package, per ADR-002. See `README.md` for usage and
   repository's own release procedure still wants the `v2.51.0` cut recorded
   as its own unmilestoned journal entry, which remains unwritten and is now
   seven tags behind.
+
+## 2026-08-28 — Finish the audit (midday, continued)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Named the stray submodule pointer in CLAUDE.md 2.1.** `git add -A`
+    stages a pointer left at another branch's revision, which is a standing
+    hazard here rather than a one-off: this repository carries a submodule
+    that legitimately sits at different revisions on different branches, so
+    every branch switch leaves the working tree holding a pointer the new
+    branch does not record. Placed against the doc-placement tree rather than
+    defaulted -- it is not a code invariant, weighs no alternatives, and is
+    not user-facing setup, but it fires on every commit.
+- **PRs merged:** #155.
+- **Issues closed/created:** none either way. Upstream, filed
+  braboj/solid-ai-templates#1211 and #1212.
+- **Correction:** the previous entry's Upstream line states that #1204 is the
+  only open filing. Two more were filed after that entry merged, so the count
+  was accurate when written and is not now. Open upstream: #1204, #1211 and
+  #1212.
+- **Lesson:** the end-of-session audit writes the journal at item 4 and
+  produces new work at items 5 through 11, so an entry written in checklist
+  order cannot name the pull requests the later items open or the issues they
+  file. Every one of its **PRs merged**, **Issues closed/created** and
+  **Upstream** fields is incomplete by construction, and the rule that an
+  entry's account is fixed forbids repairing them in place. The correction is
+  a second entry for one session, which reads as two sessions to the next
+  agent -- the opposite of the continuity the document exists for. Filed as
+  #1212; until it lands, write the entry last and number it fourth.
+- **Upstream:** two filings, both from this session's own defects.
+  braboj/solid-ai-templates#1211 against `templates/base/core/git.md`: the
+  off-limits check compares `origin/main...HEAD`, so a run against uncommitted
+  work reports zero, and the pass condition names two causes for a zero
+  without naming the one a reader will actually hit. That is the
+  staleness rule's run-it-after-the-edit instruction, which the same file
+  already states for regenerated artifacts and not for this check.
+  braboj/solid-ai-templates#1212 against
+  `templates/base/workflow/scope.md`, described in the lesson above.
+- **Pending:** #149 and #150 remain the only open issues here. The pin is one
+  tag behind `v2.58.0` with no issue naming that bump. The templates
+  repository's own `v2.51.0` journal entry is still unwritten.
