@@ -26,28 +26,21 @@ One concern per PR. Repeat the closing keyword before every issue number —
 Never put a closing keyword next to an issue the change does not resolve; the
 match is on the bare substring and fires even when negated.
 
-```bash
-gh pr create --fill
-gh run list --commit $(git rev-parse HEAD)   # every row must be green
-```
+The three checks below run at three different moments, and each reports on the
+state at the instant it executes. Run one early and it reports a tree that no
+longer exists, in wording indistinguishable from a run against finished work.
+The order here is the order to execute them in.
 
-Before opening it, list every closing keyword the body actually contains and
-check each against what the change resolves:
+**After committing, before opening.** Check whether the branch touches an
+off-limits path. A hit is an escalation trigger rather than a failure: it says
+the change needs the proposal `CLAUDE.md` 2.5 describes before it merges, and
+that the summary names the path at the top. The check reads the declared list
+from `CLAUDE.md` rather than restating it, so adding a path is one edit.
 
-```bash
-gh pr view <N> --json body --jq .body | grep -inE '(close[sd]?|fix(e[sd])?|resolve[sd]?) +#[0-9]+'
-```
-
-Every line it prints closes that issue on merge. A sentence written to
-*exclude* an issue prints here too, and closes it just the same — a negated
-keyword is still a keyword, and that phrasing has already cost this repository
-one wrongly closed issue. Write "part of #N" or the bare number instead.
-
-Also before opening it, check whether the branch touches an off-limits path.
-A hit is an escalation trigger rather than a failure: it says the change needs
-the proposal `CLAUDE.md` 2.5 describes before it merges, and that the summary
-names the path at the top. The check reads the declared list from `CLAUDE.md`
-rather than restating it, so adding a path is one edit:
+Its subject is committed history, so a branch whose work is staged and
+uncommitted reports exactly what a compliant branch reports. That is the
+reading to get right: the natural moment to run a pre-pull-request check is
+while writing the change, and that run is guaranteed to report nothing.
 
 ```bash
 py - <<'EOF'
@@ -86,7 +79,8 @@ changed = [path for path in out.splitlines() if path]
 
 print("files changed: %d" % len(changed))
 if not changed:
-    print("no files compared; the base is wrong or the branch is empty")
+    print("no files compared; the change is not committed, the base is wrong, "
+          "or the branch is empty")
 
 for path in changed:
     for prefix in declared:
@@ -97,15 +91,40 @@ EOF
 
 Pass condition: the command reports how many paths it read and how many files
 it compared, then prints nothing. Zero on either count is a failure rather
-than a clean branch — a declaration it cannot parse and a diff it cannot
-resolve both report the same nothing a compliant branch does.
+than a clean branch. Three causes produce it, and the first is the one reached
+by running the check at the wrong moment:
+
+- the change is not committed yet, so there is nothing in the subject
+- the declaration cannot be parsed, because 2.5 moved or its wording drifted
+- the base is wrong, or the branch holds no commits of its own
 
 It belongs here rather than in section 3. Everything in that section is a tool
 or a test wired into CI, and this one must never gate: a hit is the normal
 outcome of a legitimate workflow edit, so a gate would be muted within a week.
 
-After merging, confirm what actually closed. A negated keyword closes silently,
-so the merge output never reports it:
+**After opening, before merging.** Create the pull request, then list every
+closing keyword its body actually contains and check each against what the
+change resolves:
+
+```bash
+gh pr create --fill
+gh pr view <N> --json body --jq .body | grep -inE '(close[sd]?|fix(e[sd])?|resolve[sd]?) +#[0-9]+'
+gh run list --commit $(git rev-parse HEAD)   # every row must be green
+```
+
+The order is forced: `gh pr view <N>` needs the pull request to exist, so this
+check cannot run before `gh pr create` however the prose reads.
+
+Every line the grep prints closes that issue on merge. A sentence written to
+*exclude* an issue prints here too, and closes it just the same — a negated
+keyword is still a keyword, and that phrasing has already cost this repository
+one wrongly closed issue. Write "part of #N" or the bare number instead.
+
+An empty result means the body carries no closing keyword at all, which is
+correct for a change that resolves nothing and a defect for one that does.
+
+**After merging**, confirm what actually closed. A negated keyword closes
+silently, so the merge output never reports it:
 
 ```bash
 gh issue list --state closed --limit 100 --json number,title,closedAt \
@@ -477,6 +496,10 @@ workflow finished last and hides the other, and an abbreviated hash makes
 `--commit` match nothing, print an empty list and exit zero — a malformed
 query that reads exactly like a commit whose runs have not started.
 
+Run it after pushing. An unpushed commit has no runs, so it produces the same
+empty list from a third cause, and none of the three is distinguishable from
+the others in the output.
+
 A local run is evidence about one platform. CI runs Linux under Python 3.10 and
 3.13; development is typically Windows. Read the run before calling a change
 good — three pushes were reported clean against a red pipeline on 2026-08-16.
@@ -531,10 +554,14 @@ python -m build
 python -m twine check dist/*
 ```
 
-Both need the `dev` extra. `dist/` is gitignored. The wheel must contain
-`pyomb/` and its `dist-info` and nothing else — the `src/` layout is what keeps
-`tests/` and `scripts/` out of it, so check the listing after changing the
-build configuration:
+Both need the `dev` extra. `dist/` is gitignored, and it is not emptied
+between runs — so `twine check` and the listing below read whatever is there,
+which is the previous build until `python -m build` has run against the
+current tree. Clear it first when the answer matters.
+
+The wheel must contain `pyomb/` and its `dist-info` and nothing else — the
+`src/` layout is what keeps `tests/` and `scripts/` out of it, so check the
+listing after changing the build configuration:
 
 ```bash
 python -c "import zipfile; print(*zipfile.ZipFile('dist/pyomb-<version>-py3-none-any.whl').namelist(), sep='\n')"
