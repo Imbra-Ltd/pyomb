@@ -184,7 +184,7 @@ def issue(out, name, subject, extension, ca_key, ca_crt, days, workdir):
     return key, crt
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", default=DEFAULT_OUT, help="output directory (default: %(default)s)")
     parser.add_argument("--days", type=int, default=365, help="validity in days (default: %(default)s)")
