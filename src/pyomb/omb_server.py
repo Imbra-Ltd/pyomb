@@ -11,7 +11,7 @@ import threading
 import time
 
 from .defines import OMB_EXCEPTION_SLAVE_DEVICE_FAILURE
-from .errors import ModbusBaseError, ModbusNetworkError, ModbusSlaveDeviceFailure
+from .errors import ModbusBaseError, ModbusModeError, ModbusNetworkError, ModbusSlaveDeviceFailure
 from .logger import Logger
 from .packets import (
     ModbusError,
@@ -656,9 +656,10 @@ class OmbServerSim(threading.Thread):
                    client arrived within the timeout.
         """
 
-        # Check if the server is in the correct processing mode
+        # The server owns the connections in this mode, so handing one out
+        # would give a single socket two owners.
         if self.process_connections:
-            raise Exception("Not allowed in this processing mode!")
+            raise ModbusModeError(message="accept() is unavailable while the server processes connections itself")
 
         # If there are no clients, wait for a new connection
         if len(self.clients) == 0:

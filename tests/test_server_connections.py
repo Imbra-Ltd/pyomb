@@ -15,7 +15,7 @@ import threading
 import time
 import unittest
 
-from pyomb.errors import ModbusNetworkError
+from pyomb.errors import ModbusModeError, ModbusNetworkError
 from pyomb.omb_server import OmbServerSim
 
 
@@ -261,11 +261,9 @@ class TestManualAccept(ServerFixture):
     def test_accept_is_refused_in_processing_mode(self):
         self.start_server(process_connections=True)
 
-        # Matched on the message rather than the class, because the server
-        # raises a bare Exception here. Pinning the message is what separates
-        # the refusal this test is about from any other Exception a defect
-        # might raise on the same call.
-        with self.assertRaisesRegex(Exception, "processing mode"):
+        # Named rather than matched on the message. The class is what a caller
+        # catches, so it is what the test pins; the message is free to change.
+        with self.assertRaises(ModbusModeError):
             self.server.accept(0.1)
 
 

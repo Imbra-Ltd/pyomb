@@ -123,7 +123,7 @@ convention = "google"
 "src/pyomb/errors.py" = ["D105", "D107", "D202", "D205", "D212", "D412", "D415", "I001", "N818", "SIM108", "UP008", "UP009", "UP010", "UP030", "UP032"]
 "src/pyomb/logger.py" = ["D100", "D102", "D107", "D202", "I001", "UP008", "UP009", "UP010", "UP018"]
 "src/pyomb/omb_client.py" = ["D100", "D103", "D107", "D202", "D415", "N802", "N803", "SIM108", "TRY201", "TRY203", "UP004", "UP009", "UP010", "UP024", "UP030", "UP032"]
-"src/pyomb/omb_server.py" = ["B904", "BLE001", "D100", "D102", "D107", "D202", "D415", "N802", "N803", "N806", "RUF059", "SIM105", "SIM300", "TRY002", "TRY003", "UP004", "UP008", "UP009", "UP010", "UP018", "UP024", "UP030", "UP032"]
+"src/pyomb/omb_server.py" = ["B904", "BLE001", "D100", "D102", "D107", "D202", "D415", "N802", "N803", "N806", "RUF059", "SIM105", "SIM300", "TRY003", "UP004", "UP008", "UP009", "UP010", "UP018", "UP024", "UP030", "UP032"]
 "src/pyomb/packets.py" = ["B904", "BLE001", "D105", "D107", "D202", "D214", "D415", "RUF005", "RUF012", "UP008", "UP009", "UP010", "UP030", "UP032"]
 "src/pyomb/stream.py" = ["B008", "B904", "BLE001", "D107", "D202", "D415", "I001", "TRY300", "TRY301", "UP009", "UP010", "UP030", "UP032"]
 

@@ -23,6 +23,7 @@ from .errors import ModbusIllegalDataAddress
 from .errors import ModbusIllegalDataValue
 from .errors import ModbusIllegalFunction
 from .errors import ModbusMemoryParityError
+from .errors import ModbusModeError
 from .errors import ModbusNetworkError
 from .errors import ModbusPacketError
 from .errors import ModbusProtocolError
@@ -87,6 +88,7 @@ __all__ = [
     "ModbusProtocolError",
     "ModbusNetworkError",
     "ModbusPacketError",
+    "ModbusModeError",
     "ModbusIllegalFunction",
     "ModbusIllegalDataAddress",
     "ModbusIllegalDataValue",

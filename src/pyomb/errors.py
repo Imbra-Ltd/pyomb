@@ -408,3 +408,37 @@ class ModbusPacketError(ModbusBaseError):
 
         # Call the parent class constructor
         super(ModbusPacketError, self).__init__(message=message, extended_info=extended_info)
+
+
+class ModbusModeError(ModbusBaseError):
+    """The operation is not valid in the component's current mode
+
+    A component that owns a resource refuses the operations that would hand
+    that resource to a caller. Nothing reached the wire, so this is neither a
+    protocol failure nor a network one: it says the caller and the component
+    disagree about which of them is driving.
+
+    Possible causes of this error include:
+
+    - Accepting a connection on a server that processes connections itself
+    - Driving a component that has already been handed to something else
+
+    Args:
+        message         (unicode)   : A description of the error.
+        extended_info   (unicode)   : Additional information (e.g. the mode)
+
+    Example:
+        try:
+            # Code that may raise Modbus mode errors
+            raise ModbusModeError("Test mode error")
+
+        # Catch the error and print the error message
+        except ModbusModeError as e:
+            print("Modbus mode error: {0}".format(e))
+    """
+
+    def __init__(self, message, extended_info=""):
+        """Initialize the ModbusModeError object"""
+
+        # Call the parent class constructor
+        super().__init__(message=message, extended_info=extended_info)
