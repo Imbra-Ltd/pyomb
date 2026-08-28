@@ -6,8 +6,23 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `ModbusModeError`, exported from the package root, for an operation refused
+  because the component and its caller disagree about which of them is driving.
+  Nothing reaches the wire on that path, so none of the existing branches fit:
+  `ModbusProtocolError` carries Modbus exception codes, `ModbusNetworkError` is
+  sockets and `ModbusPacketError` is frames. It subclasses `ModbusBaseError`, so
+  an existing `except Exception` still catches what it replaces. See #180
+
 ### Fixed
 
+- The server's manual-accept refusal raises `ModbusModeError` rather than the
+  base `Exception`. A caller had no way to catch that refusal without catching
+  everything, in a library whose own rules say it should never have to, and the
+  test covering it could only pin the message -- which matched a `TypeError`
+  from a typo on the same line just as well. `TRY002` comes off the module's
+  entry in the lint freeze, the finding it froze being gone. See #180
 - A close that fails no longer escapes the client's teardown. `disconnect()`
   already treated `shutdown()` as able to fail, because a peer that has gone
   away is the ordinary case there rather than a fault, and did not treat
