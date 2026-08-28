@@ -2586,3 +2586,73 @@ package, per ADR-002. See `README.md` for usage and
   the owner has stated the preference but not the ceiling, and #173 on the
   simulator rename, which is a public API break. #172 and #170 are the two
   epics and the largest remaining work.
+
+## 2026-08-28 — Ship the pin, cut the release (late)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Moved the pin to `v2.61.0` and read the range.** Three chain files
+    moved. `quality.md` did too, so PLAYBOOK 4.1's cheap short-circuit did not
+    apply and the diff was read against ADR-014's own subject — both hunks
+    land below the character-set rules, which the range leaves untouched, so
+    the record is unrefuted a second time and still stands the stricter way
+    round. Three of the rules the range adds were already satisfied here and
+    were named as such rather than assumed: the control floor's margin, the
+    absence of backslash shorthands in embedded checks, and the gate control
+    planting a behavioural break. One was adopted, into PLAYBOOK 3.10, where
+    "run it both ways" had covered only the case where a fix is observable.
+  - **Released `v0.3.1`.** A patch, because nothing in the library's behaviour
+    changed since `v0.3.0`: the only diff under `src/` is 57 deleted lines,
+    every one a TODO comment or a commented-out log line, with no additions.
+    `release.yml` attached the wheel, the sdist and the SBOM in 21 seconds.
+    No rehearsal was owed — the workflow is byte-identical to the one that
+    produced `v0.3.0` and has three prior executions.
+  - **The `Unreleased` block was two entries deep against thirty-seven
+    commits.** Cutting it as it stood would have published a `[0.3.1]` entry
+    naming 2 of 37 changes. Four notable omissions were added at release time:
+    the document-gate coverage control, both retired ruff freeze slices, the
+    TODO triage and the emptied `scripts/`.
+  - **The 360 audit was skipped deliberately**, on the owner's call, and the
+    release pull request records that this is the fourth consecutive release
+    to skip it. `v0.2.0`, `v0.2.1` and `v0.3.0` each shipped without one and
+    nothing reported it.
+- **PRs merged:** #202, #205.
+- **Issues closed/created:** one closed — #200. Five created here — #203, #204,
+  #206, #207 and #208 — and two upstream.
+- **Lesson:** a count far larger than expected is a defect in the check before
+  it is a backlog. The range's new comment-layout check reported 209 findings
+  on this tree; 164 were one false-positive class, a comment opening a `try:`
+  or a bracketed literal, where the comment sits correctly above what it
+  documents. Working that list would have been 164 edits to well-formed code.
+  The rule that says triage the check first is the only thing standing between
+  the two readings, and it turned a backlog into an upstream filing.
+- **Lesson:** a plan-time placement is a hypothesis, and it failed twice in one
+  session. The behavioural-break rule was planned into a PLAYBOOK section that
+  does not exist, and the rule turned out already satisfied. The comment-layout
+  findings were planned onto #167, which settles comment density rather than
+  layout and whose six acceptance criteria do not reach it; they went to their
+  own issue instead of widening a spike that already needs the owner.
+- **Lesson:** a rule's stated reason rots independently of the rule it
+  justifies. The changelog gate's docstring and PLAYBOOK 5 step 4 both justify
+  cutting the entry before the tag by saying it ships inside the tagged sdist.
+  It never has — the include list carries four paths and `CHANGELOG.md` is not
+  among them. The conclusion survives, because the tag's own tree carries the
+  entry; only the named artifact is wrong, and it is falsifiable in one
+  command, which is how a step loses its justification and then itself.
+- **Lesson:** the working directory persists across shell calls, and a `cd`
+  into the submodule made a later diagnostic read the templates repository's
+  journal and issue count as though they were this project's. The numbers were
+  plausible — 55 open issues, a journal with dated entries — which is what
+  makes the failure worth recording rather than the error itself.
+- **Upstream:** two filings, both landed rather than named.
+  braboj/solid-ai-templates#1245 on the comment-layout check flagging a comment
+  that opens a block or a bracketed literal, carrying the 164/19 split and a
+  fix tested against this tree; #1254 on the release procedure cutting an
+  accumulator nothing checked was maintained, which is the generic form of the
+  two-entries-against-thirty-seven-commits finding.
+- **Pending:** nothing blocked. Twenty-four issues open, none milestoned. #208
+  bumps the pin to `v2.62.0`, cut after this session's bump and moving
+  `git.md`, which puts ADR-023 on the reading list rather than the four records
+  the cheap short-circuit covers. #206 carries the stale 360 audit and the
+  uncounted skips. The three library defects — #190, #180 and #193 — remain the
+  sharpest items and none of them was touched.
