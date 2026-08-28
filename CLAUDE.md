@@ -167,8 +167,10 @@ tests pass.
 - A resource limit refuses the request that exceeds it and keeps serving;
   stopping on the limit hands any peer the ability to stop the server
 - Secure defaults are load-bearing: verified peer certificate, hostname
-  checking on, no custom cipher string, finite socket timeout. Never relax one
-  as a test convenience — pass an explicit argument instead
+  checking on, no custom cipher string, finite socket timeout, and a declared
+  minimum TLS version. Never relax one as a test convenience — pass an
+  explicit argument instead. The floor takes no such argument: it is set
+  after the caller's options, which are OR-ed and can only add a restriction
 
 ## 3. Quality
 
