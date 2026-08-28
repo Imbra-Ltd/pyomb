@@ -1,6 +1,8 @@
 import unittest
-from pyomb.stream import ModbusTcpStream, ModbusFragmenter
+
 from stub_socket import StubSocket
+
+from pyomb.stream import ModbusFragmenter, ModbusTcpStream
 
 
 class TestModbusStream(unittest.TestCase):

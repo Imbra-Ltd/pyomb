@@ -12,28 +12,41 @@ listener, no certificates and no timing.
 """
 
 import unittest
-
 from unittest import mock
 
 from pyomb.errors import ModbusSlaveDeviceFailure
 from pyomb.omb_server import OmbServerSim
-from pyomb.packets import ModbusError
-from pyomb.packets import ModbusHeader
-from pyomb.packets import ModbusPdu
-from pyomb.packets import ModbusRequestFC1, ModbusResponseFC1
-from pyomb.packets import ModbusRequestFC2, ModbusResponseFC2
-from pyomb.packets import ModbusRequestFC3, ModbusResponseFC3
-from pyomb.packets import ModbusRequestFC4, ModbusResponseFC4
-from pyomb.packets import ModbusRequestFC5, ModbusResponseFC5
-from pyomb.packets import ModbusRequestFC6, ModbusResponseFC6
-from pyomb.packets import ModbusRequestFC7, ModbusResponseFC7
-from pyomb.packets import ModbusRequestFC15, ModbusResponseFC15
-from pyomb.packets import ModbusRequestFC16, ModbusResponseFC16
-from pyomb.packets import ModbusRequestFC22, ModbusResponseFC22
-from pyomb.packets import ModbusRequestFC23, ModbusResponseFC23
-from pyomb.packets import ModbusRequestFC43, ModbusResponseFC43
-from pyomb.packets import ModbusTcpRequest
-from pyomb.packets import ModbusTcpResponse
+from pyomb.packets import (
+    ModbusError,
+    ModbusHeader,
+    ModbusPdu,
+    ModbusRequestFC1,
+    ModbusRequestFC2,
+    ModbusRequestFC3,
+    ModbusRequestFC4,
+    ModbusRequestFC5,
+    ModbusRequestFC6,
+    ModbusRequestFC7,
+    ModbusRequestFC15,
+    ModbusRequestFC16,
+    ModbusRequestFC22,
+    ModbusRequestFC23,
+    ModbusRequestFC43,
+    ModbusResponseFC1,
+    ModbusResponseFC2,
+    ModbusResponseFC3,
+    ModbusResponseFC4,
+    ModbusResponseFC5,
+    ModbusResponseFC6,
+    ModbusResponseFC7,
+    ModbusResponseFC15,
+    ModbusResponseFC16,
+    ModbusResponseFC22,
+    ModbusResponseFC23,
+    ModbusResponseFC43,
+    ModbusTcpRequest,
+    ModbusTcpResponse,
+)
 
 # One request per supported function code, paired with the response class the
 # dispatch is expected to answer with.
@@ -64,7 +77,7 @@ DISPATCH_TABLE = (
 )
 
 
-class RecordingConnection(object):
+class RecordingConnection:
     """Stands in for a client socket and keeps what the server wrote."""
 
     def __init__(self):
@@ -82,7 +95,7 @@ class FailingConnection(RecordingConnection):
     """A peer that has gone away between the request and the response."""
 
     def send(self, data):
-        raise OSError("connection reset by peer")
+        raise ConnectionResetError
 
 
 class ServerUnderTest(unittest.TestCase):

@@ -9,6 +9,7 @@ disconnected, because the live-client list was appended to on every accept and
 never pruned.
 """
 
+import contextlib
 import socket
 import threading
 import time
@@ -18,7 +19,7 @@ from pyomb.errors import ModbusNetworkError
 from pyomb.omb_server import OmbServerSim
 
 
-class ServerThreadExceptions(object):
+class ServerThreadExceptions:
     """Captures anything that escapes a thread while it is installed."""
 
     def __init__(self):
@@ -37,7 +38,7 @@ class ServerThreadExceptions(object):
         return False
 
     def describe(self):
-        return ", ".join("{0}: {1}".format(type(a.exc_value).__name__, a.exc_value) for a in self.caught)
+        return ", ".join(f"{type(a.exc_value).__name__}: {a.exc_value}" for a in self.caught)
 
 
 class ServerFixture(unittest.TestCase):
@@ -58,10 +59,8 @@ class ServerFixture(unittest.TestCase):
 
     def tearDown(self):
         for sock in self.sockets:
-            try:
+            with contextlib.suppress(OSError):
                 sock.close()
-            except OSError:
-                pass
 
         if self.server is not None:
             self.server.stop()
@@ -128,10 +127,8 @@ class TestConnectionLimit(ServerFixture):
             self.start_server(connLimit=2)
 
             for _ in range(4):
-                try:
+                with contextlib.suppress(OSError):
                     self.connect()
-                except OSError:
-                    pass
                 time.sleep(0.3)
 
             self.assertTrue(self.server.is_alive(), "server died: " + errors.describe())
@@ -145,10 +142,8 @@ class TestConnectionLimit(ServerFixture):
         self.connect()
 
         for _ in range(2):
-            try:
+            with contextlib.suppress(OSError):
                 self.connect()
-            except OSError:
-                pass
             time.sleep(0.3)
 
         self.assertTrue(self.exchange(first), "an established session was dropped by the limit")
@@ -159,10 +154,8 @@ class TestConnectionLimit(ServerFixture):
         self.start_server(connLimit=3)
 
         for _ in range(5):
-            try:
+            with contextlib.suppress(OSError):
                 self.connect()
-            except OSError:
-                pass
             time.sleep(0.3)
 
         self.assertEqual(len(self.server.getPeers()), 3)
@@ -268,7 +261,11 @@ class TestManualAccept(ServerFixture):
     def test_accept_is_refused_in_processing_mode(self):
         self.start_server(process_connections=True)
 
-        with self.assertRaises(Exception):
+        # Matched on the message rather than the class, because the server
+        # raises a bare Exception here. Pinning the message is what separates
+        # the refusal this test is about from any other Exception a defect
+        # might raise on the same call.
+        with self.assertRaisesRegex(Exception, "processing mode"):
             self.server.accept(0.1)
 
 

@@ -1,7 +1,9 @@
 import unittest
-from pyomb.stream import ModbusTcpSender
-from pyomb.packets import ModbusTcpPacket, ModbusHeader, ModbusPdu
+
 from stub_socket import StubSocket
+
+from pyomb.packets import ModbusHeader, ModbusPdu, ModbusTcpPacket
+from pyomb.stream import ModbusTcpSender
 
 
 class TestModbusSender(unittest.TestCase):

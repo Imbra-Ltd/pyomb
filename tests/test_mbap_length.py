@@ -1,13 +1,15 @@
 import unittest
 
 from pyomb.errors import ModbusPacketError
-from pyomb.packets import ModbusHeader
-from pyomb.packets import ModbusPduParser
-from pyomb.packets import ModbusRequestFC1
-from pyomb.packets import ModbusResponseFC1
-from pyomb.packets import ModbusTcpRequest
-from pyomb.packets import ModbusTcpResponse
-from pyomb.packets import validate_mbap_length
+from pyomb.packets import (
+    ModbusHeader,
+    ModbusPduParser,
+    ModbusRequestFC1,
+    ModbusResponseFC1,
+    ModbusTcpRequest,
+    ModbusTcpResponse,
+    validate_mbap_length,
+)
 
 
 class TestValidateMbapLength(unittest.TestCase):

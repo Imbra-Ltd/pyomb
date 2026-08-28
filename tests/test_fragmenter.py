@@ -1,4 +1,5 @@
 import unittest
+
 from pyomb.stream import ModbusFragmenter
 
 

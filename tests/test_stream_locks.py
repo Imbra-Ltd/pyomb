@@ -18,9 +18,9 @@ Using the object is the only description that survives all four combinations.
 import threading
 import unittest
 
-from pyomb.stream import ModbusTcpReceiver
-from pyomb.stream import ModbusTcpSender
 from stub_socket import StubSocket
+
+from pyomb.stream import ModbusTcpReceiver, ModbusTcpSender
 
 
 def exercise(lock):
@@ -65,8 +65,12 @@ class TestLockShapeIsNotVacuous(unittest.TestCase):
 
     def test_the_unconstructed_lock_does_not_pass(self):
         # Deliberately broad: the claim is that this fails, not that it fails
-        # in the particular way one interpreter happens to report.
-        with self.assertRaises(Exception):
+        # in the particular way one interpreter happens to report. Entering the
+        # unconstructed class raises AttributeError on 3.10 and TypeError on
+        # 3.13, so naming either class writes one interpreter's answer into a
+        # test that runs on both. B017 asks for the narrower assertion and is
+        # wrong here for that reason.
+        with self.assertRaises(Exception):  # noqa: B017
             exercise(threading.Lock)
 
 

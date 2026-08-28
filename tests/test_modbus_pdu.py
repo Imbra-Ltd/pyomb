@@ -1,4 +1,5 @@
 import unittest
+
 from pyomb.packets import ModbusError, ModbusPdu
 
 

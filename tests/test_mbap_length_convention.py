@@ -9,13 +9,10 @@ field. These tests pin the single convention at both layers.
 
 import unittest
 
-from pyomb.packets import ModbusHeader
-from pyomb.packets import ModbusPduParser
-from pyomb.packets import ModbusRequestFC1
-from pyomb.packets import ModbusTcpRequest
-from pyomb.stream import ModbusFragmenter
-from pyomb.stream import ModbusTcpStream
 from stub_socket import StubSocket
+
+from pyomb.packets import ModbusHeader, ModbusPduParser, ModbusRequestFC1, ModbusTcpRequest
+from pyomb.stream import ModbusFragmenter, ModbusTcpStream
 
 
 class TestLengthConvention(unittest.TestCase):
@@ -55,7 +52,7 @@ class TestLengthConvention(unittest.TestCase):
                 sock=sock, fragmenter=ModbusFragmenter(), frag_delay=0, frag_size=frag_size, burst=False
             )
 
-            self.assertEqual(stream.receive(), expected, "mismatch at frag_size={0}".format(frag_size))
+            self.assertEqual(stream.receive(), expected, f"mismatch at frag_size={frag_size}")
 
     def test_sender_output_survives_the_codec(self):
         # ModbusTcpSender.run() assigns the length this way before serializing;

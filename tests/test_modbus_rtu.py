@@ -1,7 +1,6 @@
 import unittest
-from pyomb.packets import ModbusRequestFC1, ModbusResponseFC1
-from pyomb.packets import ModbusRtuRequest, ModbusRtuResponse
-from pyomb.packets import ModbusPduParser
+
+from pyomb.packets import ModbusPduParser, ModbusRequestFC1, ModbusResponseFC1, ModbusRtuRequest, ModbusRtuResponse
 
 
 class TestModbusRtuRequest(unittest.TestCase):

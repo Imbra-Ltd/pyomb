@@ -1,7 +1,14 @@
 import unittest
-from pyomb.packets import ModbusRequestFC1, ModbusResponseFC1
-from pyomb.packets import ModbusTcpPacket, ModbusTcpRequest, ModbusTcpResponse
-from pyomb.packets import ModbusPduParser, ModbusHeader
+
+from pyomb.packets import (
+    ModbusHeader,
+    ModbusPduParser,
+    ModbusRequestFC1,
+    ModbusResponseFC1,
+    ModbusTcpPacket,
+    ModbusTcpRequest,
+    ModbusTcpResponse,
+)
 
 
 class TestModbusTcpPacket(unittest.TestCase):

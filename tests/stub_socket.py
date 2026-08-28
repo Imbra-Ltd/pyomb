@@ -33,7 +33,7 @@ class StubSocket(socket.socket):
         self.recv_data = self.DATA
 
 
-class LoopbackSocket(object):
+class LoopbackSocket:
     """Records what is written and replays a queue of prepared frames.
 
     Unlike StubSocket this does not subclass socket.socket, so it can be

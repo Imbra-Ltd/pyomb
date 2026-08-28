@@ -13,11 +13,16 @@ bugs can satisfy.
 import unittest
 
 from pyomb.errors import ModbusPacketError
-from pyomb.packets import ModbusPduParser
-from pyomb.packets import ModbusRequestFC1, ModbusRequestFC3
-from pyomb.packets import ModbusResponseFC1, ModbusResponseFC4
-from pyomb.packets import ModbusRtuRequest, ModbusRtuResponse
-from pyomb.packets import calc_crc16
+from pyomb.packets import (
+    ModbusPduParser,
+    ModbusRequestFC1,
+    ModbusRequestFC3,
+    ModbusResponseFC1,
+    ModbusResponseFC4,
+    ModbusRtuRequest,
+    ModbusRtuResponse,
+    calc_crc16,
+)
 
 
 class TestCrcAlgorithm(unittest.TestCase):
@@ -32,7 +37,7 @@ class TestCrcAlgorithm(unittest.TestCase):
         )
 
         for payload, expected in vectors:
-            self.assertEqual(calc_crc16(payload), expected, "mismatch for {0}".format(payload.hex()))
+            self.assertEqual(calc_crc16(payload), expected, f"mismatch for {payload.hex()}")
 
 
 class TestRtuRequestFraming(unittest.TestCase):

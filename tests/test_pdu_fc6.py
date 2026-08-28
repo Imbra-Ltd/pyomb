@@ -1,6 +1,6 @@
 import unittest
-from pyomb.packets import ModbusRequestFC6, ModbusResponseFC6
 
+from pyomb.packets import ModbusRequestFC6, ModbusResponseFC6
 
 ####################################################################################################
 # Request Tests
