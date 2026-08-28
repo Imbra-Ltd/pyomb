@@ -102,6 +102,35 @@ It belongs here rather than in section 3. Everything in that section is a tool
 or a test wired into CI, and this one must never gate: a hit is the normal
 outcome of a legitimate workflow edit, so a gate would be muted within a week.
 
+Still after committing, classify what the change did to the suite. Adding a
+test or tightening an assertion can only narrow what passes, and needs no
+explanation. Deleting, loosening or rewriting one changes what correct means,
+and a green run cannot report that it has:
+
+```bash
+git diff --name-status origin/main...HEAD -- 'tests/*' | wc -l
+git diff --name-status origin/main...HEAD -- 'tests/*' | grep -vE '^A'
+```
+
+Pass condition: the first line counts the test-file changes inspected; the
+second lists every one that is not a pure addition. Every path the second
+prints is a claim the pull request body owes — what was weakened and why. A
+zero from the first is a real answer here, unlike the check above it: it means
+the change touched no tests at all. The same uncommitted-work caveat applies,
+because the subject is the same committed range.
+
+The listing names files, not assertions, so a formatting pass over a test
+module prints as loudly as a deleted case. Narrow it before writing the
+explanation:
+
+```bash
+git diff -U0 origin/main...HEAD -- 'tests/*' | grep -E '^[-+].*(assert|self\.fail)'
+```
+
+Pass condition: every line it prints is accounted for in the body. This is the
+evidence the first check asks for rather than a second gate — a mechanical
+rewrite shows the same assertion on both sides, and a weakened one does not.
+
 **After opening, before merging.** Create the pull request, then list every
 closing keyword its body actually contains and check each against what the
 change resolves:
