@@ -754,7 +754,7 @@ on the citation scope. The divergence may still hold, or upstream may have
 adopted it, in which case the record now describes an inherited rule rather
 than a departure from one.
 
-Three of the four are in that second state as of `v2.56.0`, and the reading
+Three of the four are in that second state as of `v2.57.0`, and the reading
 that established it is not owed again. Upstream took the format-migration
 boundary at `v2.47.0` and the citation scope at `v2.54.0`, each from this
 project's own filing, so ADR-017 and ADR-020 now describe inherited rules.
@@ -767,7 +767,8 @@ state, which is why it stays on the list.
 
 All four are recorded against `quality.md` and `docs.md`, so the cheap way to
 carry that position forward is to ask whether either file moved at all before
-re-reading any record. Neither did between `v2.54.0` and `v2.56.0`. Ask the
+re-reading any record. Neither did between `v2.54.0` and `v2.56.0`; between
+`v2.56.0` and `v2.57.0` `quality.md` moved and `docs.md` did not. Ask the
 question rather than assume the answer, because a range that leaves both files
 alone is the common case and the one that costs nothing:
 
@@ -786,6 +787,15 @@ answered a question about one file while reading as though it had covered both.
 With both names confirmed, empty output from the second means no record in the
 list can have been touched and the paragraph above still holds. Any output
 names the file to read, and from there the record that bounds it.
+
+A named file is not a moved rule, and the second command cannot tell them
+apart. `v2.57.0` reported `quality.md` moving 21 lines, all of them the
+`eslint-plugin-sonarjs` table and the cognitive-complexity bullet delegating
+its tool binding to the language layer. ADR-014 bounds the character set in
+that same file and none of the 21 lines reach it, so the record is unrefuted
+and stays where the paragraph above puts it. Read the diff to the record's
+own subject before treating a named file as a finding; the range that moves a
+file without moving the rule is as common as the range that moves neither.
 
 A clause can also be correct upstream and wrong here. The templates repository
 writes rules for itself as well as for its consumers, so a rule about how it
