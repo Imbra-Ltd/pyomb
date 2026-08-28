@@ -434,6 +434,13 @@ class ModbusTcpSender(ModbusSenderAbc):
     - Stress testing the Modbus server to check stability
     - Load testing the Modbus server to check performance
 
+    This class is safe to drive from more than one thread. Its lock covers the
+    fragment settings and the send loop together: a setter cannot land between
+    two of the three values being copied into the stream, and two callers
+    cannot interleave fragments and put a malformed frame on the wire. The
+    cost is that a setter waits for a send in progress, including its
+    fragment delays. Calling stop() makes the next run_once() do nothing.
+
     Args:
         sock (socket.socket)    : A TCP socket.
         packets (iterable)      : A list of Modbus packets.
@@ -484,44 +491,61 @@ class ModbusTcpSender(ModbusSenderAbc):
     def set_frag_size(self, value):
         """Sets the fragment size in bytes."""
 
-        self._frag_size = value
+        with self._lock:
+            self._frag_size = value
+
         return self
 
     def set_frag_delay(self, value):
         """Sets the fragment delay in seconds."""
 
-        self._frag_delay = value
+        with self._lock:
+            self._frag_delay = value
+
         return self
 
     def set_burst_mode(self, value):
         """Sets the burst mode."""
 
-        self._burst_mode = value
+        with self._lock:
+            self._burst_mode = value
+
         return self
 
     def run_once(self):
         """Sends the provided Modbus messages with optional fragmentation."""
 
-        # Update the stream attributes before sending messages
-        self.stream.frag_size = self._frag_size
-        self.stream.frag_delay = self._frag_delay
-        self.stream.burst = self._burst_mode
+        # A stopped sender does no work. Reading the event here is what makes
+        # stop() observable; setting it and never consulting it left the call
+        # changing nothing a later one could see.
+        if self._stop.is_set():
+            return
 
-        try:
-            # Iterate through the packets
-            for packet in self.packets:
-                # The MBAP length counts the unit identifier plus the PDU.
-                packet.header.length = len(packet.pdu) + 1
+        # Held across the copy and the send loop together, not each in turn. A
+        # setter landing between two of the three copies configures the stream
+        # from two intentions at once, and two senders interleaving fragments
+        # put a malformed frame on the wire.
+        with self._lock:
+            # Update the stream attributes before sending messages
+            self.stream.frag_size = self._frag_size
+            self.stream.frag_delay = self._frag_delay
+            self.stream.burst = self._burst_mode
 
-                # Serialize the packet
-                message = packet.serialize()
+            try:
+                # Iterate through the packets
+                for packet in self.packets:
+                    # The MBAP length counts the unit identifier plus the PDU.
+                    packet.header.length = len(packet.pdu) + 1
 
-                # Send the message
-                self.stream.send(message)
+                    # Serialize the packet
+                    message = packet.serialize()
 
-        except Exception as e:
-            message = "Error sending Modbus message: {0}".format(str(e))
-            raise ModbusNetworkError(message=message)
+                    # Send the message
+                    self.stream.send(message)
+
+            except Exception as e:
+                message = "Error sending Modbus message: {0}".format(str(e))
+                raise ModbusNetworkError(message=message)
 
     def stop(self):
         """Stops sending messages and closes the socket."""
@@ -536,6 +560,14 @@ class ModbusTcpReceiver(ModbusReceiverAbc):
     - Store the received messages for further analysis and replay
     - Monitor the Modbus traffic
     - Debug the Modbus client
+
+    This class is safe to drive from more than one thread. Its lock covers the
+    collected packets and the fragment setting, so a reader walking the list
+    never sees a partial append and a setter cannot land while the value is
+    being copied into the stream. The lock is taken per append rather than
+    held across the receive loop, so a reader is not blocked for as long as
+    the socket stays open. Calling stop() ends the loop at the next message
+    boundary and makes the next run_once() do nothing.
 
     Args:
         sock (socket.socket)    : A TCP socket to receive messages.
@@ -582,18 +614,34 @@ class ModbusTcpReceiver(ModbusReceiverAbc):
     def set_frag_size(self, value):
         """Sets the fragment size in bytes."""
 
-        self._frag_size = value
+        with self._lock:
+            self._frag_size = value
+
         return self
 
     def run_once(self):
         """Receives Modbus messages until no more messages are available."""
 
-        # Update the stream attributes before receiving messages
-        self.stream.frag_size = self._frag_size
+        # A stopped receiver does no work, the same way a stopped sender does
+        # none. Reading the event is what makes stop() observable.
+        if self._stop.is_set():
+            return self.packets
+
+        # Taken for the copy alone rather than held across the loop below,
+        # which also takes it per append -- this lock is not reentrant, and
+        # holding it here would deadlock on the first message.
+        with self._lock:
+            # Update the stream attributes before receiving messages
+            self.stream.frag_size = self._frag_size
 
         try:
             # Iterate until all the packets are received
             while True:
+                # A stop arriving mid-loop ends it at the next boundary rather
+                # than once the socket happens to drain.
+                if self._stop.is_set():
+                    break
+
                 # Receive the full message
                 message = self.stream.receive()
 

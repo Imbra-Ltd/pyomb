@@ -15,6 +15,19 @@ numbers follow [Semantic Versioning](https://semver.org/).
   sockets and `ModbusPacketError` is frames. It subclasses `ModbusBaseError`, so
   an existing `except Exception` still catches what it replaces. See #180
 
+### Changed
+
+- `ModbusTcpSender` and `ModbusTcpReceiver` keep the threading contract their
+  shape has always advertised. Both were built with a lock and a stop event and
+  neither used them fully: the sender never acquired its lock, and neither class
+  ever read its stop event, so `stop()` returned having changed nothing a later
+  call could observe. The sender's lock now covers the fragment settings and the
+  send loop together, so two callers cannot interleave fragments and put a
+  malformed frame on the wire; the receiver's covers its packet list and its
+  fragment setting. `run_once()` reads the stop event in both. A caller that set
+  the event and then called `run_once()` used to get a full run and now gets
+  none, and a setter now waits for a send in progress. See #190, ADR-026
+
 ### Fixed
 
 - The server's manual-accept refusal raises `ModbusModeError` rather than the
