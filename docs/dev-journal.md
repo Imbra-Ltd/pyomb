@@ -2193,3 +2193,77 @@ package, per ADR-002. See `README.md` for usage and
 - **Pending:** the backlog is empty. The templates repository's own release
   procedure still wants the `v2.51.0` cut recorded as its own unmilestoned
   journal entry, which remains unwritten and is now three tags behind.
+
+## 2026-08-28 — Bump the pin, file the gaps (morning)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Bumped the pin to `v2.56.0` and reconciled the divergences.** The issue
+    was filed against `v2.55.0`, which upstream superseded the same day, so
+    the range was three chain files rather than the two the body named and
+    `git.md` moved 144 lines rather than the seven it reported. The scope
+    correction went on the issue before any work started, because the
+    acceptance criteria were written against the narrower range. None of the
+    four divergence records is touched: neither `quality.md` nor `docs.md`
+    appears in the range at all.
+  - **Named where the suite already stands against each rule the range adds.**
+    `testing.md` adds five sections and one drift-guard bullet, and the suite
+    satisfies all six as it stands. Each was checked against the code rather
+    than assumed: the published CRC vectors in `test_rtu_crc.py`, the lock
+    exercised rather than typed in `test_stream_locks.py`, the bind failure
+    `occupy_a_port()` injects, the port-0 allocation ADR-021 settled, the
+    autouse guard in `conftest.py`, the TLS 1.0 context
+    `test_tls_integration.py` substitutes at the seam the module under test
+    reads, and every `__all__` entry resolved in `test_package_exports.py`.
+    The sixth, an AST comparison proving a whole-tree rewrite preserved
+    meaning, binds a rewrite this project already did: ADR-004 adopted `ruff
+    format` before the rule existed, so nothing is owed and nothing is
+    retrofitted.
+  - **Recorded the divergence position in PLAYBOOK 4.1 as a command rather
+    than a sentence.** The previous bump left the settled position in prose,
+    which the next bump has to take on trust. It is now two commands: one
+    naming the files it reached, one reporting whether they moved. The first
+    exists because the second cannot tell a range that changed neither file
+    from a path that no longer exists.
+- **PRs merged:** #146.
+- **Issues closed/created:** #143 closed by #146. #144 and #145 created while
+  reconciling the pin, filed rather than absorbed into it, and both open.
+  Upstream, filed braboj/solid-ai-templates#1181.
+- **Lesson:** a claim written about a check is not a property of it. PLAYBOOK
+  4.1's new command was first shipped with the sentence that a mistyped path
+  turns into a git error rather than into silence, which would have made an
+  empty result a real pass. `git diff --stat <a> <b> -- <mistyped>` prints
+  nothing and exits zero. It is the shape ADR-022 was written for, one level
+  up: the reasoning that licences reading an empty result as a pass is itself
+  the thing that needed the negative control. Running it before committing is
+  the whole difference, and it cost one command.
+- **Lesson:** fixing a rule upstream does not fix the copy this project runs.
+  Three of the range's changes are this project's own filings landing --
+  #1076 in `v2.55.0`, #1127 and #1150 in `v2.56.0`. #1150 retired the pass
+  condition the template's rewritten label check no longer met, and
+  reconciling it is what sent the reading to PLAYBOOK 1.6, where this project
+  runs the older jq form. Its pass condition is correct for that form, so the
+  filing's own subject is absent here; what is absent instead is any report
+  of what the check read, which is #145. A filing that lands upstream leaves
+  a downstream copy that no longer matches either the old text or the new.
+- **Lesson:** a tag named in an issue body is a claim with a short life. #143
+  was filed at 07:35 naming `v2.55.0` as the target, and `v2.56.0` already
+  existed. Nothing in the issue could have said so, and the acceptance
+  criteria were sound against the range they were written for. One `git tag
+  --sort=-v:refname | head` before starting is what separates reading the
+  body from trusting it.
+- **Upstream:** one filing. braboj/solid-ai-templates#1181 against
+  `templates/base/core/testing.md`: the check shipped with the
+  unique-resource rule greps `tests/` for the class-counter pattern and
+  requires no output, but matches inside a comment. It therefore reports the
+  project that hit the defect, fixed it, and left the reasoning at the
+  fixture, while a project that never had it passes. Found by running the
+  check rather than reading it -- this repository's only hit is the comment
+  in `test_server_connections.py` explaining why the fixture takes an
+  OS-assigned port. #1058, #1076, #1077 and #1127 have closed since the
+  previous entry, and #1150 with them; #1133, #1140, #1161 and #1181 are
+  open.
+- **Pending:** #144 and #145 are filed and unshipped, and they are the only
+  open issues. The templates repository's own release procedure still wants
+  the `v2.51.0` cut recorded as its own unmilestoned journal entry, which
+  remains unwritten and is now five tags behind.
