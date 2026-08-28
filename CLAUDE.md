@@ -253,6 +253,11 @@ follow the referenced templates. Project-specific additions only:
   to every one of them and `git add` is the fix. Enforced by
   `tests/test_document_gates_are_not_blind.py`, which discovers each gate and
   fails one that passes on an empty corpus; see ADR-022
+- Adding a test or tightening an assertion needs no explanation. Deleting,
+  loosening or rewriting one changes what correct means, so it states why in
+  the pull request and never merges on a green suite alone — the suite cannot
+  report that it was weakened. PLAYBOOK 1.3 carries the classifier and the
+  assertion-level diff that evidences the claim
 
 ## 4. Identity
 
