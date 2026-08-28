@@ -194,17 +194,60 @@ no mutually-exclusive label group, so nothing refuses an issue that is missing
 one or carries two — the rule holds only because something runs the check:
 
 ```bash
-gh issue list --state open --limit 200 --json number,labels \
-  --jq '[.[] | {n: .number,
-                t: ([.labels[].name
-                     | select(test("^(bug|epic|task|spike|incident)$"))] | length),
-                p: ([.labels[].name | select(test("^P[0-3]$"))] | length)}
-        | select(.t != 1 or .p != 1)]'
+py - <<'EOF'
+import json, re, subprocess
+
+# Ask for more than the repository is expected to hold, so a listing that
+# comes back at the limit is a truncation rather than a coincidence.
+LIMIT = 500
+TYPES = re.compile(r"^(bug|epic|task|spike|incident)$")
+PRIORITIES = re.compile(r"^P[0-3]$")
+
+# Decode as UTF-8 rather than the locale encoding. `gh` emits UTF-8; on
+# a console whose code page is not, text=True alone mangles every
+# non-ASCII label name, and on a code page that does not map every byte
+# it raises UnicodeDecodeError instead.
+raw = subprocess.run(["gh", "issue", "list", "--state", "open",
+                      "--limit", str(LIMIT), "--json", "number,labels"],
+                     capture_output=True, text=True,
+                     encoding="utf-8").stdout
+issues = json.loads(raw) if raw.strip() else []
+
+print("issues inspected: %d" % len(issues))
+if not issues:
+    print("no issues found; the query or the repository context is wrong")
+if len(issues) == LIMIT:
+    print("listing came back at the limit of %d; the set is truncated" % LIMIT)
+
+for issue in issues:
+    names = [label["name"] for label in issue["labels"]]
+    types = [n for n in names if TYPES.match(n)]
+    priorities = [n for n in names if PRIORITIES.match(n)]
+    if len(types) != 1 or len(priorities) != 1:
+        print("issue %d: %d type label(s), %d priority label(s)"
+              % (issue["number"], len(types), len(priorities)))
+EOF
 ```
 
-Output MUST be `[]`. Each reported entry names the issue and its actual type
-and priority counts, so a `t: 0` is an unlabelled issue and a `t: 2` is a
-double-labelled one. Run it when triaging and before a release.
+Pass condition: the command reports how many issues it inspected and prints
+nothing after that. Each reported entry names the issue and its actual type
+and priority counts, so `0 type label(s)` is an unlabelled issue and
+`2 type label(s)` a double-labelled one. Run it when triaging and before a
+release.
+
+A count of zero is a failure rather than an empty tracker. Three things
+produce an empty listing and only one of them is compliance: every issue
+correctly labelled, an authentication failure, or the command running against
+the wrong repository. A count equal to the limit is a failure too, because the
+listing was truncated and the check then reported on part of the set while
+looking identical to a full pass.
+
+This is the form `templates/platform/github.md` ships, adopted rather than
+locally extended. The `jq` form it replaces was correct for what it printed
+and reported nothing about its own coverage, and keeping a variant means every
+upstream fix to the check has to be re-derived here instead of arriving with
+the pin. It also drops a line continuation, which is the one break mode that
+fails neither loudly nor closed.
 
 There is no priority below `P3` and no holding-lane milestone. Work that is
 unscheduled but still live carries an empty milestone field — never a label
