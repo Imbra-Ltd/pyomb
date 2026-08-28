@@ -1,6 +1,7 @@
 # coding: utf-8
 from __future__ import print_function, unicode_literals
 
+import contextlib
 import logging
 import socket
 import ssl
@@ -305,19 +306,25 @@ class OmbClientSim(object):
                 # If so unwrap the socket from the SSL context
                 sock = sock.unwrap()
 
-            # Block any further communication without destroying the socket
+            # Send the FIN now and unconditionally. The close below only does
+            # so once no other reference to the socket remains, so this is not
+            # redundant -- dropping it changes what the peer observes.
             sock.shutdown(socket.SHUT_RDWR)
 
         except socket.error:
             pass
 
         finally:
-            # Block further communication and close the socket
-            sock.close()
+            # A close fails on the same peer a shutdown does: gone away is the
+            # ordinary case here, not a fault. Letting it escape would leave
+            # the attribute set on a socket already given up on, so the clear
+            # runs on every path including this one.
+            with contextlib.suppress(socket.error):
+                sock.close()
+
             self.sock = None
 
         self.log.info("Client socket closed")
-        # time.sleep(1)
 
     ############################################################################
     def reset(self):
