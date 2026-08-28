@@ -18,10 +18,7 @@ import time
 import unittest
 
 from pyomb.omb_server import OmbServerSim
-from pyomb.packets import ModbusHeader
-from pyomb.packets import ModbusRequestFC1
-from pyomb.packets import ModbusTcpRequest
-from pyomb.packets import ModbusTcpResponse
+from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest, ModbusTcpResponse
 
 
 def read_request(address=0, count=8, trans_id=1):
@@ -31,7 +28,7 @@ def read_request(address=0, count=8, trans_id=1):
     return ModbusTcpRequest(header=header, pdu=pdu).serialize()
 
 
-class DeadSocket(object):
+class DeadSocket:
     """A socket whose shutdown fails, as a reset connection's does on Linux.
 
     Windows stays silent for the same call, so the platform that first ran

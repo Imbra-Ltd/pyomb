@@ -12,6 +12,7 @@ The same loop also mutated the list it was iterating, so it skipped whichever
 connection followed a closed one.
 """
 
+import contextlib
 import socket
 import threading
 import time
@@ -20,7 +21,7 @@ import unittest
 from pyomb.omb_server import OmbServerSim
 
 
-class ServerThreadExceptions(object):
+class ServerThreadExceptions:
     """Captures anything that escapes a thread while it is installed."""
 
     def __init__(self):
@@ -39,7 +40,7 @@ class ServerThreadExceptions(object):
         return False
 
     def describe(self):
-        return ", ".join("{0}: {1}".format(type(a.exc_value).__name__, a.exc_value) for a in self.caught)
+        return ", ".join(f"{type(a.exc_value).__name__}: {a.exc_value}" for a in self.caught)
 
 
 class TestInactivitySweep(unittest.TestCase):
@@ -51,10 +52,8 @@ class TestInactivitySweep(unittest.TestCase):
 
     def tearDown(self):
         for sock in self.sockets:
-            try:
+            with contextlib.suppress(OSError):
                 sock.close()
-            except OSError:
-                pass
 
         server = getattr(self, "server", None)
 

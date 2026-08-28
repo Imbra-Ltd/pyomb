@@ -11,39 +11,42 @@ TypeError from iter().
 
 import unittest
 
+from stub_socket import LoopbackSocket
+
 from pyomb.errors import ModbusIllegalFunction
 from pyomb.omb_client import OmbClientSim
-from pyomb.packets import ModbusHeader
-from pyomb.packets import ModbusRequestFC1
-from pyomb.packets import ModbusRequestFC2
-from pyomb.packets import ModbusRequestFC3
-from pyomb.packets import ModbusRequestFC4
-from pyomb.packets import ModbusRequestFC5
-from pyomb.packets import ModbusRequestFC6
-from pyomb.packets import ModbusRequestFC7
-from pyomb.packets import ModbusRequestFC15
-from pyomb.packets import ModbusRequestFC16
-from pyomb.packets import ModbusRequestFC22
-from pyomb.packets import ModbusRequestFC23
-from pyomb.packets import ModbusRequestFC43
-from pyomb.packets import ModbusTcpRequest
-from stub_socket import LoopbackSocket
+from pyomb.packets import (
+    ModbusHeader,
+    ModbusRequestFC1,
+    ModbusRequestFC2,
+    ModbusRequestFC3,
+    ModbusRequestFC4,
+    ModbusRequestFC5,
+    ModbusRequestFC6,
+    ModbusRequestFC7,
+    ModbusRequestFC15,
+    ModbusRequestFC16,
+    ModbusRequestFC22,
+    ModbusRequestFC23,
+    ModbusRequestFC43,
+    ModbusTcpRequest,
+)
 
 # One call per supported function code, paired with the PDU class it must
 # build. The keyword arguments are the ones that function code actually reads.
 REQUEST_TABLE = (
-    (1, dict(readAddress=4, readCount=8), ModbusRequestFC1),
-    (2, dict(readAddress=4, readCount=8), ModbusRequestFC2),
-    (3, dict(readAddress=4, readCount=2), ModbusRequestFC3),
-    (4, dict(readAddress=4, readCount=2), ModbusRequestFC4),
-    (5, dict(writeAddress=3, values=[0xFF00]), ModbusRequestFC5),
-    (6, dict(writeAddress=3, values=[0xABCD]), ModbusRequestFC6),
-    (7, dict(), ModbusRequestFC7),
-    (15, dict(writeAddress=0, writeCount=8, values=[0xFF]), ModbusRequestFC15),
-    (16, dict(writeAddress=0, writeCount=2, values=[1, 2]), ModbusRequestFC16),
-    (22, dict(writeAddress=4, and_mask=0x00F2, or_mask=0x0025), ModbusRequestFC22),
-    (23, dict(readAddress=0, readCount=2, writeAddress=8, writeCount=1, values=[0xABCD]), ModbusRequestFC23),
-    (43, dict(), ModbusRequestFC43),
+    (1, {"readAddress": 4, "readCount": 8}, ModbusRequestFC1),
+    (2, {"readAddress": 4, "readCount": 8}, ModbusRequestFC2),
+    (3, {"readAddress": 4, "readCount": 2}, ModbusRequestFC3),
+    (4, {"readAddress": 4, "readCount": 2}, ModbusRequestFC4),
+    (5, {"writeAddress": 3, "values": [0xFF00]}, ModbusRequestFC5),
+    (6, {"writeAddress": 3, "values": [0xABCD]}, ModbusRequestFC6),
+    (7, {}, ModbusRequestFC7),
+    (15, {"writeAddress": 0, "writeCount": 8, "values": [0xFF]}, ModbusRequestFC15),
+    (16, {"writeAddress": 0, "writeCount": 2, "values": [1, 2]}, ModbusRequestFC16),
+    (22, {"writeAddress": 4, "and_mask": 0x00F2, "or_mask": 0x0025}, ModbusRequestFC22),
+    (23, {"readAddress": 0, "readCount": 2, "writeAddress": 8, "writeCount": 1, "values": [0xABCD]}, ModbusRequestFC23),
+    (43, {}, ModbusRequestFC43),
 )
 
 

@@ -21,7 +21,7 @@ FRAME = bytes.fromhex("000100000006110300000002")
 NEXT_FRAME = bytes.fromhex("000200000006110300000004")
 
 
-class SegmentedSocket(object):
+class SegmentedSocket:
     """Hands out at most `segment` bytes per read, as a slow path would."""
 
     def __init__(self, data, segment=5):
@@ -46,16 +46,14 @@ class TestSegmentedDelivery(unittest.TestCase):
 
     def test_every_segment_size_reassembles(self):
         for segment in range(1, len(FRAME) + 2):
-            self.assertEqual(
-                stream_over(FRAME, segment=segment).receive(), FRAME, "mismatch at segment={0}".format(segment)
-            )
+            self.assertEqual(stream_over(FRAME, segment=segment).receive(), FRAME, f"mismatch at segment={segment}")
 
     def test_every_fragment_size_reassembles(self):
         for frag_size in (0, 1, 3, 7, 100):
             self.assertEqual(
                 stream_over(FRAME, segment=2, frag_size=frag_size).receive(),
                 FRAME,
-                "mismatch at frag_size={0}".format(frag_size),
+                f"mismatch at frag_size={frag_size}",
             )
 
     def test_two_frames_in_one_segment_are_returned_one_at_a_time(self):

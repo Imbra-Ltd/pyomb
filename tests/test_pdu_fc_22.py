@@ -1,4 +1,5 @@
 import unittest
+
 from pyomb.packets import ModbusRequestFC22, ModbusResponseFC22
 
 

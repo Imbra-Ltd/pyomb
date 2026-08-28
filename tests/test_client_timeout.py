@@ -6,6 +6,7 @@ way to recover short of killing the process. These tests hold the finite
 default in place and check that the timeout surfaces as a Modbus error.
 """
 
+import contextlib
 import socket
 import threading
 import unittest
@@ -14,7 +15,7 @@ from pyomb.errors import ModbusNetworkError
 from pyomb.omb_client import OmbClientSim
 
 
-class SilentServer(object):
+class SilentServer:
     """Accepts one connection, reads nothing, answers nothing."""
 
     def __init__(self):
@@ -29,18 +30,14 @@ class SilentServer(object):
         self.thread.start()
 
     def _serve(self):
-        try:
+        with contextlib.suppress(OSError):
             self.accepted, _ = self.sock.accept()
-        except OSError:
-            pass
 
     def close(self):
         for handle in (self.accepted, self.sock):
             if handle is not None:
-                try:
+                with contextlib.suppress(OSError):
                     handle.close()
-                except OSError:
-                    pass
 
 
 class TestClientTimeout(unittest.TestCase):

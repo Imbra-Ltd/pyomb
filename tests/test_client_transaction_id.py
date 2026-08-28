@@ -13,12 +13,11 @@ These tests pin the counter, the correlation and the configurable unit id.
 
 import unittest
 
+from stub_socket import LoopbackSocket
+
 from pyomb.errors import ModbusNetworkError
 from pyomb.omb_client import OmbClientSim
-from pyomb.packets import ModbusHeader
-from pyomb.packets import ModbusResponseFC1
-from pyomb.packets import ModbusTcpResponse
-from stub_socket import LoopbackSocket
+from pyomb.packets import ModbusHeader, ModbusResponseFC1, ModbusTcpResponse
 
 
 def response_frame(trans_id, unit_id=1):

@@ -11,17 +11,19 @@ client believes whatever the server reports.
 import unittest
 
 from pyomb.omb_server import ResponseFactory
-from pyomb.packets import ModbusRequestFC1
-from pyomb.packets import ModbusRequestFC2
-from pyomb.packets import ModbusRequestFC3
-from pyomb.packets import ModbusRequestFC4
-from pyomb.packets import ModbusRequestFC5
-from pyomb.packets import ModbusRequestFC6
-from pyomb.packets import ModbusRequestFC15
-from pyomb.packets import ModbusRequestFC16
-from pyomb.packets import ModbusRequestFC22
-from pyomb.packets import ModbusRequestFC23
-from pyomb.packets import ModbusRequestFC43
+from pyomb.packets import (
+    ModbusRequestFC1,
+    ModbusRequestFC2,
+    ModbusRequestFC3,
+    ModbusRequestFC4,
+    ModbusRequestFC5,
+    ModbusRequestFC6,
+    ModbusRequestFC15,
+    ModbusRequestFC16,
+    ModbusRequestFC22,
+    ModbusRequestFC23,
+    ModbusRequestFC43,
+)
 
 
 class TestBitReadByteCounts(unittest.TestCase):

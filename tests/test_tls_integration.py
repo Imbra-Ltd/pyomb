@@ -8,19 +8,17 @@ The certificates are deliberately not committed, so this suite is opt-in
 rather than part of the default run.
 """
 
+import contextlib
 import os
 import ssl
 import unittest
 import warnings
 from unittest import mock
 
-from pyomb import omb_client
-from pyomb import omb_server
+from pyomb import omb_client, omb_server
 from pyomb.omb_client import OmbClientSim
 from pyomb.omb_server import OmbServerSim
-from pyomb.packets import ModbusPduParser
-from pyomb.packets import ModbusRequestFC1
-from pyomb.packets import ModbusResponseFC1
+from pyomb.packets import ModbusPduParser, ModbusRequestFC1, ModbusResponseFC1
 
 CERTS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "certificates")
 
@@ -179,10 +177,8 @@ class TestMutualTls(unittest.TestCase):
 
     def tearDown(self):
         if self.client is not None:
-            try:
+            with contextlib.suppress(OSError):
                 self.client.disconnect()
-            except OSError:
-                pass
         self.server.stop()
 
         # stop() only sets the quit event, so the thread is still in its select
@@ -198,7 +194,14 @@ class TestMutualTls(unittest.TestCase):
         )
 
     def connect(self, **kwargs):
-        options = dict(host="localhost", port=self.PORT, secure=True, cert=CLIENT_CRT, key=CLIENT_KEY, ca_chain=CA)
+        options = {
+            "host": "localhost",
+            "port": self.PORT,
+            "secure": True,
+            "cert": CLIENT_CRT,
+            "key": CLIENT_KEY,
+            "ca_chain": CA,
+        }
         options.update(kwargs)
         self.client = OmbClientSim(**options)
         self.client.connect()
