@@ -2449,3 +2449,63 @@ package, per ADR-002. See `README.md` for usage and
   templates repository's own `v2.51.0` cut is still unrecorded as its own
   unmilestoned journal entry, and is now eight tags behind; that is work in
   that repository rather than a filing from this one.
+
+## 2026-08-28 — Read the range, file what it finds (afternoon)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Moved the templates pin to `v2.59.0` and read the range against the
+    tree.** 462 insertions and 8 deletions across nine template files, seven
+    of them in this project's chain. `templates/manifest.yaml` is untouched,
+    so the chain does not move and the startup block needed no edit -- run at
+    the new pin rather than inferred from the unchanged manifest, which is the
+    difference the acceptance criteria asked for.
+  - **Carried the divergence position forward in PLAYBOOK 4.1.** ADR-014 stays
+    the one record standing apart, and the worked example for "a named file is
+    not a moved rule" now runs off this range rather than `v2.57.0`'s: 132
+    lines added to `quality.md`, none deleted, all three hunks landing ahead of
+    the Code style section the record bounds.
+- **PRs merged:** #164.
+- **Issues closed/created:** #157 closed. Four created from the reading --
+  #160 on the control's unmargined floor, #161 on the procedure-step audit,
+  #162 on a test edit that weakens the suite, #163 on a trigger with no
+  detector. None absorbed into the bump.
+- **Correction:** the previous entry's Upstream line lists #1204, #1211, #1212
+  and #1215 as open upstream. Three of the four closed as completed the same
+  day. #1212 is the one that matters here -- it moves the journal entry to the
+  end of the end-of-session audit -- and `scope.md` did not move in this
+  range, so the change landed after `v2.59.0` and arrives at the next bump.
+  The practice of writing the entry last and leaving it numbered fourth is
+  settled upstream and not yet inherited.
+- **Lesson:** a control is a member of the family it controls, for the purpose
+  of every rule that family follows. Six document gates each size their
+  coverage floor from a measurement, classify the corpus, and sit at roughly
+  half where it churns. The seventh module, the one that proves the six are
+  not blind, sets its floor at the measured six with no margin and no corpus
+  classification. ADR-022 states the sizing rule in the words the template now
+  uses, and its scope is the six -- so the control escaped the rule the record
+  exists to impose, by not being one of the things the record is about. Filed
+  as #160 here and as braboj/solid-ai-templates#1225 upstream, because a
+  reader applying the template as written lands in the same place.
+- **Lesson:** read a range for what it says about this tree, not only for what
+  it says. Two of this range's edits were made for a shape this repository
+  already has. The unique-resource check gained a `^[^#]*` prefix so it stops
+  flagging a comment that discusses the pattern rather than using it, and the
+  only such comment anywhere is at `tests/test_server_connections.py:52`,
+  beside the fixture that fixed the defect. Running the old form and the
+  shipped form side by side took one command and turned an abstract edit into
+  a confirmed clean result across 136 files. The same command run only in the
+  shipped form would have printed nothing and proved nothing.
+- **Upstream:** one filing. braboj/solid-ai-templates#1225 against
+  `templates/base/core/testing.md`: `testing-negative-assertion-coverage`
+  gained both the floor-sizing clause and the control clauses in this range,
+  and they do not meet -- nothing says the control's own discovery count is a
+  floor taking the same margin. It is the floor most likely to be set at the
+  measured count, because the author is counting members they have just
+  written. Open upstream: #1215 and #1225.
+- **Pending:** nothing blocked. Six issues open here, none milestoned: #149,
+  #150 and the four filed today. #160 is the smallest and has its evidence
+  attached; #161 is an audit rather than a fix. The templates repository's own
+  `v2.51.0` cut is still unrecorded as its own journal entry, now ten tags
+  behind, and remains work in that repository rather than a filing from this
+  one.
