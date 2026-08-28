@@ -2267,3 +2267,97 @@ package, per ADR-002. See `README.md` for usage and
   open issues. The templates repository's own release procedure still wants
   the `v2.51.0` cut recorded as its own unmilestoned journal entry, which
   remains unwritten and is now five tags behind.
+
+## 2026-08-28 — Bump the pin, declare the paths (midday)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Bumped the pin to `v2.57.0` and reconciled the startup block.** The
+    first range in three to change the resolved chain rather than only the
+    text inside it: `templates/manifest.yaml` wires `base-python` and
+    `base-cli` into `stack-python-lib`, so
+    `templates/base/language/python.md` and `templates/base/core/cli.md`
+    govern this repository for the first time. Verified three ways, since a
+    block edit that happens to satisfy the guard proves nothing on its own:
+    the check passes at `v2.56.0`, fails at `v2.57.0` naming exactly those
+    two files, and passes again once the block names them. Most of the range
+    is relocation rather than new rules -- the 21 lines out of `quality.md`
+    are the `eslint-plugin-sonarjs` table and the complexity bullet
+    delegating its tool binding, and the rows dropped from
+    `python-lib.md`'s gate table are the same bindings restated in
+    `base-python`. Separating the two is what kept the already-satisfied
+    tool bindings, lock rules and sdist anchoring from being filed as gaps.
+  - **Declared the off-limits paths, and added one the default set misses.**
+    `git.md` requires the context file to carry the section and `CLAUDE.md`
+    had none. The default list cuts down to `.github/workflows/` here, since
+    this project has no auth, billing, migrations or `.env`. The list adds
+    `docs/solid-ai-templates`: a submodule pointer is a one-line diff that
+    replaces every rule the project binds, with the suite, the linters and
+    the diff itself reporting nothing about it. That is the section's own
+    criterion, and the default list misses it because every member there
+    earns its place by what it executes. ADR-023 carries the reasoning and
+    why `pyproject.toml` stays off. The check reads the declared list out of
+    `CLAUDE.md` rather than restating it, and lives in PLAYBOOK 1.3 rather
+    than section 3 because a hit is an escalation trigger and a gate would be
+    muted within a week.
+  - **Adopted the template's label check instead of extending the local
+    one.** PLAYBOOK 1.6 ran a `jq` form whose whole output was the offender
+    list, so an authentication failure, a wrong repository context and full
+    compliance all printed `[]`, and a hardcoded limit truncated in silence.
+    The Python form upstream ships closes all four and is the copy upstream
+    maintains, which is the argument that settled it: a local variant means
+    every fix has to be re-derived here rather than arriving with the pin.
+    Negative-controlled against planted input rather than by mislabelling a
+    real issue -- a missing type label, a missing priority label, two type
+    labels, an empty listing and a listing at the limit are each flagged, and
+    a well-formed issue is not.
+- **PRs merged:** #151, #152 and #153.
+- **Issues closed/created:** #148, #144 and #145 closed by the pull requests
+  that carry them, and the closure list was read by `closedAt` afterwards
+  rather than trusted. #149 and #150 created while reconciling the pin, filed
+  rather than absorbed into it, and both open. Upstream, filed
+  braboj/solid-ai-templates#1204.
+- **Lesson:** `git add -A` stages a submodule pointer left over from another
+  branch. The working tree still held `v2.57.0` from the pin branch, so the
+  off-limits commit carried a pointer bump it had nothing to do with -- and
+  the path it contaminated is the one that commit exists to declare. What let
+  it through is the ordering: the check had been run before committing, when
+  `origin/main...HEAD` compared nothing and printed the same silence a clean
+  branch prints. The staleness rule already says to compare after the edit;
+  this is that rule reaching a diff-reading check rather than a regenerated
+  artifact.
+- **Lesson:** a document gate cannot see a file that is not staged, and the
+  window where that matters is the one where a new document is written.
+  ADR-023 shipped with an 82-column title. The width gate passed before the
+  commit, having enumerated through `git ls-files` and never read the record
+  under review, then failed the moment the file was tracked. ADR-022 states
+  this gap and declined to close it; this is the first time it has cost
+  anything, and the cost was one follow-up commit because force-push is
+  denied.
+- **Lesson:** a poll that hides its own errors reports silence as success.
+  Waiting on the first pull request's checks ran 37 attempts printing "no
+  checks reported yet" while all eleven were passing, because `python` is not
+  on `PATH` in this shell and the loop routed the failure to `2>/dev/null`
+  with a fallback of zero. The previous entry recorded the same shape one
+  level down, in a condition that was vacuously true over an empty array.
+  Here the poll itself was the blind check, and the tell was available
+  throughout: eleven attempts of nothing on a repository whose CI finishes in
+  under a minute is not a slow queue.
+- **Lesson:** an upstream reference written before the filing names a number
+  that already belongs to something else. ADR-023 was drafted citing
+  `#1194`, which was taken by an unrelated issue upstream, so the placeholder
+  would have resolved rather than 404ed and pointed a reader at the wrong
+  thread. File first, then cite.
+- **Upstream:** one filing. braboj/solid-ai-templates#1204 against
+  `templates/base/core/git.md`: the off-limits default set assembles its
+  members from paths whose danger is what runs from them, so a path whose
+  danger is what it *governs* does not suggest itself -- and the hybrid model
+  this repository recommends puts exactly such a path in every consuming
+  project. #1133, #1140, #1161 and #1181 have all closed since the previous
+  entry; #1204 is the only one open.
+- **Pending:** #149 and #150 are filed and unshipped, and they are the only
+  open issues. Upstream cut `v2.58.0` during this session, so the pin is one
+  tag behind again and no issue names that bump yet. The templates
+  repository's own release procedure still wants the `v2.51.0` cut recorded
+  as its own unmilestoned journal entry, which remains unwritten and is now
+  seven tags behind.
