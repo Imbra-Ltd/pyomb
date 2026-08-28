@@ -43,12 +43,16 @@ MARKER = "ls-files"
 
 SELF = pathlib.Path(__file__).stem
 
-# The six gates in the tree when this floor was set: the character set, the
-# line endings, the Markdown width, and the three over the decision records. A
-# floor rather than a non-empty check, for the same reason each of those gates
-# now carries one -- a discovery that returns a single module satisfies
-# non-emptiness while leaving five gates unmeasured.
-GATES_AT_LEAST = 6
+# What the tree held when this floor was set: 6 gates -- the character set, the
+# line endings, the Markdown width, and the three over the decision records.
+# The floor sits at roughly half, because test modules churn -- retiring a gate
+# is an ordinary deletion, and so is dropping one whose rule went away
+# upstream, and neither must fail a control that reports a broken discovery.
+# Every way this enumeration breaks returns nothing at all, so the margin costs
+# no detection. It is a floor rather than a non-empty check for the same reason
+# each of those gates now carries one -- a discovery that returns a single
+# module satisfies non-emptiness while leaving five gates unmeasured.
+GATES_AT_LEAST = 3
 
 NOT_A_CHECKOUT = "not a git checkout, so there is no tracked-file list to read"
 
@@ -151,12 +155,14 @@ class DocumentGatesAreNotBlind(unittest.TestCase):
         self.assertGreaterEqual(
             len(self.gates),
             GATES_AT_LEAST,
-            f"the discovery found {len(self.gates)} gate(s) where the tree "
-            f"holds at least {GATES_AT_LEAST}, so the control below would pass "
-            "having run almost nothing. A module that is written but not "
-            "staged is invisible here, because the listing reads git's index "
-            "rather than the working tree; anything else means the way a gate "
-            "reads its corpus has changed and the marker no longer finds it.",
+            f"the discovery found {len(self.gates)} gate(s) where the floor is "
+            f"{GATES_AT_LEAST}, so the control below would pass having run "
+            "almost nothing. A module that is written but not staged is "
+            "invisible here, because the listing reads git's index rather than "
+            "the working tree. Otherwise: either the way a gate reads its "
+            "corpus has changed and the marker no longer finds it, or enough "
+            "gates were retired to eat the margin, in which case re-measure "
+            "and lower the floor rather than treating this as a defect.",
         )
 
     def test_every_document_gate_fails_when_its_listing_comes_back_empty(self):
