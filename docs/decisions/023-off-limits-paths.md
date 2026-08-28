@@ -7,9 +7,9 @@ supersedes: []
 superseded_by: []
 ---
 
-# ADR-023: The off-limits list names the submodule pointer, not only the workflows
+# ADR-023: Off-limits paths include the templates submodule pointer
 
-**Upstream:** filed as braboj/solid-ai-templates#1194 against
+**Upstream:** filed as braboj/solid-ai-templates#1204 against
 `templates/base/core/git.md`. With the domain skin off, the convention is that
 a repository which vendors its governing rules declares that pointer
 off-limits. The default set names the paths whose blast radius comes from what
