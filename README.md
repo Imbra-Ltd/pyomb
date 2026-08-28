@@ -175,7 +175,7 @@ src/pyomb/              # The library
   defines.py            # Protocol constants
 tests/                  # Per-module tests, regression modules, convention gates
 examples/               # Runnable usage patterns, executed by CI
-scripts/                # Certificate generation and standalone demos
+scripts/                # Certificate generation and a CRC walkthrough
 docs/                   # Specifications, tutorial, decisions, journal, audits
 assets/                 # Generated test certificates (gitignored)
 .github/                # CI, CodeQL and release workflows, Dependabot config

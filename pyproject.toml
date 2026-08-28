@@ -118,13 +118,8 @@ convention = "google"
 #
 #   ruff check src tests scripts --output-format=json
 
-"scripts/demo_metaclass.py" = ["D100", "D101", "D102", "D105", "D107", "UP004", "UP008"]
 "scripts/demo_modbus_crc.py" = ["D202", "D205", "D212", "D415", "UP030", "UP032"]
-"scripts/demo_stream.py" = ["D100", "D101", "D202", "D415", "I001", "RUF059", "UP004", "UP030"]
-"scripts/demo_validation.py" = ["C419", "D100", "D103", "TRY003", "TRY004"]
-"scripts/factory.py" = ["D100", "D101", "D102", "D107", "N804", "UP004"]
 "scripts/gen_test_certs.py" = ["D103", "D202", "I001", "SIM115", "UP009", "UP010", "UP030", "UP032"]
-"scripts/pack_unpack.py" = ["B904", "BLE001", "D100", "D103", "TRY002", "UP030", "UP032"]
 "src/pyomb/__init__.py" = ["I001", "RUF022", "UP009"]
 "src/pyomb/defines.py" = ["D100", "I001", "UP009", "UP010"]
 "src/pyomb/errors.py" = ["D105", "D107", "D202", "D205", "D212", "D412", "D415", "I001", "N818", "SIM108", "UP008", "UP009", "UP010", "UP030", "UP032"]
