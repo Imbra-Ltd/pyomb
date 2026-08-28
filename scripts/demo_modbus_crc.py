@@ -1,6 +1,6 @@
-"""
-This script demonstrates how to checksum a Modbus RTU frame. The Modbus RTU
-frame consists of:
+"""Checksum a Modbus RTU frame, and show why the result goes out backwards.
+
+The Modbus RTU frame consists of:
 
     - Slave ID (1 byte)
     - PDU (Protocol Data Unit) (variable length)
@@ -40,13 +40,12 @@ from pyomb.packets import CRC_FMT, calc_crc16
 
 def demo(payload):
     """Print the checksum of one frame body as a value and as wire bytes."""
-
     crc = calc_crc16(payload)
 
-    print("payload  : {0}".format(payload.hex(" ")))
-    print("crc value: 0x{0:04X}".format(crc))
-    print("on the wire: {0}".format(struct.pack(CRC_FMT, crc).hex(" ")))
-    print("full frame: {0}".format((payload + struct.pack(CRC_FMT, crc)).hex(" ")))
+    print("payload  : {}".format(payload.hex(" ")))
+    print(f"crc value: 0x{crc:04X}")
+    print("on the wire: {}".format(struct.pack(CRC_FMT, crc).hex(" ")))
+    print("full frame: {}".format((payload + struct.pack(CRC_FMT, crc)).hex(" ")))
     print("")
 
 
