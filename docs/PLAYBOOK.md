@@ -413,6 +413,21 @@ command above before pushing and the check has nothing to say. Formatting is
 therefore not reviewable material — the formatter has already settled it, and
 a pull request cannot carry the argument. ADR-004 records the adoption.
 
+A finding has three homes and only one of them is the freeze table. A rule
+that is wrong at one site is suppressed there; a file that was already broken
+on adoption day is in the table; anything else is fixed. ADR-025 draws the
+line and ADR-003 owns the table.
+
+```bash
+grep -rn '# noqa' src tests scripts examples
+```
+
+Pass condition: every line it prints names a rule, as `# noqa: B017`, with the
+reason in a comment directly above. A bare `# noqa` is the failure — it
+absorbs every rule that later applies to that line, where a named one keeps
+failing on the next finding. An empty result is a pass here and not a broken
+path: the repository carried none at all until `v0.3.0`.
+
 ### 3.5 Type checking (mypy)
 
 ```bash
