@@ -254,10 +254,15 @@ unscheduled but still live carries an empty milestone field — never a label
 and never a lane.
 
 Work deferred on a trigger outside this repository is closed rather than
-carried open, per ADR-016. The closing comment carries the trigger, the
-instruction to reopen rather than refile, and anything that loses its watcher
-by the closure. No triage label is applied: `wontdo` states the opposite of
-what is true for work that is expected back.
+carried open, per ADR-016. The closing comment carries the trigger, what would
+detect it, the instruction to reopen rather than refile, and anything that
+loses its watcher by the closure. No triage label is applied: `wontdo` states
+the opposite of what is true for work that is expected back.
+
+Naming the detector is what stops the backlog re-running the check by hand.
+Where nothing detects the trigger, the comment says so — an unwatched trigger
+is a decision to take deliberately, and a comment that omits the question
+reads the same as one that answered it.
 
 ## 2. Domain operations
 
@@ -942,6 +947,22 @@ sections. Keep every sentence to 40 words and every paragraph to 80; 3.14 and
 Superseding an earlier record updates both sides in the same change: the new
 record lists it in `supersedes`, and the old one gets `status: Superseded` and
 the new id in `superseded_by`. 3.16 fails if either side is missing.
+
+A record that defers something carries its revisit trigger on a line opening
+`**Revisit trigger:**`, or `**Revisit trigger for (N):**` where the record
+numbers its decisions. The form is what makes the search work — nothing polls
+a trigger, so the only thing connecting an actor to a record that names their
+action is a grep for it:
+
+```bash
+grep -rn 'Revisit trigger' docs/decisions/
+```
+
+The line names the condition and what would detect it: a scheduled check, a
+gate that fails, or the surface a reader would notice it on. Where nothing
+would, say that detection is a person looking. A trigger that fired and one
+that has not read identically from the text, so the sentence that says who is
+watching is the only thing separating them.
 
 A merged record is immutable in what it claims, not in how it reads. Editing
 one for readability alone is a format migration: make the change, confirm with
