@@ -174,6 +174,21 @@ tests pass.
   explicit argument instead. The floor takes no such argument: it is set
   after the caller's options, which are OR-ed and can only add a restriction
 
+### 2.5 Off-limits paths
+
+- `.github/workflows/` is off-limits — the release workflow fires on a tag
+  that cannot be taken back, and no suite runs it
+- `docs/solid-ai-templates` is off-limits — the pointer is one line and
+  changes every rule this project binds
+- Propose a change inside either before making it; the proposal carries a
+  rollback strategy and the coverage that would catch a regression
+- The approval is for that plan, not for the area — the next change needs its
+  own proposal
+- A diff touching either names it at the top of its summary; the reviewer's
+  attention is the control, and it is spent only if the summary spends it
+- Run the check in PLAYBOOK 1.3 before opening a pull request; it reads the
+  two paths above, so the list has one home. See ADR-023
+
 ## 3. Quality
 
 Testing, coverage, review order, documentation standards and quality gates

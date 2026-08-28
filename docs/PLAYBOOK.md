@@ -43,6 +43,67 @@ Every line it prints closes that issue on merge. A sentence written to
 keyword is still a keyword, and that phrasing has already cost this repository
 one wrongly closed issue. Write "part of #N" or the bare number instead.
 
+Also before opening it, check whether the branch touches an off-limits path.
+A hit is an escalation trigger rather than a failure: it says the change needs
+the proposal `CLAUDE.md` 2.5 describes before it merges, and that the summary
+names the path at the top. The check reads the declared list from `CLAUDE.md`
+rather than restating it, so adding a path is one edit:
+
+```bash
+py - <<'EOF'
+import pathlib, re, subprocess, sys
+
+sys.stdout.reconfigure(encoding="utf-8")
+
+BASE = "origin/main"
+
+# The declared list has one home. Reading it is what stops this command and
+# the section drifting apart, in the direction where nothing would notice.
+SECTION = re.compile(r"^### 2\.5 ")
+NEXT = re.compile(r"^#{2,3} ")
+ENTRY = re.compile(r"^- `([^`]+)` is off-limits")
+
+lines = pathlib.Path("CLAUDE.md").read_text(encoding="utf-8").splitlines()
+inside, declared = False, []
+
+for line in lines:
+    if SECTION.match(line):
+        inside = True
+        continue
+    if inside and NEXT.match(line):
+        break
+    found = ENTRY.match(line) if inside else None
+    if found:
+        declared.append(found.group(1))
+
+print("off-limits paths declared: %d" % len(declared))
+if not declared:
+    print("none read from CLAUDE.md; the section moved or its wording drifted")
+
+out = subprocess.run(["git", "diff", "--name-only", BASE + "...HEAD"],
+                     capture_output=True, text=True, encoding="utf-8").stdout
+changed = [path for path in out.splitlines() if path]
+
+print("files changed: %d" % len(changed))
+if not changed:
+    print("no files compared; the base is wrong or the branch is empty")
+
+for path in changed:
+    for prefix in declared:
+        if path.startswith(prefix) or ("/" + prefix) in path:
+            print("  off-limits: %s (matches %s)" % (path, prefix))
+EOF
+```
+
+Pass condition: the command reports how many paths it read and how many files
+it compared, then prints nothing. Zero on either count is a failure rather
+than a clean branch — a declaration it cannot parse and a diff it cannot
+resolve both report the same nothing a compliant branch does.
+
+It belongs here rather than in section 3. Everything in that section is a tool
+or a test wired into CI, and this one must never gate: a hit is the normal
+outcome of a legitimate workflow edit, so a gate would be muted within a week.
+
 After merging, confirm what actually closed. A negated keyword closes silently,
 so the merge output never reports it:
 
