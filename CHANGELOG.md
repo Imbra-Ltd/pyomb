@@ -6,6 +6,18 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- A close that fails no longer escapes the client's teardown. `disconnect()`
+  already treated `shutdown()` as able to fail, because a peer that has gone
+  away is the ordinary case there rather than a fault, and did not treat
+  `close()` the same way -- it sat in a `finally` with nothing catching it, so
+  a raising close skipped the line clearing the socket attribute and left the
+  client holding a socket it had already given up on. Whether a close raises is
+  a platform difference: silent on Windows, `ENOTCONN` on Linux for the same
+  reset socket. The regression test injects the fault from a double rather than
+  waiting for a platform to supply it. See #193
+
 ## [0.3.1] - 2026-08-28
 
 ### Added
