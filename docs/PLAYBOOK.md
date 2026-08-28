@@ -815,10 +815,16 @@ gap is stated rather than closed.
 
 ### 4.1 Bump the templates submodule
 
-Pin a released tag, never a branch tip.
+Pin a released tag, never a branch tip, and resolve which tag from the
+listing rather than from the issue that asked for the bump. A tag named in an
+issue body is a claim with a short life: it has been wrong on arrival twice,
+once where the body said `v2.55.0` and `v2.56.0` already existed, once where
+it said `v2.58.0` and `v2.59.0` did. Both bodies were sound against the range
+they were written for, and neither could have known.
 
 ```bash
 git -C docs/solid-ai-templates fetch --tags
+git -C docs/solid-ai-templates tag --sort=-v:refname | head -3
 git -C docs/solid-ai-templates checkout <tag>
 git add docs/solid-ai-templates && git commit -m "chore(templates): bump to <tag>"
 ```
