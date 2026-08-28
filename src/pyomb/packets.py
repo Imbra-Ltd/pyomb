@@ -23,23 +23,6 @@ from abc import ABCMeta, abstractmethod
 
 from .errors import ModbusPacketError
 
-# TODO: Add generic ModbusRtuPacket for sniffers, proxies and gateways
-# TODO: The registiry may be a separate class, now it is a class attribute
-# TODO: Add validation logic for all classes
-# TODO: Ensure all edge cases are covered, including boundary conditions
-#       and invalid inputs by the validate() method
-# TODO: Make more clear calculation of the pdu_data_length in the request, use
-#       the struct module or similar to calculate the length of the data
-# TODO: Redundancy in the serialize() and deserialize() methods, use helper or
-#       utility functions to avoid code repetition
-# TODO: calc_crc16() walks the message bit by bit, a table would be faster
-# TODO: Define performance criteria for creation, serialization and
-#       deserialization and check if the current implementation meets the
-#       criteria, otherwise optimize the code.
-# TODO: Add a cast_to() method to the ModbusPdu class to case a specific PDU
-#       to the generic PDU class.
-
-
 ################################################################################
 # ABSTRACT CLASSES
 ################################################################################

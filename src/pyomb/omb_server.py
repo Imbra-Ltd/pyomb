@@ -33,17 +33,6 @@ from .packets import (
 )
 from .stream import ModbusTcpStream
 
-# TODO: Add more comments and improve the docstrings
-# TODO: Some namings are not conforming the PE8 standard (e.g. setDelay)
-# TODO: The ciphers configuration depends on the OpenSSL format, change to a more user-friendly format
-# TODO: Encapsulate the SSL configuration in a more user-friendly way
-# TODO: Evaluate the server design and improve the code quality
-# TODO: Reduce the line length whenever possible to 80 characters
-# TODO: Some parameters in the constructor are not well designed (e.g. ipAddres as integer)
-# TODO: Add module level docstring with authors and description
-# TODO: Rename OmbServerSim to ModbusTestServer
-# TODO: Rename frag_count to frag_size
-
 
 class OmbServerSim(threading.Thread):
     """Very simple Modbus TCP Server for test purposes.
