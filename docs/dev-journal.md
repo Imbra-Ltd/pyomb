@@ -2656,3 +2656,66 @@ package, per ADR-002. See `README.md` for usage and
   the cheap short-circuit covers. #206 carries the stale 360 audit and the
   uncounted skips. The three library defects — #190, #180 and #193 — remain the
   sharpest items and none of them was touched.
+
+## 2026-08-28 — Fix the defects, ship v0.4.0 (night)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Fixed the three library defects that three sessions had shipped process
+    work around.** #193: a close that raised escaped the client teardown and
+    left `self.sock` set, so the client held a socket it had already given up
+    on. #180: the server's manual-accept refusal raised the base `Exception`,
+    which a caller could not catch without catching everything. #190: the
+    stream sender's lock was created and never acquired.
+  - **#190 turned out to be two defects.** Reading the class rather than the
+    issue found that *neither* component ever read its stop event, so `stop()`
+    was a no-op on both. ADR-026 records the decision to make the contract real
+    rather than withdraw it, and the three alternatives weighed.
+  - **Released `v0.4.0`.** Minor rather than patch, because `ModbusModeError`
+    is a new exported name and new public API is minor however small the class.
+    125 insertions across five source files -- the first release in four whose
+    changelog names actual library fixes.
+  - **The changelog block was current when it was cut.** Four entries, one per
+    fix, each added on the pull request that made the change. The previous
+    release found the opposite and reconstructed the omissions by hand.
+- **PRs merged:** #211, #212, #213, #214.
+- **Issues closed/created:** three closed -- #193, #180 and #190. None created
+  here; one filed upstream.
+- **Lesson:** a test named for a defect can be blind to the defect beside it.
+  `test_stream_locks.py` was written for a lock bound without parentheses and
+  asserts four things: that each component holds a working lock, that the two
+  are not shared, and that both are the same type. Every one is a property of
+  the lock object. All four passed against a sender that never acquired its
+  lock, and coverage reported the lines as covered, by a witness that could not
+  disagree. The module named the right subject and measured the wrong property.
+- **Lesson:** one inert primitive is grounds to grep for its siblings. The
+  unacquired lock prompted a search for `is_set` and `wait(` across the module,
+  which returned nothing at all and exposed both dead stop events. Same author,
+  same file, same mistake one field over -- which is the shape the
+  rejected-mechanism sweep describes, applied to a field rather than a
+  construct.
+- **Lesson:** an issue's acceptance criteria are evidence about its filing
+  date. #180 said its count "is part of the work rather than known now" -- it
+  was one, and the checker said so in a second once the freeze was bypassed.
+  It also said the change was breaking for a caller catching the current type,
+  which is wrong: the new class subclasses `Exception`. Both were checked
+  rather than implemented.
+- **Lesson:** a release can be empty in a way the commit count hides. The
+  session opened with a request to cut the next release, and one commit had
+  landed since `v0.3.1`. Diffing the paths that actually reach the artifacts --
+  `src/`, and `src/ tests/ README.md LICENSE` for the sdist -- showed both
+  empty, so the tag would have published byte-identical artifacts and a
+  changelog entry with nothing under it. The commit count was 1, which reads
+  like something.
+- **Upstream:** one filing. braboj/solid-ai-templates#1267 on a test that a
+  guard exists not being a test that the guard is used. The base chain says to
+  exercise a lock rather than inspect it, which asks whether the guard works;
+  nothing asks whether the code under test takes it, and the two are
+  indistinguishable from a suite and from a coverage report.
+- **Pending:** nothing blocked. Twenty-two issues open, none milestoned. The
+  pin is now two releases behind at `v2.61.0` -- `v2.63.0` is out, and #208
+  carries the bump with a comment recording that its target has moved a third
+  time. #206 carries the 360 audit, which this release skipped for the fifth
+  consecutive time; the skip is recorded in the release pull request, and the
+  issue's second half exists so it stops depending on someone remembering to
+  write it down.
