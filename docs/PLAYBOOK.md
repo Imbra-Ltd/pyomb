@@ -591,6 +591,19 @@ A fix ships with a test that fails against the unfixed code. Run it both ways:
 stash or revert the source change, confirm the new test fails, restore, confirm
 it passes. Say so in the commit message.
 
+Both ways proves nothing where the fix has no observable effect on this tree. A
+preventive change -- a guard for a condition nothing currently triggers, a rule
+tightened where no file violates it -- prints the same output on either side of
+itself, so the run is evidence for neither. Such a fix ships a check against a
+synthetic subject reproducing the condition. Without one it is
+indistinguishable from a no-op, including to whoever later reads it as
+unnecessary and deletes it.
+
+Where the tree can be put into the failing state instead, demonstrate the
+defect on the branch that fixes it: run the check with the fix's own edit still
+uncommitted, then again once it is committed. Those two numbers are the defect
+and its repair over real inputs, and they cost one extra invocation.
+
 ### 3.11 Build (build, twine)
 
 ```bash
@@ -967,7 +980,8 @@ is to ask whether either moved at all before re-reading any record. Neither did
 between `v2.54.0` and `v2.56.0`; `quality.md` moved and `docs.md` did not
 between `v2.56.0` and `v2.57.0`, and again between `v2.57.0` and `v2.59.0`;
 neither moved between `v2.59.0` and `v2.60.0`, which is the case that costs
-nothing. Ask the question rather than assume the answer, because a range that
+nothing; `quality.md` moved and `docs.md` did not between `v2.60.0` and
+`v2.61.0`. Ask the question rather than assume the answer, because a range that
 leaves both files alone is the common one:
 
 ```bash
@@ -997,6 +1011,15 @@ in. So the record is unrefuted and stays where the paragraph above puts it.
 Read the diff to the record's own subject before treating a named file as a
 finding; the range that moves a file without moving the rule is as common as
 the range that moves neither.
+
+`v2.61.0` is the same shape at a smaller size, and it is worth recording
+because the file moved rather than because the rule did. `quality.md` moved 54
+lines in two hunks: one widens the ticket-citation ban to reach commented
+configuration, the other appends a mechanical comment-layout check. Both land
+below the character-set rules, which the range leaves untouched -- identifiers
+stay ASCII-only, and comments, docstrings and string content keep carrying no
+restriction at all. ADR-014 is unrefuted a second time and still stands the
+stricter way round.
 
 A clause can also be correct upstream and wrong here. The templates repository
 writes rules for itself as well as for its consumers, so a rule about how it
