@@ -116,6 +116,8 @@ python scripts/gen_test_certs.py # mint the throwaway TLS chain
 - Always commit `uv.lock`, and run `uv lock` in the same change as any
   dependency edit — CI installs with `--locked` and fails on a stale lock;
   never reach for `--frozen` to get past it. See ADR-010
+- Read what `git add -A` staged before committing; a submodule pointer left
+  at another branch's revision rides along into an unrelated commit
 - Bump the templates submodule to a released tag, never to a branch tip
 
 ### 2.2 Python
