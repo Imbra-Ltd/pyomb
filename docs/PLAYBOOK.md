@@ -864,7 +864,7 @@ on the citation scope. The divergence may still hold, or upstream may have
 adopted it, in which case the record now describes an inherited rule rather
 than a departure from one.
 
-Three of the four are in that second state as of `v2.59.0`, and the reading
+Three of the four are in that second state as of `v2.60.0`, and the reading
 that established it is not owed again. Upstream took the format-migration
 boundary at `v2.47.0` and the citation scope at `v2.54.0`, each from this
 project's own filing, so ADR-017 and ADR-020 now describe inherited rules.
@@ -875,13 +875,24 @@ stands the other way: `quality.md` narrowed its ASCII rule to identifiers at
 departure from it. A pin that re-widens that rule puts it back in the first
 state, which is why it stays on the list.
 
-All four are recorded against `quality.md` and `docs.md`, so the cheap way to
-carry that position forward is to ask whether either file moved at all before
-re-reading any record. Neither did between `v2.54.0` and `v2.56.0`; `quality.md`
-moved and `docs.md` did not between `v2.56.0` and `v2.57.0`, and again between
-`v2.57.0` and `v2.59.0`. Ask the question rather than assume the answer, because
-a range that leaves both files alone is the common case and the one that costs
-nothing:
+ADR-023 joined them at `v2.60.0` and reached the second state from a third
+direction. It was never a divergence: it recorded a path added to the
+off-limits set beyond the default the rule offers, which the rule invites a
+project to do. `git.md` then took that addition into the default set itself,
+with the reasoning the record gave -- a pointer executes nothing, so no gate
+reads it, and one line replaces every rule the project binds. So the record now
+describes an inherited rule, and the entry in `CLAUDE.md` 2.5 that looked like
+a local extension is the template's own default. Read it the same way as the
+other two: adopted upstream, nothing to maintain here.
+
+All five are recorded against `quality.md`, `docs.md` and `git.md`, and the
+first two carry four of them, so the cheap way to carry that position forward
+is to ask whether either moved at all before re-reading any record. Neither did
+between `v2.54.0` and `v2.56.0`; `quality.md` moved and `docs.md` did not
+between `v2.56.0` and `v2.57.0`, and again between `v2.57.0` and `v2.59.0`;
+neither moved between `v2.59.0` and `v2.60.0`, which is the case that costs
+nothing. Ask the question rather than assume the answer, because a range that
+leaves both files alone is the common one:
 
 ```bash
 git -C docs/solid-ai-templates ls-tree --name-only <new-tag> templates/base/core/quality.md templates/base/core/docs.md
