@@ -6,6 +6,8 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-08-28
+
 ### Added
 
 - The line-ending rule runs as a test rather than as two commands the playbook
@@ -24,6 +26,36 @@ numbers follow [Semantic Versioning](https://semver.org/).
   unreleased range starts at the reported version, every version section
   carries a definition, and no definition names a version other than its own.
   See #123
+- Every document gate asserts that its enumeration reached the corpus it reads,
+  and a control discovers the gates and fails any that still reports clean once
+  that corpus is emptied. Three of the six were measured blind: replacing the
+  tracked-file listing with an empty result left the character-set rule, the
+  readability limits and the frontmatter schema all green, and those three are
+  the enforcement behind three divergences this project recorded. The control
+  discovers its members rather than listing them, so a gate added later is
+  covered without registering it anywhere. See #131, ADR-022
+
+### Changed
+
+- The ruff per-file freeze holds `src/` only. Retiring the `tests/` slice
+  surfaced 77 findings across 39 entries, and the `scripts/` slice 28 across
+  two, so the linter now gates files it previously exempted wholesale.
+  Shrinking that table is the migration ADR-003 sanctions; what remains is
+  eight entries over `src/`, plus the docstring exemption the test suite keeps,
+  which is a convention rather than a freeze. See #168, #169, ADR-003
+- Forty-four TODO comments are gone from the source. Seven became issues
+  carrying verified evidence and the rest were deleted with the verdict
+  recorded -- one was false, and one wrong in the other direction. They had sat
+  in the module header blocks since the first import, so the wheel a consumer
+  installs has carried them through every release until this one. See #174
+
+### Removed
+
+- `scripts/` is empty. Six of its eight files were unreachable from anything
+  that runs, and three were not runnable as written: methods orphaned from
+  their class, a class whose every method is `pass`, two helpers nothing
+  imports. A stray text file was a stale draft of a docstring that disagreed
+  with the shipped text about the PDU identifier range. See #150, ADR-024
 
 ## [0.3.0] - 2026-08-26
 
@@ -205,7 +237,8 @@ no upgrade path to describe and no consumer to break.
   committed chain was rotated; it was self-signed and installed in no trust
   store
 
-[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.1.0...v0.2.0
