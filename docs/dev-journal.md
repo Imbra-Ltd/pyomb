@@ -2071,3 +2071,125 @@ package, per ADR-002. See `README.md` for usage and
   and is now two tags behind. Upstream, braboj/solid-ai-templates#1058,
   #1076, #1077, #1127, #1133, #1140 and #1150 are open; #1057 closed since
   the previous entry named it.
+
+## 2026-08-28 — Un-blind the gates, bump the pin
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Made every document gate fail when it reads nothing.** Six checks assert
+    that a list of violations is empty, and three passed on an empty corpus —
+    the character set, the readability limits and the frontmatter schema,
+    which are the enforcement mechanisms of three recorded divergences. Each
+    now carries a coverage test of its own asserting a floor rather than
+    non-emptiness, because a listing that returns one entry passes a non-empty
+    check while measuring nothing. Coverage reaches past the file list where
+    the file list is not the only thing that can come back empty: the
+    readability gate floors the sentences it parsed, and the character-set
+    gate floors each half of the tree, since its two rules read one each.
+    ADR-022 records the floors, how each was sized, and why the unstaged-file
+    gap is stated rather than closed.
+  - **Shipped the negative control as a test rather than running it once.**
+    `tests/test_document_gates_are_not_blind.py` discovers each gate by how it
+    reads its corpus and blinds it through the call they all share, so a
+    seventh gate is covered without being registered anywhere and a new gate
+    written without a coverage assertion fails on the pull request that adds
+    it. Verified both ways: it fails against the unfixed tree naming exactly
+    the three blind gates, and a deliberately blind gate planted in the suite
+    was discovered and failed before being removed.
+  - **Bumped the pin to `v2.54.0` and reconciled the divergences.** The first
+    range to reach the rules the records bound rather than the checks beside
+    them. ADR-020's citation scope was adopted upstream in it, from this
+    project's own filing, so that record now describes an inherited rule.
+    ADR-017's format-migration boundary was taken at `v2.47.0`, also from this
+    project's filing. ADR-019's decline had already been narrowed by ADR-020,
+    so none of it is live. ADR-014 is not in the range at all and stands the
+    other way round: `quality.md` narrowed its ASCII rule to identifiers at
+    `v2.46.0`, so this project's rule is the stricter of the two. PLAYBOOK 4.1
+    now records where all four stand, so the next bump starts from the settled
+    position rather than re-deriving it.
+  - **Named the distribution the release workflow produces.** CLAUDE.md 1.1
+    read `Distribution: PyPI as pyomb` while the release workflow attaches a
+    wheel and an sdist to the GitHub release and stops there, which is what
+    ADR-011 decided and what the README and the changelog already said. The
+    context file was the stale side of a three-way disagreement, and the one
+    read on every turn.
+  - **Named the declared TLS floor among the secure defaults.** CLAUDE.md 2.4
+    enumerated four load-bearing defaults and the protocol floor was not among
+    them, which is the enumeration the tests had mirrored before the floor was
+    lost. See the post-mortem below.
+  - **Declined the code of conduct rather than leaving it open.** The rule the
+    range added is a SHOULD and the template says plainly that it is a
+    governance choice, so the decision was the owner's. Closed with `wontdo`,
+    the reasoning recorded, and a revisit trigger named: the first issue,
+    discussion or pull request opened from outside the organisation.
+- **PRs merged:** #135, #139, #140 and #141.
+- **Issues closed/created:** #131 and #134 closed by the pull requests that
+  carry them. #136, #137 and #138 created while reconciling the pin, filed
+  rather than absorbed into the bump; #136 closed as declined, #138 closed by
+  #140, and #137 closed by this entry. Upstream, filed
+  braboj/solid-ai-templates#1161.
+- **Post-mortem (#76, owed since 2026-08-22 and written here because a journal
+  entry's account is fixed):**
+  - **Symptom:** the client and the server built their `ssl.SSLContext`
+    without declaring a minimum protocol version, so the floor was whatever
+    the linked OpenSSL supplied. Nothing was exploitable where it ran, since
+    that default was already TLS 1.2. CodeQL's first full-tree analysis of
+    `main` rated it high under `py/insecure-protocol`.
+  - **Root cause:** the floor was inherited rather than declared, and
+    `ssl_options` defaulting to `ssl.OP_ALL` reads as though it covers the
+    protocol switches. It does not — `OP_ALL` is a bug-compatibility mask and
+    shares no bits with `OP_NO_TLSv1`.
+  - **Why missed:** `TestSecureDefaults` already asserted properties of the
+    constructed context rather than of a successful handshake — peer
+    verification, client certificate required, no cipher string — so the test
+    class with the right shape existed. The floor was not among the defaults
+    CLAUDE.md 2.4 enumerated, so it was not among the properties pinned
+    either, and a value the platform supplies is indistinguishable from one
+    the library sets until something asserts which. The scanner that found it
+    had until then been read on pull-request refs, where a clean row means the
+    branch added nothing.
+  - **Fix:** #83 declared `MINIMUM_TLS_VERSION` on both endpoints and set it
+    after the caller's options, which are OR-ed in and can only add a
+    restriction. Deliberately not done: `ssl_options` was neither removed nor
+    narrowed, so a caller can still pin a session above the floor and only
+    above it.
+  - **Prevention:** four assertions on the constructed context, in
+    `tests/test_tls_integration.py`, which fail against the unfixed source
+    with 769 where 771 is required. The enumeration that was short by one is
+    fixed rather than left: #141 adds the declared floor to CLAUDE.md 2.4 and
+    says it is the one default taking no relaxing argument, so the list the
+    tests mirror now matches the code.
+- **Lesson:** a control that proves a check is not blind belongs in the suite,
+  and it has to discover its subjects. A roster of the checks under control
+  carries the same blind spot as the checks themselves — a member missing from
+  it is never controlled, and the roster reports success while covering less
+  than it claims. Blinding the one call the family shares covers a gate nobody
+  has written yet and needs no knowledge of what each named its enumeration.
+- **Lesson:** a poll that exits on an empty list reports silence as success.
+  Waiting on a pull request's checks with a condition that every one is not
+  pending is true over an empty array, so the wait ended before the first
+  check had registered and printed that no checks were reported on the branch.
+  Read straight that says the workflows never fired; both were in fact
+  running. CLAUDE.md already carries this shape for `gh run list --commit` on
+  an abbreviated hash, and the fix is the same one — require the list to be
+  non-empty before believing what it says.
+- **Lesson:** a divergence can be absorbed upstream tags before anyone reads
+  it that way. The format-migration boundary was taken at `v2.47.0` and the
+  ASCII rule was narrowed at `v2.46.0`, both below the pin the previous
+  session reconciled against. That session reported no record refuted, which
+  was true and is not the same statement: a diff cannot show that a departure
+  had already stopped being one. Dating the clause with a pickaxe search
+  against the tags is what separates the two, at one command per record.
+- **Upstream:** one filing. braboj/solid-ai-templates#1161 against
+  `templates/base/core/testing.md`: the coverage rule names a meta-test as the
+  route to enforcing it and does not say how a family of checks is controlled.
+  Two additions, both measured here — replace the single call the family reads
+  through rather than each member's own reader, and derive the members from
+  that call rather than listing them. A second candidate, how to size the
+  floor an append-only corpus takes against a churning one, was left out as a
+  separate addition to the same rule rather than folded in. #1076, #1104 and
+  #1150 have closed since the previous entry; #1058, #1077, #1127, #1133,
+  #1140 and #1161 are open.
+- **Pending:** the backlog is empty. The templates repository's own release
+  procedure still wants the `v2.51.0` cut recorded as its own unmilestoned
+  journal entry, which remains unwritten and is now three tags behind.
