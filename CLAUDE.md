@@ -52,7 +52,8 @@ outstanding — read them rather than inferring the gap.
 - Owner: Imbra Ltd — Branimir Georgiev
 - Repo: `github.com/Imbra-Ltd/pyomb` (public)
 - Stack: Python 3.10+, `pyproject.toml`, ruff, mypy, pytest
-- Distribution: PyPI as `pyomb`, imported as `pyomb`
+- Distribution: wheel and sdist attached to the GitHub release, distributed
+  and imported as `pyomb`; nothing goes to a package index — see ADR-011
 - Specifications: Modbus Application Protocol v1.1b3, Modbus Messaging
   Implementation Guide v1.0b, MB-TCP-Security v21 — all in `docs/`
 
