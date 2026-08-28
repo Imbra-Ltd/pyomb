@@ -2509,3 +2509,80 @@ package, per ADR-002. See `README.md` for usage and
   `v2.51.0` cut is still unrecorded as its own journal entry, now ten tags
   behind, and remains work in that repository rather than a filing from this
   one.
+
+## 2026-08-28 — Clear the backlog, surface the debt (evening)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Moved the pin to `v2.60.0` and carried the divergence position.** Three
+    of the four moved files sit in this project's chain. `quality.md` and
+    `docs.md` did not move, so no record on PLAYBOOK 4.1's list could have
+    been touched. ADR-023 joined that list in the adopted state rather than
+    the divergent one: `git.md` took the templates-submodule pointer into the
+    off-limits default set with the reasoning the record gave, so
+    `CLAUDE.md` 2.5's second entry is now the template's own default.
+  - **Retired both ruff freeze slices.** The `tests/` half was 39 entries and
+    77 findings; the `scripts/` half arrived at two entries because ADR-024
+    had deleted five of its seven files first. The freeze now holds `src/`
+    only -- 8 entries, 734 findings -- plus the `tests/**` docstring rule,
+    which is a convention rather than a freeze.
+  - **ADR-024 settled what `base-cli` reaches and emptied `scripts/`.** Eight
+    files there, one reachable from anything. Three of the seven modules were
+    not runnable as written: methods orphaned from their class, a class whose
+    every method is `pass`, two helpers nothing imports. A stray text file was
+    a stale draft of the `packets.py` docstring disagreeing with the shipped
+    text about the PDU-ID range. Six deleted.
+  - **Triaged 44 in-source TODOs to zero.** Seven filed with verified
+    evidence, the rest deleted with the verdict recorded. One was false and
+    one was wrong in the other direction.
+  - **Adopted three rules the ranges added.** Check timing across PLAYBOOK 1.3,
+    3.9 and 3.11; the test-edit boundary in 1.3 and `CLAUDE.md` 3; the
+    revisit-trigger detector in 4.2 and 1.6.
+- **PRs merged:** #179, #181, #182, #184, #185, #186, #188, #189, #197, #198,
+  #199.
+- **Issues closed/created:** ten closed -- #150, #160, #162, #163, #166, #168,
+  #169, #174, #176, and #183 closed as deferred per ADR-016. Twenty-three
+  created, #167 through #200.
+- **Correction:** the entry counts this session first put on #168 and #170
+  were wrong -- 24 named `tests/` entries where the table holds 39, and 23
+  `src/` entries where it holds 8. Both bodies were corrected before any work
+  ran off them, and a comment on #168 records the correction. The finding
+  counts, which were measured rather than read, were right.
+- **Lesson:** a check that reads git's index or git's history is evidence about
+  whichever tree it was pointed at, and the natural moment to run one is
+  before the change is in that tree. It happened twice. The off-limits check
+  reported `files changed: 0` against the uncommitted pin bump and named the
+  path correctly once committed; the document gates passed against an unstaged
+  ADR-024 and failed in CI. `CLAUDE.md` 3 already states the index half and
+  the second failure still happened, so the fix that worked was mechanical
+  rather than a rule: stage first, then run. ADR-025 was written under that
+  order and its two findings surfaced locally.
+- **Lesson:** the freeze was camouflage as much as a ratchet. Six dead files
+  and 100 findings survived in `scripts/` because every gate that would have
+  seen them was silent -- the `src/` layout keeps the directory out of the
+  wheel, no test imports it, and all seven modules sat inside
+  `per-file-ignores`. Nothing was wrong with any single gate. The union of
+  their blind spots was a directory.
+- **Lesson:** auditing a backlog is net-generative and that is not a defect.
+  Ten issues closed and twenty-three filed, every one carrying a measurement
+  rather than a suspicion. The seven inherited issues were process work; under
+  them sat a lock nothing acquires whose test cannot see it (#190), a bare
+  `raise Exception` in the server (#180), and a transport that logs nothing so
+  a swallowed failure looks like silence (#195). Say so early rather than
+  reporting a shrinking number that is not shrinking.
+- **Upstream:** six filings, five captured on the records at decision time.
+  braboj/solid-ai-templates#1230 on `SECURITY.md` having two required facts
+  and no structure where the README gets nine sections; #1231 on no rule
+  shaping a changelog entry; #1238 on `cli.md` and `examples.md` wanting
+  opposite things from the same file; #1239 on `scripts/` being named the
+  home for probes a probe rule says never land; #1240 on the per-file freeze
+  being specified where the site-local suppression beside it is not; #1241 on
+  a sixth shape for the filed-issue list, where an issue's classification does
+  not cover every member. Open upstream: #1215, #1225 and all six.
+- **Pending:** nothing blocked. Nineteen issues open, none milestoned. #200
+  bumps the pin to `v2.61.0`, cut after this session's bump and moving
+  `quality.md`, which puts ADR-014 back on the reading list. The two spikes
+  need the owner rather than the agent: #167 on the comment convention, where
+  the owner has stated the preference but not the ceiling, and #173 on the
+  simulator rename, which is a public API break. #172 and #170 are the two
+  epics and the largest remaining work.
