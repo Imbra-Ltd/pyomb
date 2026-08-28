@@ -216,6 +216,11 @@ follow the referenced templates. Project-specific additions only:
 - Suppress a bandit finding at the line with `# nosec <ID>` naming the one
   check, and put the reason above it. Never add to the config-level `skips`,
   which stops the check firing tree-wide; see ADR-012
+- Suppress a ruff finding the same way, with `# noqa: <RULE>` naming the one
+  rule and the reason above it, and only where the rule is wrong at that site.
+  A file that was already broken belongs in the freeze and a real defect gets
+  fixed; never a bare `# noqa`, which absorbs every rule that later applies to
+  the line. See ADR-025
 - Every pattern in the sdist `include` list carries a leading slash. An
   unanchored pattern matches at any depth, so it also selects the templates
   submodule's file of that name and republishes it. Enforced by
