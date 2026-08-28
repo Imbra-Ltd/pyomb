@@ -89,10 +89,10 @@ silent too. They carry 100 lint findings, 45 of them missing docstrings.
 
 4. **What may live in `scripts/`** -- a file that a documented command names
    or that CI executes. `scripts/` is not a probe directory in this
-   repository: `base-quality` requires a probe to be deleted before the commit
-   that uses its findings, and that rule wins over the description of
-   `scripts/` in `base-examples`, which is drawing a boundary for `examples/`
-   rather than granting a permanent home.
+   repository. `base-quality` requires a probe to be deleted before the commit
+   that uses its findings, and that rule wins here. The description of
+   `scripts/` in `base-examples` is drawing a boundary for `examples/`, not
+   granting a permanent home.
 
 ## Alternatives considered
 
@@ -101,7 +101,7 @@ silent too. They carry 100 lint findings, 45 of them missing docstrings.
 | Record a local divergence from `base-cli` and maintain it | A divergence needs re-reading against every future edit to the template. The scope sentence is ambiguous upstream, so fixing it at the source is cheaper and helps every consumer. PLAYBOOK 4.1 already names this case. |
 | Apply `base-cli` to `examples/` and relax `base-examples` | Inverts which rule owns the directory. An example whose body lives in a shared import stops being readable in one piece, which is the only thing an example is for. |
 | Give each dead script a `main(argv)` and docstrings | Reshapes files nothing runs. It would clear 100 lint findings by writing documentation for a class whose every method is `pass`. |
-| Keep the dead scripts and exclude `scripts/` from the linter | Widens a freeze to hide the evidence. ADR-003 forbids exactly this move, and the freeze is what let them survive this long. |
+| Keep the dead scripts and exclude `scripts/` from the linter | Widens a freeze to hide the evidence, which the lint-freeze record forbids. The freeze is what let them survive this long. |
 | Delete `demo_modbus_crc.py` with the rest | Its docstring carries the CRC polynomial, the reversed form, and why the checksum goes on the wire low byte first -- knowledge this project's protocol rules depend on. Deleting it loses that; it is promoted instead. |
 
 ## Consequences
@@ -109,8 +109,8 @@ silent too. They carry 100 lint findings, 45 of them missing docstrings.
 - Six files leave `scripts/`: `demo_metaclass.py`, `demo_stream.py`,
   `demo_validation.py`, `factory.py`, `pack_unpack.py` and
   `module_docstring.txt`.
-- `demo_stream.py` binds port 502, which ADR-021 rules out for anything a
-  contributor runs. Deleting it removes the last such caller.
+- `demo_stream.py` binds port 502, which the assigned-port record rules out
+  for anything a contributor runs. Deleting it removes the last such caller.
 - `scripts/gen_test_certs.py` gains the `-> int` return annotation
   `base-cli-main` requires. `scripts/` is outside `mypy`'s `files = ["src"]`,
   so nothing reads it and the annotation is documentation.
