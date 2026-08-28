@@ -2402,3 +2402,50 @@ package, per ADR-002. See `README.md` for usage and
 - **Pending:** #149 and #150 remain the only open issues here. The pin is one
   tag behind `v2.58.0` with no issue naming that bump. The templates
   repository's own `v2.51.0` journal entry is still unwritten.
+
+## 2026-08-28 — Close the wrap (midday, third)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Made PLAYBOOK 4.1 resolve the bump target rather than accept it.** The
+    section said to pin a released tag and never a branch tip, which a stale
+    released tag satisfies, and the procedure went from `fetch --tags`
+    straight to `checkout <tag>` -- so the tag name arrived from the issue
+    asking for the bump. One command between the two is the fix. The failure
+    is not that the cited tag is absent; it resolves, it checks out, and
+    everything the body says about it is true. It is simply no longer the
+    newest, and existence is the wrong predicate for that.
+- **PRs merged:** #158.
+- **Issues closed/created:** none closed. #157 created, naming the `v2.59.0`
+  bump with the range already read: the manifest is untouched so the chain
+  does not move, `quality.md` gains 132 lines across five new sections with no
+  deletions, and nothing in the range mentions the character set. Upstream,
+  filed braboj/solid-ai-templates#1215.
+- **Correction:** the previous entry's Pending line states that the pin is one
+  tag behind `v2.58.0` and that no issue names that bump. Both halves have
+  since gone false -- `v2.59.0` was cut, and #157 names it. The count in a
+  Pending line is a claim with the same short life as a tag in an issue body,
+  which is the session's own lesson arriving one level up.
+- **Lesson:** a stale version identifier passes every check written for a
+  wrong one. `review.md` tells an agent to verify anything an issue cites as
+  existing, and a superseded tag satisfies it: the three shapes it enumerates
+  -- narrower, wider and wrong as filed -- all describe an issue whose content
+  is off, while this one's content is correct and its target has moved. The
+  cost lands on acceptance criteria written against the narrower range, so it
+  surfaces after the work is scoped rather than before. Filed as #1215.
+- **Lesson:** three journal entries for one session is what the audit's
+  ordering costs, not what the session's shape justifies. Each was written at
+  item 4 and each was falsified by items 5 through 11 of the same run, so each
+  correction is itself a record that needed correcting. #1212 proposes moving
+  the entry to the end; until it lands, the practice here is to write it last
+  and leave it numbered fourth, which is what this entry does.
+- **Upstream:** one filing. braboj/solid-ai-templates#1215 against
+  `templates/base/core/review.md`: a fourth shape for the verification step,
+  where the version an issue names was the newest when written and is not now.
+  The window is short and the cadence is what makes it likely -- an upstream
+  that tags often outruns any issue describing a bump to it. Open upstream:
+  #1204, #1211, #1212 and #1215.
+- **Pending:** #149, #150 and #157 are open here and none is blocked. The
+  templates repository's own `v2.51.0` cut is still unrecorded as its own
+  unmilestoned journal entry, and is now eight tags behind; that is work in
+  that repository rather than a filing from this one.
