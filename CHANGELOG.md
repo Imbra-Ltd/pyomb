@@ -6,6 +6,8 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-28
+
 ### Added
 
 - `ModbusModeError`, exported from the package root, for an operation refused
@@ -277,7 +279,8 @@ no upgrade path to describe and no consumer to break.
   committed chain was rotated; it was self-signed and installed in no trust
   store
 
-[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.2.0...v0.2.1
