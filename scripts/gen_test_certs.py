@@ -1,5 +1,3 @@
-# encoding: utf-8
-
 # Copyright (c) 2022-2026 Imbra Ltd
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -36,15 +34,12 @@ Requires the openssl executable on PATH. No Python dependencies, so the
 package keeps its empty install_requires.
 """
 
-from __future__ import print_function
-
 import argparse
 import os
 import shutil
 import subprocess  # nosec B404
 import sys
 import tempfile
-
 
 # Modbus role OID, per the MB-TCP-Security specification. The server reads the
 # role from this extension to authorize a client.
@@ -81,7 +76,6 @@ extendedKeyUsage = critical, clientAuth
 
 def run(command):
     """Run a command, raising with captured output if it fails."""
-
     # This is the one place the script reaches openssl, and the two suppressed
     # checks -- the advisory on importing subprocess, and this call site --
     # both rest on the same property. command is always a list, which hands
@@ -92,19 +86,19 @@ def run(command):
     result = subprocess.run(command, capture_output=True, text=True)  # nosec B603
 
     if result.returncode != 0:
-        raise RuntimeError("{0} failed:\n{1}".format(" ".join(command), result.stderr.strip()))
+        raise RuntimeError("{} failed:\n{}".format(" ".join(command), result.stderr.strip()))
 
     return result
 
 
 def write(path, text):
+    """Write text to path, replacing whatever is there."""
     with open(path, "w") as handle:
         handle.write(text)
 
 
 def make_ca(out, days, workdir):
     """Create the test certificate authority."""
-
     key = os.path.join(out, "ca.key")
     crt = os.path.join(out, "ca.crt")
     ext = os.path.join(workdir, "ca.ext")
@@ -138,17 +132,16 @@ def make_ca(out, days, workdir):
 
 def ext_config(path, section):
     """Wrap a bare extension block in the minimal config openssl expects."""
-
-    body = open(path).read()
+    with open(path) as handle:
+        body = handle.read()
     config = os.path.splitext(path)[0] + ".cnf"
-    write(config, "[req]\ndistinguished_name=dn\n[dn]\n[{0}]{1}".format(section, body))
+    write(config, f"[req]\ndistinguished_name=dn\n[dn]\n[{section}]{body}")
 
     return config
 
 
 def issue(out, name, subject, extension, ca_key, ca_crt, days, workdir):
     """Issue a certificate signed by the test CA."""
-
     key = os.path.join(out, name + ".key")
     crt = os.path.join(out, name + ".crt")
     csr = os.path.join(workdir, name + ".csr")
@@ -185,6 +178,15 @@ def issue(out, name, subject, extension, ca_key, ca_crt, days, workdir):
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Mint the throwaway chain and return the process exit code.
+
+    Args:
+        argv (list[str] | None) : Command-line arguments, or None to read
+            them from the process
+
+    Returns:
+        int : 0 on success, 1 where openssl is not on PATH
+    """
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", default=DEFAULT_OUT, help="output directory (default: %(default)s)")
     parser.add_argument("--days", type=int, default=365, help="validity in days (default: %(default)s)")
@@ -213,7 +215,7 @@ def main(argv: list[str] | None = None) -> int:
             issue(
                 out,
                 "client-" + role,
-                "/CN=modbus client {0}/O=Imbra Ltd".format(role),
+                f"/CN=modbus client {role}/O=Imbra Ltd",
                 CLIENT_EXT.format(oid=ROLE_OID, role=role.capitalize()),
                 ca_key,
                 ca_crt,
@@ -223,14 +225,14 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 "client       ",
                 os.path.relpath(os.path.join(out, "client-" + role + ".crt"), os.getcwd()),
-                "(role: {0})".format(role.capitalize()),
+                f"(role: {role.capitalize()})",
             )
 
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
 
     print()
-    print("Valid for {0} days. These are throwaway test credentials:".format(args.days))
+    print(f"Valid for {args.days} days. These are throwaway test credentials:")
     print("the keys are unencrypted and the directory is gitignored.")
     print("Never commit them, and never trust this CA outside a test network.")
 
