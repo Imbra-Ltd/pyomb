@@ -32,12 +32,6 @@ from .errors import ModbusNetworkError, ModbusPacketError, ModbusBaseError
 HEADER_SIZE = ModbusHeader.SIZE
 
 
-# TODO: Improve thread-safety for the sender and receiver classes
-# TODO: Exception handling could be improved
-# TODO: Use the logging module to log errors and debug messages
-# TODO: Check the documentation and add more examples
-
-
 ################################################################################
 # ABSTRACT BASE CLASSES
 ################################################################################

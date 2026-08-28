@@ -24,10 +24,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 # Recommendations accodrding to chatGPT
-# TODO: Reduce redundancy in the error messages
-# TODO: Improve unicode string handling in the error messages
-# TODO: Improve the examples in the docstrings with more realistic scenarios
-# TODO: Use defines, if provided, for the error codes in the error messages
 
 
 class ModbusBaseError(Exception):

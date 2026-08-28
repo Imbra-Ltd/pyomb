@@ -28,18 +28,6 @@ from .packets import (
 )
 from .stream import ModbusTcpStream
 
-# TODO: Add more comments and improve the docstrings
-# TODO: Some namings are not conforming the PE8 standard (e.g. sendRequest, waitResponse)
-# TODO: Add more error handling and logging
-# TODO: The ciphers configuration depends on the OpenSSL format, change to a more user-friendly format
-# TODO: Encapsulate the SSL configuration in a more user-friendly way
-# TODO: Evaluate the client design and improve the code quality
-# TODO: Reduce the line length whenever possible to 80 characters
-# TODO: Add send and receive methods that serialize and deserialize messages
-# TODO: Add module level docstring with authors and description
-# TODO: Rename OmbClientSim to ModbusTestClient
-# TODO: Rename frag_count to frag_size
-
 
 class OmbClientSim(object):
     """Very simple Modbus TCP Client used for testing purposes.
@@ -318,16 +306,13 @@ class OmbClientSim(object):
                 sock = sock.unwrap()
 
             # Block any further communication without destroying the socket
-            # TODO: Obsolete as later we are closing it
             sock.shutdown(socket.SHUT_RDWR)
 
         except socket.error:
-            # self.log.info("The server doesn't respond with NOTIFY ALERT")
             pass
 
         finally:
             # Block further communication and close the socket
-            # TODO: This should be in the try block
             sock.close()
             self.sock = None
 
@@ -335,8 +320,6 @@ class OmbClientSim(object):
         # time.sleep(1)
 
     ############################################################################
-    # TODO: Rename to reset_socket(), abort_connection()???
-    # TODO: This method seems to not be used anywhere, maybe remove it
     def reset(self):
         """Reset the client socket with linger option set to
 
@@ -386,7 +369,6 @@ class OmbClientSim(object):
         return trans_id
 
     ############################################################################
-    # TODO: Rename to send_request(...)
     def sendRequest(
         self,
         fc,
@@ -512,7 +494,6 @@ class OmbClientSim(object):
         sender.send(request.serialize())
 
     ############################################################################
-    # TODO: Rename to wait_response(...)
     def waitResponse(self):
         """Waits for the response to the pending request and parses it.
 
