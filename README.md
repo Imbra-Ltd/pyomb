@@ -176,7 +176,8 @@ src/pyomb/              # The library
 tests/                  # Per-module tests, regression modules, convention gates
 examples/               # Runnable usage patterns, executed by CI
 scripts/                # Certificate generation and a CRC walkthrough
-docs/                   # Specifications, tutorial, decisions, journal, audits
+docs/                   # Guides, decisions, journal, audits
+  specs/                # Vendor Modbus specifications and the protocol tutorial
 assets/                 # Generated test certificates (gitignored)
 .github/                # CI, CodeQL and release workflows, Dependabot config
 .vscode/                # Shared editor settings that mirror the CI gates
@@ -240,13 +241,13 @@ hardened for production control networks.
 | [SECURITY.md](SECURITY.md) | How to report a vulnerability |
 | [docs/ONBOARDING.md](docs/ONBOARDING.md) | Setup, verification and key files |
 | [docs/PLAYBOOK.md](docs/PLAYBOOK.md) | Git, quality checks, maintenance, release |
-| [docs/Open_Modbus_Tutorial.md](docs/Open_Modbus_Tutorial.md) | Protocol introduction |
+| [docs/specs/Open_Modbus_Tutorial.md](docs/specs/Open_Modbus_Tutorial.md) | Protocol introduction |
 | [docs/decisions/](docs/decisions/) | Architecture decision records |
 | [docs/dev-journal.md](docs/dev-journal.md) | Session history and post-mortems |
 | [CLAUDE.md](CLAUDE.md) | Conventions, and the shape the rewrite targets |
 
-The Modbus specifications this library implements are in [docs/](docs/) as
-published PDFs.
+The Modbus specifications this library implements are in
+[docs/specs/](docs/specs/) as published PDFs.
 
 ## License
 

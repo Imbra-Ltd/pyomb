@@ -124,8 +124,9 @@ the certificate generator are reported on their own line.
 
 The library implements Modbus TCP and RTU: encoding and decoding frames, a
 stream transport, and a client/server pair for exercising other
-implementations. The authoritative specifications are in `docs/` as PDFs, and
-`docs/Open_Modbus_Tutorial.md` is the readable introduction to the protocol.
+implementations. The authoritative specifications are in `docs/specs/` as
+PDFs, and `docs/specs/Open_Modbus_Tutorial.md` is the readable introduction to
+the protocol.
 
 Read `docs/dev-journal.md` before touching the wire format. Its post-mortems
 record defects that a passing test suite did not catch, and section 2.3 of

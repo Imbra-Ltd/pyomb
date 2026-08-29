@@ -6,6 +6,16 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The four published Modbus specifications and the imported protocol tutorial
+  move to `docs/specs/`, separating material this project reads from material
+  it writes. `docs/` gave the same visual weight to a 1996 Modicon reference
+  guide and to the playbook. The fourth PDF, PI-MBUS-300 Rev J, was on no list
+  in `CLAUDE.md` and is now declared alongside the other three rather than
+  carried unexplained. Nothing ships in the distribution either way -- the
+  sdist include list names neither path. See #175, ADR-028
+
 ## [0.4.1] - 2026-08-29
 
 ### Added

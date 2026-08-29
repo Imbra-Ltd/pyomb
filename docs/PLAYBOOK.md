@@ -705,9 +705,10 @@ its Markdown section, counted in characters so an em dash costs one and not
 three. That declaration is the only place the number is written down, and the
 check reads it rather than carrying a copy. Table rows, fenced blocks and lines
 carrying a URL are exempt, each because it cannot be wrapped; a relative link
-is not. `docs/Open_Modbus_Tutorial.md` is outside the rule, having arrived with
-the v0.1.0 import at its own width. ADR-018 records the scope and the
-exemptions.
+is not. `docs/specs/Open_Modbus_Tutorial.md` is outside the rule, having
+arrived with the v0.1.0 import at its own width. ADR-018 records the scope and
+the exemptions, and names the path it sat at before ADR-028 grouped the
+specifications.
 
 A failure names each offender as `path:line (width)`. Wrap at or before the
 declared column. A heading that will not fit wants a shorter title, not a
