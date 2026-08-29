@@ -667,16 +667,18 @@ pytest tests/test_source_is_ascii.py
 ```
 
 The sibling of the rule above: line endings govern how a file ends its lines,
-this governs which characters may appear in them. Markdown prose may use the em
-dash and nothing else beyond ASCII; every other tracked file is ASCII without
-exception. ADR-014 records why the project diverges from the templates here and
-where the boundary sits.
+this governs which characters may appear in them. Markdown carries any
+character a reader can see; every other tracked file is printable ASCII without
+exception. ADR-029 records where the boundary sits and what moving it gave up.
 
 A failure names each offending character as `path:line:column U+XXXX`. Outside
-Markdown the substitute for an em dash is `--`. Inside it, the usual causes are
-a curly quote, an en dash standing in for a hyphen, or a homoglyph — a Cyrillic
-letter that renders identically to its Latin twin, which is the case a reader
-cannot catch by reading and the check exists for.
+Markdown the substitute for an em dash is `--`, and a homoglyph — a Cyrillic
+letter that renders identically to its Latin twin — is replaced by the Latin
+letter it imitates. Inside Markdown the only failure is a control character,
+which renders as nothing and is almost always a byte written where the text of
+its escape was meant. A NUL is the one that reaches past its own line: git then
+classifies the file as binary, skips line-ending normalisation, and the gate
+above reads a clean tree over a file full of CRLF.
 
 ### 3.14 Decision-record readability (pytest)
 
@@ -973,7 +975,7 @@ ADR-008 carries why the two additions are there, ADR-015 why the check exists.
 The guard checks chain membership, not rule content. A bump can leave the block
 correct while a rule this project deliberately diverges from moves underneath
 it, and nothing reports that. Re-read every record carrying a divergence
-against the text the new pin ships -- ADR-014 on the character set, ADR-017 on
+against the text the new pin ships -- ADR-029 on the character set, ADR-017 on
 the format-migration boundary, ADR-019 on the prose rule it declines, ADR-020
 on the citation scope. The divergence may still hold, or upstream may have
 adopted it, in which case the record now describes an inherited rule rather
@@ -984,11 +986,14 @@ that established it is not owed again. Upstream took the format-migration
 boundary at `v2.47.0` and the citation scope at `v2.54.0`, each from this
 project's own filing, so ADR-017 and ADR-020 now describe inherited rules.
 ADR-019's decline of the citation rule was narrowed by ADR-020 before either
-landed, and none of it is live. ADR-014 is the one still standing apart, and it
-stands the other way: `quality.md` narrowed its ASCII rule to identifiers at
-`v2.46.0`, so this project's rule is the stricter of the two rather than a
-departure from it. A pin that re-widens that rule puts it back in the first
-state, which is why it stays on the list.
+landed, and none of it is live. The character-set record is the one still
+standing apart, and it stands the other way: `quality.md` narrowed its ASCII
+rule to identifiers at `v2.46.0`, so this project's rule is the stricter of the
+two rather than a departure from it. ADR-029 replaced ADR-014 on 2026-08-29 and
+closed half the gap by lifting the printable restriction off Markdown, leaving
+the source half stricter than the templates and the divergence live. A pin that
+re-widens that rule puts it back in the first state, which is why it stays on
+the list.
 
 ADR-023 joined them at `v2.60.0` and reached the second state from a third
 direction. It was never a divergence: it recorded a path added to the
@@ -1030,8 +1035,8 @@ A named file is not a moved rule, and the second command cannot tell them
 apart. `v2.59.0` reported `quality.md` moving 132 lines, every one an addition
 and none a deletion: five new sections on revisit triggers, sweeping a
 workaround comment, destructive operations, a detector's cost and a spike's
-corpus. ADR-014 bounds the character set in that same file, under Code style,
-and none of the 132 lines reach it -- all three hunks land ahead of that
+corpus. The character-set record bounds a rule in that same file, under Code
+style, and none of the 132 lines reach it -- all three hunks land ahead of that
 section, and the diff matches nothing for the vocabulary the record is written
 in. So the record is unrefuted and stays where the paragraph above puts it.
 Read the diff to the record's own subject before treating a named file as a
@@ -1044,8 +1049,8 @@ lines in two hunks: one widens the ticket-citation ban to reach commented
 configuration, the other appends a mechanical comment-layout check. Both land
 below the character-set rules, which the range leaves untouched -- identifiers
 stay ASCII-only, and comments, docstrings and string content keep carrying no
-restriction at all. ADR-014 is unrefuted a second time and still stands the
-stricter way round.
+restriction at all. The character-set record is unrefuted a second time and
+still stands the stricter way round.
 
 A clause can also be correct upstream and wrong here. The templates repository
 writes rules for itself as well as for its consumers, so a rule about how it

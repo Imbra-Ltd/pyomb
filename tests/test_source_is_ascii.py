@@ -1,29 +1,26 @@
-"""Every tracked file is ASCII, except the em dash the prose deliberately uses.
+"""Source stays printable ASCII; Markdown carries only what a reader can see.
 
-`templates/base/core/quality.md` requires file content to be restricted to
-ASCII. The documents did not follow it and the divergence was never recorded,
-so the rule sat unenforced while the em dash spread through the journal, the
-decision records, PLAYBOOK, CLAUDE.md and the README. That left the two rules
-in direct conflict, because `ai-workflow-match-convention` makes a document's
-prior entries the template for its format: writing a new journal entry in ASCII
-broke one rule and writing it with an em dash broke the other.
+The rule this replaces held every tracked file to printable ASCII and let
+Markdown past it by exactly one character, the em dash. The printable
+restriction is now lifted off Markdown altogether. A document is written for a
+reader, so a diagram drawn in box-drawing characters, an arrow, or a quotation
+in another script is content rather than drift. `templates/base/core/quality.md`
+reaches the same position from the other side: it scopes its ASCII rule to
+identifiers and says in as many words that documentation carries no charset
+restriction at all.
 
-ADR-014 settles it. Markdown prose may use the em dash, and nothing anywhere
-may use anything else outside ASCII. This module is the check that rule was
-missing, and the reason it is worth having is what the first measurement found:
-among several hundred deliberate em dashes sat four genuine defects, invisible
-because nothing was counting. A Cyrillic capital Te opened a sentence where a
-Latin T belongs and renders identically, so no reader would ever have seen it;
-a quoted exception name carried curly quotes; and an en dash stood in for a
-hyphen. The em dash allowance is deliberately the narrowest one that lets the
-documents stay as they are, so that class of defect still fails here.
+What survives the lift is the half a reader cannot see. A control character
+renders as nothing, so no amount of reading catches it, and one of them is
+load-bearing for a second gate. A single NUL makes git classify a file as
+binary, which stops `text=auto` normalising its line endings and makes
+`git ls-files --eol` report `-text` where a value belongs. That is how the dev
+journal came to be stored with 1127 CRLF endings while `test_line_endings.py`
+read a clean tree, and this module is what names the byte behind it.
 
-ASCII is a range rather than a ceiling, so the check bounds it at both ends.
-The low end is the half nobody looks for: a control character renders as
-nothing, which hides it better than any homoglyph. The journal carried a NUL
-and a DEL inside a code span for a day, in a sentence describing the very grep
-that mishandles that range, and the only outward sign was git and grep quietly
-reclassifying the file as binary.
+So the two halves are held to two different rules. Source, tests, configuration
+and workflows stay printable ASCII, where `--` substitutes for a dash and the
+extra characters buy nothing that terminals, diff viewers, `grep` and patch
+files do not charge for. Markdown is held to the control-character rule alone.
 
 The guard is one-directional and needs no fixture: it reads the tree as git
 tracks it, so a local scratch file cannot fail a run that CI would pass.
@@ -35,23 +32,12 @@ import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
-# The one character prose may carry beyond ASCII. The en dash and the curly
-# quotes it gets confused with are not included, and are defects wherever they
-# appear -- including in Markdown. Written as an escape so this module, which
-# its own first test reads, stays ASCII.
-EM_DASH = "\u2014"
-
 # Binary by nature, so "characters" does not apply to them. The Modbus
 # specifications are the only ones in the tree.
 BINARY_SUFFIXES = {".pdf"}
 
-# ASCII is a range, not a ceiling, and the low end of it is the half nobody
-# looks for. A control character reads as nothing at all, so it hides better
-# than any homoglyph: the journal carried a NUL and a DEL inside a code span
-# for a day, in a sentence about the very grep that mishandles them, and the
-# only outward sign was git and grep quietly reclassifying the file as binary.
-# Tab and newline are the two that legitimately appear in text; the reader
-# strips carriage returns before this sees them.
+# The two control characters that legitimately appear in text. The reader
+# strips carriage returns before either rule below sees them.
 LEGAL_CONTROL = "\t\n"
 
 NOT_A_CHECKOUT = "not a git checkout, so there is no tracked-file list to read"
@@ -67,13 +53,53 @@ MARKDOWN_AT_LEAST = 16
 
 OTHER_AT_LEAST = 48
 
-SUBSTITUTES = (
-    "Use '--' for an em dash outside Markdown, '-' for a hyphen, and a "
-    "straight quote for a quotation. A character that renders like a Latin "
-    "letter but is not one is a homoglyph; replace it with the Latin letter. "
-    "A control character below U+0020 renders as nothing and is almost always "
-    "a byte written where the text of its escape was meant."
+SOURCE_SUBSTITUTES = (
+    "Use '--' for an em dash, '-' for a hyphen, and a straight quote for a "
+    "quotation. A character that renders like a Latin letter but is not one "
+    "is a homoglyph; replace it with the Latin letter. A control character "
+    "below U+0020 renders as nothing and is almost always a byte written "
+    "where the text of its escape was meant."
 )
+
+MARKDOWN_SUBSTITUTES = (
+    "A control character renders as nothing, so the line does not hold what "
+    "it appears to -- the character is almost always a byte written where the "
+    "text of its escape was meant, and deleting it is the fix. A NUL is the "
+    "one that reaches past its own line: it makes git classify the file as "
+    "binary, which stops line-ending normalisation and leaves "
+    "tests/test_line_endings.py reading a clean tree over a file full of CRLF."
+)
+
+
+def legal_in_source(character):
+    """Whether a character may appear outside Markdown.
+
+    Args:
+        character (str) : One character read from a tracked file
+
+    Returns:
+        bool : True where the character is printable ASCII, tab or newline
+    """
+
+    return character in LEGAL_CONTROL or 32 <= ord(character) <= 126
+
+
+def legal_in_markdown(character):
+    """Whether a character may appear in Markdown.
+
+    Args:
+        character (str) : One character read from a tracked document
+
+    Returns:
+        bool : True unless the character is an invisible control character
+    """
+
+    code = ord(character)
+
+    # Everything except the two Unicode control blocks, Cc: U+0000-U+001F and
+    # U+007F-U+009F. Both render as nothing, and the first carries the NUL that
+    # reclassifies a file as binary and blinds the line-ending gate.
+    return character in LEGAL_CONTROL or 32 <= code <= 126 or code >= 160
 
 
 def tracked_files():
@@ -130,7 +156,7 @@ def readable_halves(tracked):
 
 
 class SourceIsAscii(unittest.TestCase):
-    """Pins the ASCII rule to the single exception ADR-014 records."""
+    """Pins each half of the tree to the character set its own rule allows."""
 
     @classmethod
     def setUpClass(cls):
@@ -144,12 +170,13 @@ class SourceIsAscii(unittest.TestCase):
         cls.tracked = tracked_files()
         cls.markdown, cls.other = readable_halves(cls.tracked)
 
-    def offenders(self, names, allowed):
-        """Locate characters outside printable ASCII in one half of the tree.
+    def scan(self, names, is_legal):
+        """Locate the characters one half's rule does not permit.
 
         Args:
             names (list[str]) : The paths to read, already filtered to one half
-            allowed (str)     : Characters beyond printable ASCII that are permitted
+            is_legal (object) : The rule that half is held to, taking one
+                character and returning whether it may appear
 
         Returns:
             list[str] : One 'path:line:column U+XXXX' entry per offending character
@@ -168,10 +195,7 @@ class SourceIsAscii(unittest.TestCase):
             # never appear within a line for this loop to see.
             for row, line in enumerate(text.split("\n"), start=1):
                 for column, character in enumerate(line, start=1):
-                    if character in allowed or character in LEGAL_CONTROL:
-                        continue
-
-                    if not 32 <= ord(character) < 127:
+                    if not is_legal(character):
                         found.append(f"{name}:{row}:{column} U+{ord(character):04X}")
 
         return found
@@ -183,10 +207,11 @@ class SourceIsAscii(unittest.TestCase):
             len(self.markdown),
             MARKDOWN_AT_LEAST,
             f"the enumeration returned {len(self.markdown)} Markdown file(s) "
-            f"where the tree holds at least {MARKDOWN_AT_LEAST}, so the em-dash "
-            "rule below would pass having read almost nothing. A document that "
-            "is written but not staged is invisible here, because the listing "
-            "reads git's index rather than the working tree.",
+            f"where the tree holds at least {MARKDOWN_AT_LEAST}, so the "
+            "control-character rule below would pass having read almost "
+            "nothing. A document that is written but not staged is invisible "
+            "here, because the listing reads git's index rather than the "
+            "working tree.",
         )
 
         self.assertGreaterEqual(
@@ -202,25 +227,26 @@ class SourceIsAscii(unittest.TestCase):
     def test_nothing_outside_markdown_leaves_printable_ascii(self):
         """Source, tests, configuration and workflows are ASCII without exception."""
 
-        offenders = self.offenders(self.other, allowed="")
+        offenders = self.scan(self.other, legal_in_source)
 
         self.assertEqual(
             offenders,
             [],
             "characters outside printable ASCII found outside Markdown, where "
-            "the rule has no exception:\n  " + "\n  ".join(offenders) + "\n" + SUBSTITUTES,
+            "the rule has no exception:\n  " + "\n  ".join(offenders) + "\n" + SOURCE_SUBSTITUTES,
         )
 
-    def test_markdown_carries_nothing_beyond_the_em_dash(self):
-        """Prose may use the em dash; a homoglyph or a curly quote is still a defect."""
+    def test_markdown_carries_no_control_characters(self):
+        """Prose may carry any visible character; one that renders as nothing may not."""
 
-        offenders = self.offenders(self.markdown, allowed=EM_DASH)
+        offenders = self.scan(self.markdown, legal_in_markdown)
 
         self.assertEqual(
             offenders,
             [],
-            "characters outside printable ASCII found in Markdown, other than "
-            "the em dash, which is the only one ADR-014 permits:\n  " + "\n  ".join(offenders) + "\n" + SUBSTITUTES,
+            "control characters found in Markdown, which may carry any "
+            "character a reader can see and none that renders as "
+            "nothing:\n  " + "\n  ".join(offenders) + "\n" + MARKDOWN_SUBSTITUTES,
         )
 
 

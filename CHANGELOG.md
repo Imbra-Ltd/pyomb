@@ -8,6 +8,12 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Markdown is no longer held to printable ASCII. A document is written for a
+  reader, so a diagram drawn in box-drawing characters is content rather than
+  drift, and the pinned templates scope their own ASCII rule to identifiers.
+  Control characters stay a defect everywhere, because one NUL makes git call
+  a file binary and blinds the line-ending gate. Source is unchanged. What
+  this gives up is homoglyph detection in prose. See #222, ADR-029
 - The four published Modbus specifications and the imported protocol tutorial
   move to `docs/specs/`, separating material this project reads from material
   it writes. `docs/` gave the same visual weight to a 1996 Modicon reference
