@@ -6,6 +6,24 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- A release now fails its own pull request when the newest 360-degree audit
+  does not postdate the release before it. The audit step sits between two
+  gated steps and was gated by nothing, so four releases were cut without one
+  and only the fourth skip was written down anywhere. The gate reads the
+  changelog's dated entries rather than `git tag`, because CI checks out
+  shallow and a tag-based rule would find nothing and report a clean tree from
+  it. Declining the audit stays available and now takes a dated `-skipped`
+  record naming the release and the reason. See #206, ADR-027
+- `docs/audits/2026-08-29-360.md`, the second full audit of this repository.
+  Every critical finding the first one raised is closed: secret scanning, push
+  protection and Dependabot are enabled, CodeQL and bandit both run, every
+  action is pinned to a commit SHA, and `main` is protected with the
+  administrator exemption off. The overall grade moves from C- to B+, and the
+  2026-08-18 report is left as written because its grade is an observation of
+  that date. See #206
+
 ## [0.4.0] - 2026-08-28
 
 ### Added

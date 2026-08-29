@@ -879,12 +879,13 @@ record written under the rule.
 pytest tests/test_document_gates_are_not_blind.py
 ```
 
-Every check above that reads a tracked-file listing — the line endings, the
-character set, the Markdown width and the three over the decision records —
-first asserts that the listing reached a floor its corpus is known to hold. A
-test asserting no violations were found passes identically when nothing was
-examined, so without that a broken enumeration reports a clean tree in the same
-words as a clean one.
+Every check in this section that reads a tracked-file listing — the line
+endings, the character set, the Markdown width, the three over the decision
+records and the one over the release audits below — first asserts that the
+listing reached a floor its corpus is known to hold. A test asserting no
+violations were found passes identically when nothing was examined, so without
+that a broken enumeration reports a clean tree in the same words as a clean
+one.
 
 This is the control that keeps them honest. It discovers each gate by how it
 reads its corpus, replaces that read with an empty result, and fails any gate
@@ -899,6 +900,30 @@ fix. A rule failing names the document and the line.
 
 ADR-022 records the floors, where each number came from, and why the unstaged
 gap is stated rather than closed.
+
+### 3.23 Release audit currency (pytest)
+
+```bash
+pytest tests/test_release_audit_is_current.py
+```
+
+The newest report in `docs/audits/` must postdate the release before the one
+the package reports. An audit run before the last release shipped says nothing
+about the changes since, and an audit dated that same day cannot be told from
+one written earlier, so both are refused.
+
+The gate reads the changelog's dated entries rather than `git tag`. CI checks
+out shallow and fetches no tags, so a tag-based rule would find nothing and
+report a clean tree from it. ADR-027 carries that choice and what was rejected.
+
+Nothing detects a release branch. The comparison tightens only when a new dated
+entry appears, which is 5 step 4, so the gate is silent between releases and
+fails on the branch cutting one.
+
+Two ways to clear it. Run the audit per 4.4, or write
+`docs/audits/YYYY-MM-DD-360-skipped.md` naming the release and the reason.
+Declining the step is a judgement call an operator is allowed to make; what the
+gate refuses is passing over it in silence, which is what four releases did.
 
 ## 4. Maintenance
 
@@ -1085,7 +1110,15 @@ issues created, a "Current bottleneck" section, and a findings table per
 dimension. The overall grade is the lowest dimension. File findings as issues
 rather than fixing them in the same pass — an audit is a discovery pass.
 
-Run before a release or a visibility change, and at milestone boundaries.
+Run before a release or a visibility change, and at milestone boundaries. 3.23
+gates the release case: the newest report must postdate the release before the
+one being cut, so an audit cannot be reused across two of them.
+
+Declining the audit for a release is allowed and takes a document —
+`docs/audits/YYYY-MM-DD-360-skipped.md`, naming the release and the reason. It
+clears the same gate and lands in the release pull request, where a reviewer
+reads it. Four releases were cut with no audit and no record of the decision,
+which is what the gate and this paragraph exist to stop repeating.
 
 ### 4.5 Action version updates (Dependabot)
 
@@ -1143,7 +1176,8 @@ To cut a release:
 
 1. Check `git branch --no-merged main` and `git fsck --unreachable` for work
    that would be lost
-2. Run a 360 audit per 4.4; do not ship with critical findings open
+2. Run a 360 audit per 4.4; do not ship with critical findings open. 3.23 gates
+   this step — it was ungated until v0.4.0, and four releases skipped it
 3. Branch `chore/release-vX.Y.Z`, set `__version__` in `src/pyomb/__init__.py`
    — hatchling reads it, so that literal is the only place a version lives
 4. Cut the `Unreleased` block of `CHANGELOG.md` into a dated `[X.Y.Z]` entry,
