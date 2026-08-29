@@ -6,6 +6,14 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `docs/design/`, a home for direction notes the project has not adopted,
+  separate from the records that bind it. Its first note argues for a
+  transport and framer architecture, validation modes and a wire-control
+  layer. It is committed as written, with its corrections tracked rather than
+  applied. See #224, ADR-030
+
 ### Changed
 
 - Markdown is no longer held to printable ASCII. A document is written for a
