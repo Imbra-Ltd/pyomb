@@ -42,7 +42,7 @@ pyomb is not on a package index. Every tagged release attaches a wheel to its
 record on GitHub, so install that:
 
 ```bash
-pip install https://github.com/Imbra-Ltd/pyomb/releases/download/v0.4.0/pyomb-0.4.0-py3-none-any.whl
+pip install https://github.com/Imbra-Ltd/pyomb/releases/download/v0.4.1/pyomb-0.4.1-py3-none-any.whl
 ```
 
 The [releases page](https://github.com/Imbra-Ltd/pyomb/releases) carries an

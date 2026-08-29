@@ -6,6 +6,8 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-08-29
+
 ### Added
 
 - A release now fails its own pull request when the newest 360-degree audit
@@ -297,7 +299,8 @@ no upgrade path to describe and no consumer to break.
   committed chain was rotated; it was self-signed and installed in no trust
   store
 
-[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.2.1...v0.3.0
