@@ -2719,3 +2719,75 @@ package, per ADR-002. See `README.md` for usage and
   consecutive time; the skip is recorded in the release pull request, and the
   issue's second half exists so it stops depending on someone remembering to
   write it down.
+
+## 2026-08-29 -- Audit the tree, gate the step, ship v0.4.1
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Ran the second 360-degree audit, nine dimensions, and graded the tree
+    B+.** The first report graded it C- with Security as the bottleneck and
+    three critical findings. All three are closed: secret scanning, push
+    protection and Dependabot are enabled, CodeQL and bandit both run, every
+    action is pinned to a commit SHA, and `main` is protected with the
+    administrator exemption off. Ten findings, none critical.
+  - **Gated the step four releases had skipped.** The newest report in
+    `docs/audits/` must postdate the release before the one being cut. It
+    reads the changelog's dated entries rather than `git tag`, because the CI
+    checkout is shallow and fetches none -- a tag-based rule would have found
+    nothing and reported a clean tree from it. ADR-027 carries the choice.
+  - **A skip is now a document rather than a silence.** A dated `-skipped`
+    record naming the release and the reason clears the same gate. Declining
+    the audit was always legitimate; doing it four times with three leaving no
+    trace was the defect.
+  - **Released `v0.4.1`.** Patch rather than minor: no library code changed,
+    and `v0.3.1` set the precedent for a release whose content is a gate.
+  - **Grouped the vendor specifications under `docs/specs/`.** #175. The
+    fourth PDF was on no list in `CLAUDE.md`; its cover page identifies it as
+    the Modicon Modbus Protocol Reference Guide PI-MBUS-300 Rev J, so it is
+    declared rather than deleted. ADR-028 records the layout and that no
+    `docs/` index is wanted.
+- **PRs merged:** #218, #219, #220.
+- **Issues closed/created:** two closed -- #206 and #175. Two created -- #216
+  and #217, both audit findings. #196 was corrected rather than refiled, and
+  #172's gate count was corrected from 13 to 14 by the gate this session
+  added.
+- **Lesson:** a count carried between two audits is not a comparison unless
+  the method is carried with it. The first report counted 510 wire vectors by
+  scanning for byte-string escapes. The same pattern returns 15812 today, not
+  because the suite grew thirtyfold but because it also matches every hex
+  escape inside an ordinary string. Parsing each module and counting bytes
+  constants gives 118. Three numbers, one tree, and only the third is
+  reproducible -- which is why the new report states its method beside the
+  figure and says the two are not comparable rather than reporting growth.
+- **Lesson:** an edit that matched nothing and a check that never fired print
+  the same thing. Proving the moved path in the line-endings control fixture
+  was load-bearing meant planting a violation in it. The first attempt used
+  `sed`, whose pattern did not match, and the run reported six passing tests
+  -- which reads exactly like a control that fired and found the tree clean.
+  Confirming the plant by diff before reading the run is the whole check, and
+  it cost one command.
+- **Lesson:** a remedy message can promise an escape the gate does not have.
+  The first draft told an operator that overriding the audit gate "takes an
+  argument", which was false -- nothing accepted one, and the only way past it
+  was to write an audit. The message was written before the escape existed and
+  read as though it described one. Either build the escape or describe what is
+  actually there; a failure message is read at the worst moment and is not the
+  place to be aspirational.
+- **Lesson:** where a gate reads its input from is a decision a later reader
+  will reverse. Tags are the obvious source for "the date of the last release"
+  and the reasoning against them is invisible from the code: the rule would
+  keep passing, having measured nothing. That is why it is an ADR rather than
+  a comment -- a comment explains the line it sits on, and this needed to
+  survive someone deleting the line.
+- **Upstream:** no filings. ADR-027 and ADR-028 each record `none` with the
+  reason and a revisit trigger, judged at decision time rather than deferred
+  to the wrap. Both generalize -- a gate reading a project's own dated record
+  where a shallow checkout hides the tags, and third-party reference material
+  living apart from the documents a project authors -- and one project wanting
+  each once is not evidence either does.
+- **Pending:** nothing blocked. Twenty-three issues open, none milestoned. The
+  pin is now three releases behind at `v2.61.0`, with `v2.64.0` out; #208
+  carries the bump and needs no edit, because its body already says to resolve
+  the target from the tag listing rather than from itself. An empty
+  `docs/design/` directory sits untracked in the working tree; git does not
+  record it, and it was not created by this session's work.
