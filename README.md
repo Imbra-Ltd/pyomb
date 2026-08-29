@@ -177,6 +177,7 @@ tests/                  # Per-module tests, regression modules, convention gates
 examples/               # Runnable usage patterns, executed by CI
 scripts/                # Certificate generation and a CRC walkthrough
 docs/                   # Guides, decisions, journal, audits
+  design/               # Direction notes the project has not adopted
   specs/                # Vendor Modbus specifications and the protocol tutorial
 assets/                 # Generated test certificates (gitignored)
 .github/                # CI, CodeQL and release workflows, Dependabot config
