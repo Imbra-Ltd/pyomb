@@ -45,8 +45,9 @@ decisions:
 2. **Short label** — the next rule
 
 One concern per record; multi-part decisions are allowed within it. A
-non-trivial record carries an inline ASCII diagram here, in a ```text fence,
-using only + - | so the source stays ASCII.
+non-trivial record carries an inline diagram here, in a ```text fence. Plain
+ASCII (+ - |) and Unicode box-drawing both stay legible in a monospace font,
+so use whichever reads better.
 -->
 
 ## Alternatives considered

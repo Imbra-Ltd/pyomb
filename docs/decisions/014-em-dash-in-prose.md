@@ -1,10 +1,10 @@
 ---
 id: "014"
-status: Accepted
-date: 2026-08-21
+status: Superseded
+date: 2026-08-29
 category: process
 supersedes: []
-superseded_by: []
+superseded_by: ["029"]
 ---
 
 # ADR-014: Prose may use the em dash; everything else stays ASCII

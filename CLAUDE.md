@@ -226,9 +226,11 @@ follow the referenced templates. Project-specific additions only:
   unanchored pattern matches at any depth, so it also selects the templates
   submodule's file of that name and republishes it. Enforced by
   `tests/test_sdist_includes_are_anchored.py`
-- Markdown prose may use the em dash; every other tracked file is ASCII, and
-  Markdown may use no other non-ASCII character either. Enforced by
-  `tests/test_source_is_ascii.py`; see ADR-014
+- Markdown carries any character a reader can see; every other tracked file is
+  printable ASCII, where `--` substitutes for a dash. A control character is a
+  defect in both — it renders as nothing, and one NUL makes git call the file
+  binary and blinds the line-ending gate. Enforced by
+  `tests/test_source_is_ascii.py`; see ADR-029
 - A decision record holds every sentence to 40 words and every paragraph to 80.
   A sentence that runs long is almost always carrying a list — render it as
   one. Enforced by `tests/test_decisions_are_readable.py`; see ADR-017

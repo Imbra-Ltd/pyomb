@@ -27,9 +27,10 @@ is meant to copy or would misrepresent what a tool printed. A line carrying a
 URL cannot be split at all, since no Markdown break survives inside one, and a
 badge line is two long URLs and almost no prose.
 
-The width is counted in characters, not bytes. The em dash the prose rule
-permits is three bytes in UTF-8, and counting bytes would charge a document
-three columns for one glyph and shorten every line that uses one.
+The width is counted in characters, not bytes. Prose may carry any visible
+character, and the ones it reaches for -- an em dash, a box-drawing corner, an
+arrow -- are three bytes each in UTF-8, so counting bytes would charge a
+document three columns for one glyph and shorten every line that uses one.
 """
 
 import pathlib
