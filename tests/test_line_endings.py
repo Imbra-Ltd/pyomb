@@ -221,7 +221,7 @@ PLANTED = (
 # rule -- a check that flags everything flags each planted record too.
 CLEAN = (
     "i/lf    w/crlf  attr/text=auto        \tREADME.md",
-    "i/-text w/-text attr/-text            \tdocs/PI_MBUS_300.pdf",
+    "i/-text w/-text attr/-text            \tdocs/specs/PI_MBUS_300.pdf",
     "i/      w/      attr/text=auto        \tdocs/solid-ai-templates",
 )
 

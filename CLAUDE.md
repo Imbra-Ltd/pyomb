@@ -57,7 +57,8 @@ outstanding — read them rather than inferring the gap.
 - Distribution: wheel and sdist attached to the GitHub release, distributed
   and imported as `pyomb`; nothing goes to a package index — see ADR-011
 - Specifications: Modbus Application Protocol v1.1b3, Modbus Messaging
-  Implementation Guide v1.0b, MB-TCP-Security v21 — all in `docs/`
+  Implementation Guide v1.0b, MB-TCP-Security v21, and the Modicon Modbus
+  Protocol Reference Guide PI-MBUS-300 Rev J — all in `docs/specs/`
 
 ### 1.2 Project structure
 

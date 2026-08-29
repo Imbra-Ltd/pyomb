@@ -24,7 +24,7 @@ codes onto a Python exception hierarchy.
 
 One name now runs across the repository, the distribution and the import
 package, per ADR-002. See `README.md` for usage and
-`docs/Open_Modbus_Tutorial.md` for the protocol background.
+`docs/specs/Open_Modbus_Tutorial.md` for the protocol background.
 
 ## 2026-08-18 — Migrate to a clean repository
 

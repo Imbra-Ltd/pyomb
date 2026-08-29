@@ -58,7 +58,7 @@ WIDTH_KEY = "max_line_length"
 # consistent at its own width, and rewrapping 160 lines of it would bury a
 # change nobody asked for. The exclusion is the rule's scope, not a suppression
 # of findings inside it -- a document this project authored has no such escape.
-IMPORTED = {"docs/Open_Modbus_Tutorial.md"}
+IMPORTED = {"docs/specs/Open_Modbus_Tutorial.md"}
 
 # A URL survives no line break, so a line carrying one is measured by nothing
 # the author can act on. This covers the badge block at the top of the README,
