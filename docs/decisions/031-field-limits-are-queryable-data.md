@@ -25,16 +25,32 @@ else, across 26 concrete request and response classes.
 
 No function-code field limit is written down anywhere in the tree. The
 Modbus Application Protocol specification caps a Read Holding Registers
-quantity at `0x07D0`; one past it serializes without complaint:
+quantity at 125; one past it serializes without complaint:
 
 ```text
-ModbusRequestFC3(start_addr=0, quantity=0x07D1).serialize()
-  -> 03000007d1
+ModbusRequestFC3(start_addr=0, quantity=126).serialize()
+  -> 030000007e
 ```
 
 A real device answers that request with exception code 03. The frame is
 well-formed, its CRC is correct, and nothing in the library knows it is
 wrong.
+
+The declared format does not carry that limit, and cannot. Six request
+classes -- FC1, FC2, FC3, FC4, FC5 and FC6 -- all declare `PDU_FORMAT` as
+`">BHH"`, while the specification gives coils a quantity cap of 2000 and
+registers a cap of 125. One format string, different bounds, so the bound
+cannot be read off the format:
+
+```text
+FC1 coils      quantity=2000  ->  01000007d0   legal
+FC3 registers  quantity=2000  ->  03000007d0   sixteen times the cap
+```
+
+What the format does carry is field width, and that half is already
+enforced. `H` admits `0` to `65535`, and `struct` refuses anything wider
+before any protocol code runs. So the two constraints have separate homes
+already: the format holds what fits, and nothing yet holds what is allowed.
 
 One case behaves differently, and #196 lists it as unvalidated when it is
 not. A starting address above `0xFFFF` does not serialize -- `struct.pack`
@@ -71,7 +87,9 @@ library.
 1. **The limits are a table.** Each entry names a function code, a field, its
    bound and the clause of the Modbus Application Protocol specification that
    sets it. The table is recorded once, not per class, and a class carrying no
-   bounded field has an empty entry rather than no entry.
+   bounded field has an empty entry rather than no entry. It carries only what
+   the format cannot: a field's width stays with `PDU_FORMAT`, which already
+   states it and already enforces it.
 
 2. **Inspection is a pure function returning named findings.** A module-level
    `violations(pdu)` beside the existing validators returns a tuple of
@@ -114,6 +132,7 @@ library.
 | `serialize(check=True)`, as #196 implies | A boolean flag parameter, which CLAUDE.md 2.2 bans for the usual reason. It also answers the wrong question: whether to raise, rather than what is wrong with the frame. |
 | Validate in the constructor | Catches the defect earliest and forfeits the product. A malformed packet must be a first-class object, and a constructor that refuses one makes the library unable to build the frames it exists to send. |
 | An enum of modes, per the upstream rule against boolean flags | The upstream rule is right about behaviour switches and wrong here. An enum answers "how strict", and the caller's question is "which bound did this cross". This is the divergence the Upstream line records. |
+| Read the limits off `PDU_FORMAT`, which each class already declares | The most appealing option, because it needs no new data at all and the format is already the class's statement about its own layout. It gives field width and stops there. FC1 and FC3 both declare `">BHH"` while the specification caps coils at 2000 and registers at 125, so a format string cannot be the source of a bound that differs between two classes carrying the same one. |
 | Close #196 as wontdo and keep only CRC and length checks | Honest about the current state, and it leaves the specification's limits written down nowhere. A conformance test would then hardcode `0x07D0` at each call site, which is the third copy this project's own rules call a bug. |
 
 ## Consequences
