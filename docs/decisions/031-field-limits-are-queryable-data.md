@@ -76,7 +76,7 @@ exception 03", which needs the bound as data.
 | # | Rule |
 | --- | --- |
 | 1 | Each class declares its own bounds, beside `PDU_FORMAT` and `PDU_ID` |
-| 2 | `violations()` is a method, so a class can override it |
+| 2 | Two methods: `violations()` returns findings, `validate()` raises |
 | 3 | `serialize()` never validates and gains no parameter |
 | 4 | Enforcement is a caller's line at the transport boundary |
 | 5 | There is no validation mode |
@@ -103,9 +103,26 @@ class ModbusRequestFC3(ModbusPdu):
 A class the specification bounds in no way declares that explicitly, so a
 reader can tell an unbounded field from an unwritten one.
 
-### 2. Checking is a method
+### 2. Two methods, and the name carries the contract
 
-FC15 is the reason. It carries three fields the specification ties together:
+| Method | Returns | Caller |
+| --- | --- | --- |
+| `violations()` | findings; an empty tuple when clean | a test asserting which rule broke |
+| `validate()` | nothing; raises `ModbusPacketError` when not clean | a client refusing to send |
+
+`validate()` is one line over `violations()`. Both are needed because an
+exception carries a message rather than data, and a raise stops at the first
+problem. A test grading a peer needs the rule's identity, and a packet
+breaking two rules should report two.
+
+The naming follows the module's existing guards. `validate_crc` and
+`validate_mbap_length` both raise, and all five of their call sites sit
+inside `deserialize()`. A `validate` that returned a list instead would put
+two opposite contracts under one verb.
+
+### Why a method rather than a lookup
+
+FC15 carries three fields the specification ties together:
 
 | Field | Rule |
 | --- | --- |
@@ -128,9 +145,11 @@ an irregular class overrides it.
   pdu.violations()  ->  ()                 conforming
                     ->  (Violation(...),)  names the field and the bound
         |
-        +--> test:         assert the finding, send anyway, grade the peer
-        +--> client:       raise before sending
-        +--> serialize():  does not call it
+        +--> pdu.validate()   raises when that tuple is not empty
+        |
+        +--> test:            assert the finding, send anyway, grade the peer
+        +--> client:          call validate() before sending
+        +--> serialize():     calls neither
 ```
 
 ### 3 to 5. What stays out
@@ -168,6 +187,11 @@ returned tuple.
   the check earns nothing until a client or a test consumes it.
 - The finding type is a new public surface. It needs a docstring stating its
   contract and an entry in `__all__`, like any other export.
+- `validate()` is the only path that raises, so the `ModbusError` subclass is
+  constructed in one place rather than at each boundary that enforces.
+- Two `validate` spellings now coexist: the module-level guards that
+  `deserialize()` calls, and the method a caller calls. They agree on
+  raising, which is what keeps the shared verb honest.
 - Filtering a finding is a caller's decision with no record. A named
   relaxation would be a later decision, and takes its own record.
 
