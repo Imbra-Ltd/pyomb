@@ -9,7 +9,7 @@ superseded_by: []
 
 # ADR-031: Field limits are queryable data, not a validation mode
 
-**Upstream:** candidate, not yet filed, against
+**Upstream:** filed as braboj/solid-ai-templates#1293 against
 `templates/base/core/quality.md`. With the domain skin off: the rule against
 boolean flag parameters prescribes an enum, and an enum is the wrong shape
 when the caller needs to know which named constraint fired rather than how
@@ -141,6 +141,7 @@ library.
 
 - #196 -- the field-range work this settles the mechanism for
 - #224 -- the design note review, whose first finding this answers
+- #229 -- whether the packing helper stays public, which the Context cites
 - ADR-009 -- the record that gave caller-supplied packing its own name. The
   capability predates it; what it changed is which name carries it
 - `docs/design/design_notes.md` -- sections 10 and 25, the modes proposal and
