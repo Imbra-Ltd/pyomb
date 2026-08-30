@@ -2791,3 +2791,58 @@ package, per ADR-002. See `README.md` for usage and
   the target from the tag listing rather than from itself. An empty
   `docs/design/` directory sits untracked in the working tree; git does not
   record it, and it was not created by this session's work.
+
+## 2026-08-29 -- Markdown leaves the ASCII rule (evening)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Lifted the printable-ASCII rule off Markdown.** ADR-029 supersedes
+    ADR-014. The templates narrowed their own ASCII rule to identifiers at
+    `v2.46.0` and say documentation carries no charset restriction; the docs
+    template blesses plain ASCII and Unicode box-drawing equally for diagrams.
+    The local rule forbade a form the rule it extends permits, and charged
+    that to every document.
+  - **Kept control characters failing in both halves.** This was the half
+    worth arguing about. `test_line_endings.py` names `test_source_is_ascii.py`
+    in its own remedy text as the thing that finds a stray NUL, and a NUL is
+    what made git store this journal as binary with 1127 CRLF endings while
+    that gate read clean. Dropping Markdown from the character gate entirely
+    was the obvious reading of the request and would have left that remedy
+    pointing at a check that no longer looks.
+  - **Reviewed the architecture direction note against the tree and filed
+    #224.** Six findings. The one that matters: #196 asks for field-range
+    validation, the note's rule 5 says serialization must not imply
+    validation, and implementing #196 as filed would remove the ability to
+    build malformed frames deliberately -- the differentiator. Also: the
+    roadmap assigns work to `0.4`, which shipped without it, and twelve of the
+    thirteen function codes it lists as a target already exist.
+  - **Committed the note as written under `docs/design/`.** ADR-030 gives the
+    directory its record and the rule that keeps a note from reading as a
+    decision: it binds nothing, and adopting part of one takes a decision
+    record rather than an edit to the note. Its two known errors are tracked
+    in #224 rather than corrected in place.
+- **PRs merged:** #223, #225.
+- **Issues closed/created:** #222 created and closed by #223. #224 created and
+  open -- the note review, which #225 deliberately does not close.
+- **Lesson:** the project's own record of the last time a question was asked
+  is worth more than the upstream diff that appears to answer it. The first
+  reading here was that upstream had moved and the local rule was stale
+  debt. `PLAYBOOK.md` 4.1 recorded that a prior session had already
+  reconciled exactly this record twice and chosen to stay stricter. Same
+  evidence, opposite conclusion, and the difference was one section of a
+  document written for that purpose. A reconciliation note pays for itself
+  the first time it stops a session from "closing a gap" that is a decision.
+- **Lesson:** a check's remedy text can name another check as the thing that
+  finds the underlying cause, and narrowing the named check falsifies that
+  remedy silently. Nothing fails, because the remedy is prose in a failure
+  message no passing run prints. Grep the suite for a module's own name
+  before relaxing what it checks.
+- **Upstream:** one filing. ADR-029 records `none` -- it converges on the
+  position the templates already hold, so there is nothing to contribute.
+  ADR-030 records `none` with a revisit trigger. The remedy-text lesson above
+  generalizes and was filed as braboj/solid-ai-templates#1290 against
+  `templates/base/core/testing.md`.
+- **Pending:** nothing blocked. The pin is now four releases behind at
+  `v2.61.0`, with `v2.65.0` out; #208 carries the bump, and the submodule is
+  an off-limits path needing a proposal before it moves. #224 is the live
+  thread: #196 should not be implemented before it is settled.
