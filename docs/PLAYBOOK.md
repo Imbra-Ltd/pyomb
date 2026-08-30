@@ -312,6 +312,66 @@ Where nothing detects the trigger, the comment says so — an unwatched trigger
 is a decision to take deliberately, and a comment that omits the question
 reads the same as one that answered it.
 
+### 1.7 Writing an issue or pull request body
+
+An issue is read by someone deciding whether to pick the work up, and a pull
+request by someone deciding whether to approve it. Neither has the code in
+their head, and an issue can sit for months before anyone opens it. Write for
+that reader rather than for the person who has just finished the
+investigation.
+
+Five habits carry most of it.
+
+**State the symptom before the mechanism.** What a user would see comes
+first, why it happens comes second. A body that opens with the internals asks
+the reader to hold them before knowing what they explain.
+
+**Expand a term the first time it appears, or avoid it.** Names taken from
+the code — `__dict__`, `*args`, "PDU" — are exact and mean nothing to a
+reader who has not opened the file. Say what the thing is, then name it.
+
+**Show the example rather than describing it.** Real values a reader can
+compare beat a sentence about what would happen, and the interesting bytes
+are worth pointing at.
+
+**One idea per sentence.** A sentence carrying three clauses is usually three
+sentences. A reader who has to go back and re-read has found a defect in the
+sentence, not in themselves.
+
+**Separate how bad it is now from how bad it becomes.** A latent defect and a
+live one need different words, and a body that blurs them either alarms the
+reader or undersells the work.
+
+Three tells that a paragraph needs rewriting: a double negative, an abstract
+noun standing where a value would do ("the divergence", "the ordinal"), and a
+sentence that parses only for someone who already knows the answer.
+
+A worked example, from the body of #228. Before:
+
+```text
+Two packets that serialize to identical bytes are NOT reachable as unequal
+without an assignment -- the generic and concrete PDUs use different formats
+and so produce different bytes for the same values.
+```
+
+After:
+
+```text
+You have to change a value after creating the packet to run into this.
+Nothing in the library does that yet, so no current behaviour is wrong.
+```
+
+The same fact, readable once.
+
+Nothing gates this. It is judgement, and a check counting sentence length
+would pass prose nobody can follow while failing a long sentence that reads
+cleanly — so it is a review item, and reading the body back as though the
+investigation had not happened is the whole test.
+
+The required structure does not change. `templates/base/workflow/issues.md`
+sets which sections each issue type carries; this section governs the prose
+inside them.
+
 ## 2. Domain operations
 
 ### 2.1 Add a function code

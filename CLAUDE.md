@@ -242,6 +242,11 @@ follow the referenced templates. Project-specific additions only:
   fenced blocks and lines carrying a URL are exempt because none of them can be
   wrapped. Enforced by `tests/test_markdown_line_width.py`, which reads the
   declaration rather than restating it; see ADR-018
+- An issue or pull request body is written for a reader who has not seen the
+  code: symptom before mechanism, every borrowed term expanded on first use,
+  and a real example rather than a description of one. Nothing gates it,
+  because a sentence-length check passes prose nobody can follow; see
+  PLAYBOOK 1.7
 - A decision record opens with YAML front matter — `id`, `status`, `date`,
   `category`, `supersedes`, `superseded_by` — which is the source of truth for
   status and supersession. Copy `docs/decisions/TEMPLATE.md`; a new category
