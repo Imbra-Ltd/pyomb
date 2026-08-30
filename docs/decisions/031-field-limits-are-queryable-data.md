@@ -84,17 +84,27 @@ data, so it knows which verdict to demand.
 Five parts, one concern: how the specification's field limits enter the
 library.
 
-1. **The limits are a table.** Each entry names a function code, a field, its
-   bound and the clause of the Modbus Application Protocol specification that
-   sets it. The table is recorded once, not per class, and a class carrying no
-   bounded field has an empty entry rather than no entry. It carries only what
-   the format cannot: a field's width stays with `PDU_FORMAT`, which already
-   states it and already enforces it.
+1. **Each class declares its own constraints.** A packet class states the
+   bounds the specification puts on its fields, beside the `PDU_FORMAT` and
+   `PDU_ID` it already declares, and its docstring states them in prose where
+   the fields are already described. A class the specification bounds in no
+   way says so explicitly, so a reader can tell an unbounded field from an
+   unwritten one.
 
-2. **Inspection is a pure function returning named findings.** A module-level
-   `violations(pdu)` beside the existing validators returns a tuple of
-   findings, empty for a conforming PDU. It raises nothing, reads no
-   configuration and takes no flag.
+   The constraints carry only what the format cannot. A field's width stays
+   with `PDU_FORMAT`, which already states it and already enforces it.
+
+2. **Checking is a method, so a class can own an irregular rule.** A packet
+   answers `violations()` with a tuple of named findings, empty when it
+   conforms. The base class covers the common shape, a field against its own
+   bound, and a class whose specification adds a rule across fields overrides
+   it. It raises nothing, reads no configuration and takes no flag.
+
+   FC15 is why this is a method rather than a lookup. It carries `quantity`,
+   `byte_count` and `values`, and the specification ties all three: the byte
+   count is the quantity rounded up to whole bytes, and the value list is
+   that long. No table of per-field bounds expresses that, and FC16 and FC23
+   each carry their own version of it.
 
 3. **Serialization never validates.** `serialize()` gains no parameter. The
    design note's rule 5 then holds by construction, because there is no
@@ -110,14 +120,15 @@ library.
    filters the returned tuple.
 
 ```text
-  docs/specs/          the published bound
+  docs/specs/               the published bound
         |
         v
-  LIMITS table         one entry per bounded field, with its source
+  ModbusRequestFC3          bounds beside PDU_FORMAT, stated in the docstring
+  ModbusRequestFC15         overrides violations() for its cross-field rule
         |
         v
-  violations(pdu)  ->  ()                  conforming
-                   ->  (Violation(...),)   names the field and the bound
+  pdu.violations()  ->  ()                  conforming
+                    ->  (Violation(...),)   names the field and the bound
         |
         +--> test:    assert the finding, send anyway, grade the peer
         +--> client:  raise before sending
@@ -128,21 +139,27 @@ library.
 
 | Alternative | Why rejected |
 | --- | --- |
-| Three validation modes, as the design note proposes | The closest to a full answer, and it fails on PERMISSIVE. That mode is defined as allowing values "useful for interoperability testing", which names no set a conformance suite can be written against. It also collapses a table of named limits into three ordinals, discarding the one thing a peer-grading test asserts on -- which rule broke. |
+| Three validation modes, as the design note proposes | The closest to a full answer, and it fails on PERMISSIVE. That mode is defined as allowing values "useful for interoperability testing", which names no set a conformance suite can be written against. It also collapses a set of named limits into three ordinals, discarding the one thing a peer-grading test asserts on -- which rule broke. |
 | `serialize(check=True)`, as #196 implies | A boolean flag parameter, which CLAUDE.md 2.2 bans for the usual reason. It also answers the wrong question: whether to raise, rather than what is wrong with the frame. |
 | Validate in the constructor | Catches the defect earliest and forfeits the product. A malformed packet must be a first-class object, and a constructor that refuses one makes the library unable to build the frames it exists to send. |
 | An enum of modes, per the upstream rule against boolean flags | The upstream rule is right about behaviour switches and wrong here. An enum answers "how strict", and the caller's question is "which bound did this cross". This is the divergence the Upstream line records. |
+| One central table of bounds, recorded once rather than per class | What #196's first acceptance criterion asks for, and what earlier revisions of this record decided. It de-duplicates nothing real: FC3 and FC4 both cap at 125, and those are two statements in the specification that happen to agree, not one fact written twice. It also cannot hold a rule spanning fields, which FC15, FC16 and FC23 each have, so the irregular classes would need a second mechanism beside it. A table splits the contract from the class it constrains and buys nothing for the split. |
 | Read the limits off `PDU_FORMAT`, which each class already declares | The most appealing option, because it needs no new data at all and the format is already the class's statement about its own layout. It gives field width and stops there. FC1 and FC3 both declare `">BHH"` while the specification caps coils at 2000 and registers at 125, so a format string cannot be the source of a bound that differs between two classes carrying the same one. |
-| Close #196 as wontdo and keep only CRC and length checks | Honest about the current state, and it leaves the specification's limits written down nowhere. A conformance test would then hardcode `0x07D0` at each call site, which is the third copy this project's own rules call a bug. |
+| Close #196 as wontdo and keep only CRC and length checks | Honest about the current state, and it leaves the specification's limits written down nowhere. A conformance test would then hardcode 125 at each call site, which is the third copy this project's own rules call a bug. |
 
 ## Consequences
 
-- The deliverable is the table, not the check. Sizing the work means reading
-  the specification for every function code the library models, and the check
-  is a thin consumer of what that reading produces.
-- #196 becomes implementable without the rest of #224. Its acceptance criteria
-  survive almost verbatim; only the mechanism named in its third criterion
-  changes, from a check the caller requests to a function the caller calls.
+- The deliverable is the reading, not the check. Sizing the work means going
+  through the specification for every function code the library models, and
+  the check is a thin consumer of what that reading produces.
+- #196 becomes implementable without the rest of #224, and two of its
+  acceptance criteria move. Its first asks that the limits be "recorded once,
+  not per class", which this reverses; its third asks that a caller be able to
+  request the check, which becomes a method the caller calls.
+- The docstring and the declared bound state the same fact twice, which is the
+  cost of putting the contract where the reader is. They get a drift guard: a
+  test that reads both and fails when they disagree, as the templates require
+  of any fact represented twice.
 - #196's premise is corrected in one place. An over-wide starting address is
   already refused, so the work covers the fields that fit their struct format
   and cross a specification bound.
