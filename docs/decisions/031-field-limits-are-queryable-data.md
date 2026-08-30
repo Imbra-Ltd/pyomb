@@ -42,9 +42,14 @@ refuses the `>H` field and the error surfaces as a `ModbusPacketError`
 naming struct.
 
 So the tree already refuses some out-of-range values, for the wrong reason
-and with a message that names the packer rather than the constraint. It also
-means a concrete class cannot build an over-wide field deliberately, which
-the escape hatch established for caller-supplied formats already covers.
+and with a message that names the packer rather than the constraint.
+
+A concrete class cannot build that field at all, and the reason is
+arithmetic rather than a missing feature: `0x1FFFF` does not fit the sixteen
+bits the specification gives the field. Widening it produces a different
+frame, and the generic PDU already builds one -- `pack(">BIH")` emits
+`030001ffff0001`, as does handing the same bytes to `ModbusPdu` as data.
+Neither route needs anything this record adds.
 
 What forces the decision now is that two open proposals answer this
 differently. #196 asks for a check the caller can request per call. The
@@ -136,7 +141,7 @@ library.
 
 - #196 -- the field-range work this settles the mechanism for
 - #224 -- the design note review, whose first finding this answers
-- ADR-009 -- the escape hatch a caller uses to build a deliberately over-wide
-  field, which is why the concrete classes need no relaxation
+- ADR-009 -- the record that gave caller-supplied packing its own name. The
+  capability predates it; what it changed is which name carries it
 - `docs/design/design_notes.md` -- sections 10 and 25, the modes proposal and
   the rule this keeps
