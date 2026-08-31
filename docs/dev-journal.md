@@ -2976,7 +2976,8 @@ package, per ADR-002. See `README.md` for usage and
   command's output is a load-bearing claim whose truth can depend on whether
   the change it describes is committed yet, and `quality-gates-check-timing`
   covers when a check runs without covering a claim written into a document.
-  Candidate file `templates/base/core/docs.md`. Filing is pending.
+  Filed as braboj/solid-ai-templates#1314 against
+  `templates/base/core/docs.md`.
 - **Pending:** #235 awaits the owner and is fine to close. The pin is now five
   releases behind at `v2.61.0` with `v2.66.0` out, and #208 now carries the
   wider range and the expensive divergence step. The next release owes a real
