@@ -9,8 +9,8 @@ superseded_by: []
 
 # ADR-032: The release-audit gate accepts a same-day record
 
-**Upstream:** candidate for `templates/base/core/git.md`, filed as an issue on
-the templates repository. The shape is reusable: a currency gate comparing
+**Upstream:** filed as braboj/solid-ai-templates#1331 against
+`templates/base/core/git.md`. The shape is reusable: a currency gate comparing
 dates that carry no time must compare non-strictly, or two events on one day
 become unreachable.
 
