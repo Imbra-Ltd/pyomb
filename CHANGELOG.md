@@ -6,6 +6,29 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-08-31
+
+No change to what the library does on the wire. This release carries a gate
+change, a decision record and documentation.
+
+### Changed
+
+- The release-audit gate accepts a record dated the day the previous release
+  shipped, where it previously required a later one. A record older than that
+  release, and no record at all, both still fail. The strict form made two
+  releases on one calendar day unreachable, because no record can be dated
+  later than today. See #239, ADR-032
+- The Python editor guides draw a ruler at 88 columns, ruff's ceiling,
+  alongside the one at the preferred width. See #237
+
+### Added
+
+- ADR-031 settles how a packet field constraint enters the library: declared
+  per class and queried, rather than enforced by a mode. It records the
+  decision only -- the work is #196 and is not in this release. See #227
+- PLAYBOOK 1.7, on writing an issue or pull request body for a reader who has
+  not seen the code. See #230
+
 ## [0.4.2] - 2026-08-31
 
 ### Added
@@ -325,7 +348,8 @@ no upgrade path to describe and no consumer to break.
   committed chain was rotated; it was self-signed and installed in no trust
   store
 
-[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.3.1...v0.4.0
