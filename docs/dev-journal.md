@@ -2846,3 +2846,68 @@ package, per ADR-002. See `README.md` for usage and
   `v2.61.0`, with `v2.65.0` out; #208 carries the bump, and the submodule is
   an off-limits path needing a proposal before it moves. #224 is the live
   thread: #196 should not be implemented before it is settled.
+
+## 2026-08-30 -- Constraints move onto the packet
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **ADR-031 settles how specification constraints enter the library**, which
+    is #224 finding 1 and the mechanism half of #196. Neither open proposal as
+    filed: not a per-call check, not STRICT/PERMISSIVE/RAW. Every packet
+    component declares its own constraints, `violations()` returns named
+    findings, `validate()` raises, and `serialize()` gains no parameter so the
+    design note's rule 5 holds by construction.
+  - **The record reversed itself four times under review, each time on a
+    question rather than a preference.** A central table lost to per-class
+    declaration because FC15 ties `quantity`, `byte_count` and `values`
+    together and no per-field lookup holds that. The docstring stopped
+    repeating the bound, so the drift guard an earlier revision owed is not
+    needed. `validate()` joined `violations()` because `validate_crc` and
+    `validate_mbap_length` already raise. Scope widened past PDU fields once
+    the protocol identifier and the slave address turned out to be unchecked.
+  - **PLAYBOOK 1.7 records how to write an issue or pull request body**, after
+    three tickets filed this session came out accurate and unreadable. Five
+    habits, three tells, and a before-and-after from #228. `CLAUDE.md` 3
+    carries the one-line pointer. Deliberately ungated -- a sentence-length
+    check passes prose nobody can follow.
+- **PRs merged:** none. #227 (ADR-031, eight commits) and #230 (PLAYBOOK 1.7)
+  are both open, both green, both awaiting the owner.
+- **Issues closed/created:** created #228, #229, #231 and #232; none closed.
+  #224 gained finding 7, on the serial tier the note describes and the tree
+  lacks end to end. #196 carries three correcting comments.
+- **Lesson:** a number copied from a ticket body is a claim, not a fact. The
+  record cited `0x07D0` as the FC3 quantity cap, carried from #196 without
+  checking; that is the coil cap, and registers cap at 125. The correction is
+  what exposed the argument the record now turns on -- FC1 and FC3 both
+  declare `">BHH"` precisely because the format is not where the bound lives.
+  The error was load-bearing in the right direction only by luck.
+- **Lesson:** a ticket filed from a plausible reading can contradict a finding
+  written hours earlier. #231 argued RTU needs a direction-agnostic packet for
+  sniffing. Probing showed `ModbusTcpPacket` is parse-agnostic rather than
+  direction-agnostic, a wrong-direction parse raises rather than misparsing,
+  and unknown function codes already degrade to the generic PDU. #224 finding
+  6, written the same day, already said that capability class traces to no
+  requirement. The rewrite says what the ticket actually is: the codec slice
+  of a serial tier that does not exist.
+- **Lesson:** a polling loop that cannot evaluate its condition is
+  indistinguishable from one whose condition never fires. Four CI watchers ran
+  to timeout in silence because `jq` is not installed here; `gh --jq` is a
+  built-in and had been working the whole time. Nothing in the output said so.
+- **Lesson:** `ai-workflow-pwd-on-negative` fired during this very audit. A
+  `cd` into the templates submodule persisted, and the next journal check
+  reported the newest entry as 2026-08-28 and no commits ahead of main. Both
+  readings were correct for where the shell was standing.
+- **Upstream:** two filings. braboj/solid-ai-templates#1293 argues that
+  replacing a boolean flag with an enum is wrong where the caller needs the
+  name of the rule that broke, and was updated to carry the findings-plus-guard
+  pair the record landed on. braboj/solid-ai-templates#1301 proposes that
+  `base-issues` govern the prose inside a ticket, not only which sections it
+  has -- an agent fills the sections correctly and still writes an opaque body.
+- **Pending:** three decisions, all the owner's. Whether ADR-031 merges as
+  `Accepted` or `Proposed`; whether #227 and #230 merge, and in which order,
+  since the second will want `gh pr update-branch`; and whether
+  `templates/base/workflow/communication.md` joins the startup block. The last
+  is blocked rather than unanswered -- `tests/test_startup_block_resolves.py`
+  derives the block from the manifest plus a hand-declared set of exactly two
+  files, so a third needs that set widened and ADR-008 amended. The pin stays
+  four releases behind at `v2.61.0`; #208 carries it.
