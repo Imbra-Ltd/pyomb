@@ -6,6 +6,8 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-08-31
+
 ### Added
 
 - `docs/design/`, a home for direction notes the project has not adopted,
@@ -323,7 +325,8 @@ no upgrade path to describe and no consumer to break.
   committed chain was rotated; it was self-signed and installed in no trust
   store
 
-[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.3.0...v0.3.1
