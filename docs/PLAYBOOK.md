@@ -970,10 +970,24 @@ gap is stated rather than closed.
 pytest tests/test_release_audit_is_current.py
 ```
 
+The gate applies to a minor or major release. A patch release owes no audit,
+and the gate is silent for one.
+
 The newest report in `docs/audits/` must not be older than the release before
 the one the package reports. An audit run before that release shipped says
 nothing about the changes since, so it is refused. An audit dated the same day
 is accepted.
+
+Every release owed an audit until v0.4.4. That produced two consecutive
+declines — v0.4.2 wrote a skip record and v0.4.3 reused it — leaving three
+releases resting on the 2026-08-29 report. A patch changes no interface, so
+the review has nothing new to review, and an obligation discharged by writing
+a document is not an obligation. ADR-033 carries the narrowing and what it
+gives up.
+
+A version the gate cannot read is a finding rather than a pass. Not knowing
+whether an audit is owed is not the same as none being owed, so a typo in the
+version literal fails here instead of buying a silent exemption.
 
 Same-day was refused until v0.4.3. Dates carry no time, so an audit written
 before a release and one written after it read alike, and refusing both was
@@ -987,7 +1001,12 @@ report a clean tree from it. ADR-027 carries that choice and what was rejected.
 
 Nothing detects a release branch. The comparison tightens only when a new dated
 entry appears, which is 5 step 4, so the gate is silent between releases and
-fails on the branch cutting one.
+fails on the branch cutting a minor or a major one.
+
+While the package reports a patch version the live assertion passes without
+comparing anything, which no green run distinguishes from a real pass. The
+fixture tests are what keep the rule honest in that state, so they name a minor
+version and pin the patch case explicitly.
 
 Two ways to clear it. Run the audit per 4.4, or write
 `docs/audits/YYYY-MM-DD-360-skipped.md` naming the release and the reason.
@@ -1182,14 +1201,20 @@ issues created, a "Current bottleneck" section, and a findings table per
 dimension. The overall grade is the lowest dimension. File findings as issues
 rather than fixing them in the same pass — an audit is a discovery pass.
 
-Run before a release or a visibility change, and at milestone boundaries. 3.23
-gates the release case: the newest report must not be older than the release
-before the one being cut. One report can therefore cover two releases cut on
-the same day, which is deliberate and is the whole of what ADR-032 changed.
+Run before a minor or major release or a visibility change, and at milestone
+boundaries. A patch release owes no audit. 3.23 gates the release case: the
+newest report must not be older than the release before the one being cut. One
+report can therefore cover two releases cut on the same day, which is
+deliberate and is the whole of what ADR-032 changed.
 
-Declining the audit for a release is allowed and takes a document —
-`docs/audits/YYYY-MM-DD-360-skipped.md`, naming the release and the reason. It
-clears the same gate and lands in the release pull request, where a reviewer
+Every release owed one until v0.4.4, and ADR-033 records why that stopped: two
+consecutive declines left three releases resting on a single report, which is
+the shape the gate exists to refuse. Scoping the obligation to releases that
+add surface is what makes running it the cheaper option than declining it.
+
+Declining the audit for a release that owes one is allowed and takes a document
+— `docs/audits/YYYY-MM-DD-360-skipped.md`, naming the release and the reason.
+It clears the same gate and lands in the release pull request, where a reviewer
 reads it. Four releases were cut with no audit and no record of the decision,
 which is what the gate and this paragraph exist to stop repeating.
 
@@ -1249,8 +1274,9 @@ To cut a release:
 
 1. Check `git branch --no-merged main` and `git fsck --unreachable` for work
    that would be lost
-2. Run a 360 audit per 4.4; do not ship with critical findings open. 3.23 gates
-   this step — it was ungated until v0.4.0, and four releases skipped it
+2. For a minor or major release, run a 360 audit per 4.4; do not ship with
+   critical findings open. A patch release skips this step and owes no record.
+   3.23 gates it — it was ungated until v0.4.0, and four releases skipped it
 3. Branch `chore/release-vX.Y.Z`, set `__version__` in `src/pyomb/__init__.py`
    — hatchling reads it, so that literal is the only place a version lives
 4. Cut the `Unreleased` block of `CHANGELOG.md` into a dated `[X.Y.Z]` entry,

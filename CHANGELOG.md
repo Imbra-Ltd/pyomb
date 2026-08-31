@@ -6,6 +6,12 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The 360-degree audit is owed before a minor or major release. A patch
+  release owes nothing, where every release previously owed either a report or
+  a document declining one. See #243, ADR-033
+
 ## [0.4.3] - 2026-08-31
 
 No change to what the library does on the wire. This release carries a gate
