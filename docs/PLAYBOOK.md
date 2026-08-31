@@ -970,10 +970,16 @@ gap is stated rather than closed.
 pytest tests/test_release_audit_is_current.py
 ```
 
-The newest report in `docs/audits/` must postdate the release before the one
-the package reports. An audit run before the last release shipped says nothing
-about the changes since, and an audit dated that same day cannot be told from
-one written earlier, so both are refused.
+The newest report in `docs/audits/` must not be older than the release before
+the one the package reports. An audit run before that release shipped says
+nothing about the changes since, so it is refused. An audit dated the same day
+is accepted.
+
+Same-day was refused until v0.4.3. Dates carry no time, so an audit written
+before a release and one written after it read alike, and refusing both was
+the safe reading — until it turned out to block two releases on one calendar
+day outright, with no record datable late enough to clear the gate. ADR-032
+carries that reversal and what it gives up.
 
 The gate reads the changelog's dated entries rather than `git tag`. CI checks
 out shallow and fetches no tags, so a tag-based rule would find nothing and
@@ -1177,8 +1183,9 @@ dimension. The overall grade is the lowest dimension. File findings as issues
 rather than fixing them in the same pass — an audit is a discovery pass.
 
 Run before a release or a visibility change, and at milestone boundaries. 3.23
-gates the release case: the newest report must postdate the release before the
-one being cut, so an audit cannot be reused across two of them.
+gates the release case: the newest report must not be older than the release
+before the one being cut. One report can therefore cover two releases cut on
+the same day, which is deliberate and is the whole of what ADR-032 changed.
 
 Declining the audit for a release is allowed and takes a document —
 `docs/audits/YYYY-MM-DD-360-skipped.md`, naming the release and the reason. It

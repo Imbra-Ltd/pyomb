@@ -13,12 +13,23 @@ to bottom feels the procedure checking the work, and the ungated step in the
 middle is simply not done. Enforcement does not carry across adjacent steps,
 however the sequence reads.
 
-The rule is that the newest audit postdates the release before the one being
-cut. That is the weakest form that still means something: an audit run before
-the last release shipped says nothing about the changes since, and an audit
-dated the same day is indistinguishable from one that predates it, so it is
-refused too. Failing that way round costs an operator one audit and never lets
-a stale one through.
+The rule is that the newest audit is not older than the release before the one
+being cut. An audit run before that release shipped says nothing about the
+changes since, so it fails; an audit dated the same day passes.
+
+Same-day was refused until 2026-08-31 and is now accepted, which is a decision
+about cost rather than a sharpening of the rule. Dates carry no time, so an
+audit written the morning before a release and one written the evening after it
+are the same string, and refusing both was the safe reading. What that reading
+also did was make two releases on one calendar day impossible: the second is
+compared against the first, no record can be dated later than today, and the
+release is blocked with no honest way to clear it. The audit step is declinable
+by design, so a rule that cannot be satisfied at all is a worse failure than a
+same-day audit that covers less than it appears to.
+
+What the rule still catches is unchanged and is what it was written for: an
+audit predating the previous release, and no audit at all. Four releases were
+cut with neither, and none of them would pass this gate in either form.
 
 Skipping the audit stays available, because it is a judgement call and
 sometimes the right one. What is no longer available is skipping it in silence:
@@ -155,7 +166,8 @@ def stale_audit(dates, sections, version):
         version (str)      : The version the package reports
 
     Returns:
-        list[str] : Empty when the newest report postdates the previous release
+        list[str] : Empty when the newest report is not older than the previous
+            release
     """
 
     previous = previous_release(sections, version)
@@ -176,10 +188,12 @@ def stale_audit(dates, sections, version):
 
     newest = dates[-1]
 
-    if datetime.date.fromisoformat(newest) > shipped:
+    # Not older, rather than strictly newer. A same-day audit passes; see the
+    # module docstring for what that trade buys and what it gives up.
+    if datetime.date.fromisoformat(newest) >= shipped:
         return []
 
-    return [f"the newest audit is dated {newest} and {previous.version} shipped on {previous.date}"]
+    return [f"the newest audit is dated {newest}, before {previous.version} shipped on {previous.date}"]
 
 
 # A tree satisfying the rule: two releases, and a report dated after the older
@@ -201,11 +215,6 @@ BREAKS = (
         CLEAN_SECTIONS,
     ),
     (
-        "the audit is dated the day the previous release shipped, so one audit would cover two releases",
-        ["2026-01-01"],
-        CLEAN_SECTIONS,
-    ),
-    (
         "no audit has ever been written",
         [],
         CLEAN_SECTIONS,
@@ -216,6 +225,11 @@ BREAKS = (
         read_sections("## [9.9.9] - 2026-01-10\n\n## [9.9.8]\n"),
     ),
 )
+
+# The case the comparison was loosened to admit, asserted rather than left to
+# follow from the absence of a break above. A loosening that nothing pins reads
+# as an oversight to the next person tightening the rule back up.
+SAME_DAY_DATES = ["2026-01-01"]
 
 
 class ReleaseAuditIsCurrent(unittest.TestCase):
@@ -258,7 +272,7 @@ class ReleaseAuditIsCurrent(unittest.TestCase):
             "file nothing removes entries from.",
         )
 
-    def test_the_newest_audit_postdates_the_release_before_this_one(self):
+    def test_the_newest_audit_is_not_older_than_the_release_before_this_one(self):
         """The step four releases skipped, with nothing recording the skip."""
 
         self.assertEqual(
@@ -292,6 +306,18 @@ class ReleaseAuditIsCurrent(unittest.TestCase):
         for name in ("README.md", "2026-08-29-360-draft.md", "360.md"):
             with self.subTest(name=name):
                 self.assertIsNone(REPORT.match(name), f"{name} reads as a report")
+
+    def test_an_audit_dated_the_day_the_previous_release_shipped_clears(self):
+        """Two releases on one calendar day were otherwise unreachable."""
+
+        self.assertEqual(
+            stale_audit(SAME_DAY_DATES, CLEAN_SECTIONS, CLEAN_VERSION),
+            [],
+            "an audit dated the day the previous release shipped was refused. "
+            "That is the state this comparison was loosened out of: no record "
+            "can be dated later than today, so a second release on one day had "
+            "no way to clear the gate at all.",
+        )
 
     def test_the_rule_flags_the_break_it_exists_to_catch(self):
         """A rule that has never failed is a rule nothing has tested."""
