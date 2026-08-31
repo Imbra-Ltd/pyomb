@@ -2911,3 +2911,73 @@ package, per ADR-002. See `README.md` for usage and
   derives the block from the manifest plus a hand-declared set of exactly two
   files, so a third needs that set widened and ADR-008 amended. The pin stays
   four releases behind at `v2.61.0`; #208 carries it.
+
+## 2026-08-31 -- Groom the backlog, ship v0.4.2
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Cut v0.4.2**, a patch release carrying `docs/design/`, the Markdown
+    charset change and the `docs/specs/` move. The library code is unchanged;
+    the only source edit is the version literal. The wheel, sdist and SBOM are
+    attached to the tag and the README's install URL resolves to the published
+    wheel.
+  - **Declined the 360-degree audit and recorded the decision.**
+    `docs/audits/2026-08-31-360-skipped.md` names the release and the reason:
+    the 2026-08-29 report is two days old, graded B+ with zero critical
+    findings, and the five commits since are documentation. The record states
+    what it does not claim -- the ten findings that report raised still stand
+    -- and commits the next release to running the audit rather than declining
+    twice.
+  - **Held three ready pull requests until after the tag**, per PLAYBOOK 5.
+    #227, #233 and #230 were all green and mergeable before the release
+    branch existed. Merging any of them first would have shipped it inside
+    v0.4.2 with no changelog entry naming it, which is #217 and is still
+    enforced by nothing but attention.
+  - **Verified all 27 open issues against the tree and closed none.** Both P2
+    codec bugs reproduce exactly as filed -- #228 still serializes the old
+    value after a field is written, and #196 still emits a quantity one past
+    the specification cap. Every other claim checked out too.
+  - **Corrected four issue bodies whose measurements had decayed**, and left
+    #204 and #173 alone where the drift was one site and a dozen lines.
+- **PRs merged:** #234 (the release), then #227, #233 and #230 after the tag.
+  #235 is open -- a one-line docstring rewrap, deliberately framed as
+  declinable.
+- **Issues closed/created:** none created, none closed. #208 retitled and
+  rewritten, #203 recounted from eleven sites to nine, #171 and #172
+  re-measured, #210 given a re-check comment.
+- **Lesson:** an issue can anticipate one kind of decay and be undone by
+  another. #208 says outright to resolve the target tag from the listing
+  rather than from its body, because a named tag had been wrong twice before.
+  What went stale was not the tag but the reasoning attached to it: the body
+  argued the divergence re-read would be cheap because `quality.md` and
+  `docs.md` had not moved, and that held at `v2.62.0` and fails at `v2.66.0`,
+  where the two carry 389 changed lines and four decision records between
+  them. The self-aware caveat covered the number and not the argument built
+  on it.
+- **Lesson:** a verifiable claim written into a dated record can be falsified
+  by the very commit that ships it. The audit skip record said
+  `git diff --stat v0.4.1..HEAD -- src/` reports nothing, which was true while
+  the version bump sat unstaged and false the moment it was committed, because
+  the release edits the version literal. Checking the claim before pushing
+  cost one command; the alternative was a record refuted by its own commit on
+  the day it was written.
+- **Lesson:** a crude re-measurement disagreeing with a filed one is not
+  evidence the filed one was wrong. A quick classifier split the test suite
+  8/20/34 where #172 records 14/10/36. The classifier is the weaker
+  instrument, so the correction says the totals moved and leaves the split to
+  be re-derived when the layout decision needs it, rather than overwriting a
+  considered number with a hastier one.
+- **Lesson:** grooming that closes nothing is still grooming. Twenty-seven
+  issues verified and twenty-seven still live says the backlog is real work
+  rather than accumulated noise, which is the opposite of what a sweep
+  usually finds and is worth knowing before the next planning pass.
+- **Upstream:** one candidate, not yet filed. The falsified-by-its-own-commit
+  lesson above generalizes past this project -- a dated record asserting a
+  command's output is a load-bearing claim whose truth can depend on whether
+  the change it describes is committed yet, and `quality-gates-check-timing`
+  covers when a check runs without covering a claim written into a document.
+  Candidate file `templates/base/core/docs.md`. Filing is pending.
+- **Pending:** #235 awaits the owner and is fine to close. The pin is now five
+  releases behind at `v2.61.0` with `v2.66.0` out, and #208 now carries the
+  wider range and the expensive divergence step. The next release owes a real
+  audit rather than a second skip.
