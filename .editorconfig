@@ -10,8 +10,9 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 indent_style = space
 
-# 80 is the preferred width for new code. Ruff permits up to 120, which the
-# rulers in .vscode/settings.json show alongside the preferred width.
+# 80 is the preferred width for new code; ruff permits up to 120. Both are
+# drawn as rulers in .vscode/settings.json, which may also show markers that
+# gate nothing -- a ruler is a guide, not a limit.
 [*.py]
 indent_size = 4
 max_line_length = 80
