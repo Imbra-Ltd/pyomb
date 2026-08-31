@@ -2984,3 +2984,51 @@ package, per ADR-002. See `README.md` for usage and
   releases behind at `v2.61.0` with `v2.66.0` out, and #208 now carries the
   wider range and the expensive divergence step. The next release owes a real
   audit rather than a second skip.
+
+## 2026-08-31 -- Merge the held work and the editor rulers (evening)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Merged #235**, the docstring rewrap the earlier entry left with the
+    owner. Its body carried eight measured numbers and the base had moved
+    under it, so the measurements were re-run before the merge rather than
+    read. All eight held -- the intervening commit was the journal entry and
+    touched no source.
+  - **Added an 88-column ruler to the Python editor guides (#237)**, and
+    repaired the sentence it falsified. `.editorconfig` described the ruler
+    set as exactly two markers, the preferred width and ruff's ceiling, so a
+    third made that description wrong. The sentence now names the two
+    configured widths without counting the rulers drawn from them.
+  - **Contributed the version-staleness finding to the open upstream issue
+    rather than filing a second.** braboj/solid-ai-templates#1215 already
+    covers a cited version going stale; what this session found is the
+    measurement built on that version going stale with it, which is a comment
+    on that issue rather than a near-duplicate of it.
+- **PRs merged:** #235 and #237.
+- **Issues closed/created:** none. The backlog stands at 27 open, unchanged
+  from the grooming pass in the earlier entry.
+- **Lesson:** a comment that enumerates a set is a claim about the set's size,
+  and it goes stale the first time the set grows. `.editorconfig` said the
+  rulers show ruff's ceiling "alongside the preferred width" -- true of two
+  markers and false of three, falsified by a one-element edit in a different
+  file. The repair is to stop enumerating rather than to update the count,
+  because updating the count leaves the same defect waiting for the next
+  ruler.
+- **Lesson:** the guard an issue writes against its own decay can be narrower
+  than the decay. #208 said outright to re-resolve its target tag from the
+  listing, and that guard worked. What it did not cover was the measurement
+  the body offered as a reason to skip the expensive step, which was scoped
+  to the same range and went stale with it. A stale measurement that enlarges
+  the work announces itself when the work is done; one that shrinks it is
+  acted on and never revisited.
+- **Upstream:** no new filing. The candidate above was added to
+  braboj/solid-ai-templates#1215 as a comment, because that issue already
+  proposes the row this finding extends and `base-issues-duplicate` wants
+  exactly one ticket to survive. braboj/solid-ai-templates#1314, filed
+  earlier today, is the session's one new issue.
+- **Pending:** nothing blocked, and no pull request is open. The pin stays at
+  `v2.61.0` with `v2.66.0` out; #208 carries it and the submodule is an
+  off-limits path needing a proposal before it moves. The next release owes a
+  real 360-degree audit rather than a second skip. The 88-column ruler has no
+  recorded rationale beside it -- it matches neither configured width, and a
+  line in `.vscode/settings.json` would close that.
