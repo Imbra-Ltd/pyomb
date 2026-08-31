@@ -376,8 +376,8 @@ class ModbusPduParser(ModbusPduParserAbc):
         >>> assert pdu1 == pdu2
 
     Note: There is registration of all Modbus Requests and Responses in the end
-    of the module, so if it is not commented there is no need to make an additional
-    registration before serialization like in the example above.
+    of the module, so if it is not commented there is no need to make an
+    additional registration before serialization like in the example above.
     """
 
     _registry: dict[int, type[ModbusPdu]] = {}
