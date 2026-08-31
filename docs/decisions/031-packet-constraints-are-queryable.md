@@ -7,7 +7,7 @@ supersedes: []
 superseded_by: []
 ---
 
-# ADR-031: Field limits are queryable data, not a validation mode
+# ADR-031: Packet constraints are declared per class and queried, not a mode
 
 **Upstream:** filed as braboj/solid-ai-templates#1293 against
 `templates/base/core/quality.md`. With the domain skin off: the rule against
@@ -57,6 +57,23 @@ FC3 registers  quantity=2000  ->  03000007d0   sixteen times the cap
 
 One format string, two bounds.
 
+### A constraint is not always a bound, and not always on a PDU
+
+| Constraint | Shape | Carried by | Checked |
+| --- | --- | --- | --- |
+| FC3 quantity is 1 to 125 | a bound on one field | a PDU class | no |
+| FC15 byte count is the quantity rounded up to whole bytes | a rule across fields | a PDU class | no |
+| The protocol identifier is zero | a fixed value | `ModbusHeader` | no |
+| The slave address is 1 to 247; 0 broadcasts, 248 to 255 are reserved | a bound on one field | the RTU ADU classes | no |
+| The MBAP length matches the ADU received | a rule across parts | the TCP ADU classes | yes |
+
+Four of the five are unchecked, and only two are bounds on a PDU field. So
+scoping this to PDU field limits would leave the header and the slave address
+out, and both carry constraints the specification states plainly.
+
+`ModbusHeader`'s own docstring example passes `prot_id=2`, which no Modbus
+frame may carry. Nothing rejects it.
+
 ### What forces the decision now
 
 | Proposal | Asks for |
@@ -75,13 +92,14 @@ exception 03", which needs the bound as data.
 
 | # | Rule |
 | --- | --- |
-| 1 | Each class declares its own bounds, beside `PDU_FORMAT` and `PDU_ID` |
+| 1 | Every packet component declares its own constraints |
 | 2 | Two methods: `violations()` returns findings, `validate()` raises |
-| 3 | `serialize()` never validates and gains no parameter |
-| 4 | Enforcement is a caller's line at the transport boundary |
-| 5 | There is no validation mode |
+| 3 | A component's findings include those of the parts it holds |
+| 4 | `serialize()` never validates and gains no parameter |
+| 5 | Enforcement is a caller's line at the transport boundary |
+| 6 | There is no validation mode |
 
-### 1. Bounds live on the class
+### 1. Constraints live on the class that carries the field
 
 The declared bound is the only place the number appears. The docstring names
 the constraint and points at it, rather than repeating the value:
@@ -102,6 +120,18 @@ class ModbusRequestFC3(ModbusPdu):
 
 A class the specification bounds in no way declares that explicitly, so a
 reader can tell an unbounded field from an unwritten one.
+
+This is every packet component, not only the PDU classes. `ModbusHeader`
+carries the protocol identifier, and the RTU ADU classes carry the slave
+address. All of them descend from `ModbusPacketAbc`, so the methods below are
+declared there and the header and ADUs are covered by construction:
+
+```text
+  ModbusPacketAbc            declares violations() and validate()
+      +-- ModbusHeader       protocol identifier is zero
+      +-- ModbusPdu          per-function-code bounds
+      +-- the five ADUs      slave address, and the parts they hold
+```
 
 ### 2. Two methods, and the name carries the contract
 
@@ -152,11 +182,28 @@ an irregular class overrides it.
         +--> serialize():     calls neither
 ```
 
-### 3 to 5. What stays out
+### 3. A component reports for the parts it holds
 
-Rule 3 makes the design note's rule 5 hold by construction, because no
-parameter exists to pass wrongly. Rule 4 keeps validation out of the codec,
-per CLAUDE.md 1.2. Rule 5 means a caller ignoring a finding filters the
+An ADU holds a header and a PDU, and each of the three carries constraints of
+its own. Asking the ADU returns all of them, so a caller has one question to
+ask rather than three:
+
+```text
+  ModbusTcpRequest.violations()
+        |
+        +-- its own          the parts agree with each other
+        +-- header's         the protocol identifier is zero
+        +-- pdu's            the function code's own bounds
+```
+
+Without this a caller has to know the shape of what it holds, which is the
+knowledge the classes exist to carry.
+
+### 4 to 6. What stays out
+
+Rule 4 makes the design note's rule 5 hold by construction, because no
+parameter exists to pass wrongly. Rule 5 keeps validation out of the codec,
+per CLAUDE.md 1.2. Rule 6 means a caller ignoring a finding filters the
 returned tuple.
 
 ## Alternatives considered
@@ -175,7 +222,11 @@ returned tuple.
 ## Consequences
 
 - The deliverable is the reading. Going through the specification for every
-  function code the library models is the work; the check consumes it.
+  function code the library models, plus the header and the slave address, is
+  the work; the check consumes it.
+- Two constraints outside the PDU are named here and unchecked today: the
+  protocol identifier must be zero, and the slave address runs 1 to 247 with
+  0 broadcasting. Both are in scope for the work rather than a later ticket.
 - Two of #196's acceptance criteria move: its first, which asks that the
   limits be recorded once rather than per class, and its third, which asks
   that a caller be able to request the check.
@@ -200,5 +251,6 @@ returned tuple.
 - #196 -- the field-range work this settles the mechanism for
 - #224 -- the design note review, whose first finding this answers
 - #229 -- whether the packing helper stays public, which the Context cites
+- #232 -- the header docstring example this record's Context notes in passing
 - ADR-009 -- the record that gave caller-supplied packing its own name
 - `docs/design/design_notes.md` -- sections 10 and 25
