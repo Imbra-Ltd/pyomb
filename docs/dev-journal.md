@@ -3032,3 +3032,75 @@ package, per ADR-002. See `README.md` for usage and
   real 360-degree audit rather than a second skip. The 88-column ruler has no
   recorded rationale beside it -- it matches neither configured width, and a
   line in `.vscode/settings.json` would close that.
+
+## 2026-08-31 -- Loosen the audit gate, ship v0.4.3 (late evening)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Groomed the backlog against the tree and corrected seven bodies.** #210
+    is the one that changed meaning rather than numbers. It was filed as an
+    unidentified bind collision with a careful elimination list; a full suite
+    run named the site in its traceback, and it is not a defect at all. Two
+    `TestStartup` tests call `occupy_a_port()` and start a server on the port
+    they just took, asserting the server reports the failure -- so the
+    collision is the mechanism under test and the warning is a negative
+    control announcing itself. Re-scoped from finding a binding site to
+    stopping expected noise from burying a real one. The other six were
+    measurement drift: #167's whole density table, #173's module sizes,
+    #178's entry count plus a forward reference to an issue v0.4.2 closed,
+    #192's line numbers, #204's file count and one of its two violations, and
+    #229's internal call count.
+  - **Loosened the release-audit gate to accept a same-day record (#239).**
+    The comparison was strictly-later, and v0.4.2 had shipped that morning, so
+    v0.4.3 could not be cut at all: no record can carry a date later than
+    today. Declining did not help either, because a skip record carries the
+    same date and failed the same comparison. ADR-032 records the reversal and
+    what it gives up. ADR-027 keeps its other three decisions and is not
+    marked superseded, since supersession is for a record wholly replaced.
+  - **Cut v0.4.3 (#240)** with each pre-release check recorded rather than
+    asserted, including the two that did not simply pass: 217 unreachable
+    commits accounted for as squash and stash residue with one traced to its
+    landed content, and a 360-degree audit declined for the second release
+    running.
+- **PRs merged:** #239, #240 and #241.
+- **Issues closed/created:** none either way. The backlog stands at 27 open,
+  unchanged across the whole day.
+- **Lesson:** a gate can be correct, current, and impossible to satisfy. The
+  audit rule was right about staleness and had simply never run on a day when
+  two releases were wanted. Its strictness answered a real ambiguity -- a date
+  carries no time, so an audit written before a release and one written after
+  it read alike. What nobody checked was whether the refused set contained a
+  state the project legitimately needs, and it did. A step an operator is
+  invited to decline, with no form that clears the gate, is a worse failure
+  than the ambiguity being guarded against.
+- **Lesson:** an issue's diagnosis decays faster than its measurements. #210's
+  eliminations were each sound and its conclusion was wrong, because pytest's
+  attribution had moved to two tests whose entire purpose is to fail a bind.
+  One suite run settled what the body had held open since 2026-08-28. The
+  counts in the other six issues were the cheap half of grooming; re-running
+  the diagnosis was the half that changed what the work is.
+- **Lesson:** the record that warns about a thing is the one that gets
+  overridden. The v0.4.2 skip record closed by saying the next release runs
+  the audit rather than declining again, and the next release declined again.
+  That is the owner's call and the procedure allows it. What it does not allow
+  is taking it in silence, so the record gained a dated addendum superseding
+  its own forward instruction and naming the cost -- three releases now rest
+  on one report, against a trigger nothing watches.
+- **Upstream:** two filings, both from the gate change.
+  braboj/solid-ai-templates#1331 against `git.md`, that a currency gate
+  comparing dates carrying no time must compare non-strictly or one granule
+  becomes unreachable. braboj/solid-ai-templates#1332 against
+  `quality-gates.md`, that a loosened gate pins the case it was loosened to
+  admit, or the surviving diff reads as a typo the next reader reverts. Two
+  further candidates were judged already covered upstream, by
+  `docs-record-amendment` and by the rule against superseding a record to
+  correct one claim.
+- **Pending:** the 360 deferral is the open question and it is not recorded
+  anywhere a release will meet it. The owner scheduled the next audit for the
+  point the backlog reaches zero, which reads as a standing condition rather
+  than a one-off, and PLAYBOOK 4.4 still says to run one before a release.
+  Only the audit addendum carries the new position. Whether that is a
+  procedure change belongs to the owner and was left unasked rather than
+  guessed. The pin moved twice during the session and stands at `v2.61.0`
+  with `v2.68.0` out; #208 carries it and the submodule stays off-limits. The
+  88-column ruler still has no recorded rationale beside it.
