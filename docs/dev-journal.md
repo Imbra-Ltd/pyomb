@@ -2971,13 +2971,15 @@ package, per ADR-002. See `README.md` for usage and
   issues verified and twenty-seven still live says the backlog is real work
   rather than accumulated noise, which is the opposite of what a sweep
   usually finds and is worth knowing before the next planning pass.
-- **Upstream:** one candidate, not yet filed. The falsified-by-its-own-commit
-  lesson above generalizes past this project -- a dated record asserting a
-  command's output is a load-bearing claim whose truth can depend on whether
-  the change it describes is committed yet, and `quality-gates-check-timing`
-  covers when a check runs without covering a claim written into a document.
-  Filed as braboj/solid-ai-templates#1314 against
-  `templates/base/core/docs.md`.
+- **Upstream:** one filing. braboj/solid-ai-templates#1314 against
+  `templates/base/core/docs.md`: the falsified-by-its-own-commit lesson above
+  generalizes past this project. A dated report asserting a command's output
+  is a load-bearing claim whose truth can depend on whether the change
+  carrying the report is committed yet, and neither half of the
+  observations-versus-instructions split reaches it -- the claim was not
+  made stale by the world moving, it was made false by the act of recording
+  it. `quality-gates-check-timing` is the nearest neighbour and governs when
+  a check runs rather than what a document asserts.
 - **Pending:** #235 awaits the owner and is fine to close. The pin is now five
   releases behind at `v2.61.0` with `v2.66.0` out, and #208 now carries the
   wider range and the expensive divergence step. The next release owes a real
