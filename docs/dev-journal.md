@@ -3390,3 +3390,68 @@ package, per ADR-002. See `README.md` for usage and
   pointer needs the owner's approval. #210 now has three tests producing its
   warning rather than two. All three upstream filings are open rather than
   landed.
+
+## 2026-09-01 -- Make every documented example run (late night)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Settled the client's `host` on a string (#279, PR #280).** The
+    constructor documented `str` and defaulted to `b"localhost"`, `connect`
+    documented the same value as bytes, and `run_client` passed the bytes
+    form, so the shape the module demonstrated was the one its own docstring
+    contradicted. Two of the four new checks are drift guards over the same
+    fact written twice; a third reads `run_client` as a tree, because the
+    entry point builds its client inline and no signature carries the value.
+  - **Promoted the CRC walkthrough to `examples/` (#187, PR #283).** It
+    carried the only single-place statement of why the RTU checksum is sent
+    low byte first and nothing ran it. It now compares rather than prints,
+    against complete published frames, and CI executes it against a
+    consumer-shaped install. `scripts/` holds `gen_test_certs.py` alone, so
+    ADR-024's decision 4 covers all of it -- the gap that record left open.
+  - **Moved the transport demonstrations out of the docstrings (#254, PR
+    #284, ADR-040).** Three class docstrings each opened a socket to a server
+    nothing starts. They had been frozen by a deselect each, which was the
+    right first move and settled nothing: the gate then read as covering the
+    docstrings it was added to catch. `ModbusTcpStream` names an example that
+    already existed; the sender and receiver name one added here that holds
+    both ends of a connection in one process.
+  - **Dropped two stale counts from the guide documents (PR #285).**
+    ONBOARDING described the examples index as four patterns when there were
+    six, and PLAYBOOK said the two socket examples start the simulator when
+    there are three and the new one starts none.
+- **PRs merged:** #280, #283, #284 and #285.
+- **Issues closed/created:** three closed -- #279, #187 and #254. Created #281
+  and #282, both unmilestoned: the first is the sibling example that reports a
+  failed check by printing `False`, the second the encoding gate that does not
+  reach `examples/`, which #187's correction deferred rather than settled.
+- **Lesson:** designing a negative control is what tests a check; running it
+  only tests the control. The CRC example first compared the 16-bit checksum
+  value, which reads as the obvious assertion. Choosing what to plant is what
+  exposed the hole -- flipping the byte order leaves the value identical, so
+  the check would have passed on the exact defect the file exists to explain.
+  The comparison moved to the complete frame bytes before any control ran.
+- **Lesson:** a count written into prose rots from a direction no diff shows.
+  ONBOARDING had said four examples since before this session and nothing
+  reported it, because nobody edited the file -- every other document gate
+  here compares a document against the system when one of them changes. It
+  surfaced only from deliberately sweeping the guide documents for counts
+  after the directory grew twice, and the fix is to carry no number at all.
+- **Lesson:** the hypothesis that read as most obviously true was the one that
+  fell. The client's bytes host looked like it must break TLS, because the
+  `ssl` module wants a string for the name it sends. Probed rather than
+  asserted, and `wrap_socket` accepts bytes -- so the case for a string rests
+  on the docstrings and on matching the server, and the commit says so rather
+  than claiming a breakage that is not there.
+- **Upstream:** two filings. braboj/solid-ai-templates#1408 against
+  `examples.md`, that an exemption from an example gate is a holding position
+  and a demonstration needing a peer moves to the examples directory.
+  braboj/solid-ai-templates#1410 against the same file, that an example
+  printing its verdict cannot fail the smoke job that runs it -- which lands
+  hardest on the examples asserting against a specification vector, the ones
+  making the strongest claim.
+- **Pending:** #194 is still the last of v0.6.0 and still unstarted; it wants
+  the TLS config-object shape decided before code. The pin stays at `v2.61.0`
+  against `v2.72.0` and #268 needs the owner's approval on the pointer. #281
+  and #282 are open from this session. All five upstream filings, the three
+  from the previous session and the two from this one, are open rather than
+  landed.
