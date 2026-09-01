@@ -17,6 +17,9 @@ numbers follow [Semantic Versioning](https://semver.org/).
 - `ModbusHeader`'s docstring example passes a protocol id of zero, the only
   value a Modbus TCP frame may carry, where it previously passed 2. Both `Args`
   blocks now state that. No behaviour changes. See #232
+- The mypy freeze comment states the count it actually hides, 597 rather than
+  594, and says the figure is a dated measurement so the next reader
+  re-measures instead of trusting it. See #248
 
 ## [0.4.3] - 2026-08-31
 
