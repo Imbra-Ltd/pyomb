@@ -6,6 +6,14 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-01
+
+The packet classes stop storing each value twice, which is what makes a
+changed field reach the wire, and gain the specification's own bounds as data
+a caller can query. Two names are deprecated and one architecture question is
+settled. Nothing the library puts on the wire changes: every per-function-code
+suite asserts its frames against the published vectors and none was touched.
+
 ### Added
 
 - ADR-034 inverts how a rule from the pinned templates is adopted: a rule binds
@@ -447,7 +455,8 @@ no upgrade path to describe and no consumer to break.
   committed chain was rotated; it was self-signed and installed in no trust
   store
 
-[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.4...HEAD
+[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.4...v0.5.0
 [0.4.4]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.1...v0.4.2
