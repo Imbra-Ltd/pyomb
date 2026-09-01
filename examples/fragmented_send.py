@@ -16,7 +16,7 @@ which is what lets this file run without privileges on any machine.
 
 import socket
 
-from pyomb import OmbServerSim
+from pyomb import ModbusServerSimulator
 from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest, ModbusTcpResponse
 from pyomb.stream import ModbusTcpStream
 
@@ -58,7 +58,7 @@ def exchange(port: int) -> ModbusTcpResponse:
 
 def main() -> None:
     """Start the simulator, exchange one fragmented frame, then stop it."""
-    server = OmbServerSim(port=0)
+    server = ModbusServerSimulator(port=0)
     server.daemon = True
     server.start()
 

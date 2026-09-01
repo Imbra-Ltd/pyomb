@@ -15,10 +15,10 @@ import unittest
 import warnings
 from unittest import mock
 
-from pyomb import omb_client, omb_server
-from pyomb.omb_client import OmbClientSim
-from pyomb.omb_server import OmbServerSim
+from pyomb import client_simulator, server_simulator
+from pyomb.client_simulator import ModbusClientSimulator
 from pyomb.packets import ModbusPduParser, ModbusRequestFC1, ModbusResponseFC1
+from pyomb.server_simulator import ModbusServerSimulator
 
 CERTS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "certificates")
 
@@ -87,7 +87,7 @@ class TestSecureDefaults(unittest.TestCase):
     def test_client_requires_and_verifies_peer(self):
         import inspect
 
-        defaults = inspect.signature(OmbClientSim.__init__).parameters
+        defaults = inspect.signature(ModbusClientSimulator.__init__).parameters
 
         self.assertIs(defaults["verify_hostname"].default, True)
         self.assertEqual(defaults["verify_mode"].default, ssl.CERT_REQUIRED)
@@ -96,7 +96,7 @@ class TestSecureDefaults(unittest.TestCase):
     def test_server_requires_client_certificate(self):
         import inspect
 
-        defaults = inspect.signature(OmbServerSim.__init__).parameters
+        defaults = inspect.signature(ModbusServerSimulator.__init__).parameters
 
         self.assertEqual(defaults["verify_mode"].default, ssl.CERT_REQUIRED)
         self.assertEqual(defaults["protocol"].default, ssl.PROTOCOL_TLS_SERVER)
@@ -104,21 +104,21 @@ class TestSecureDefaults(unittest.TestCase):
     def test_no_custom_cipher_string_is_imposed(self):
         # None means the interpreter's secure default suite. The previous
         # values enabled null encryption and anonymous key exchange.
-        self.assertIsNone(OmbClientSim.DEFAULT_CIPHERS)
-        self.assertIsNone(OmbServerSim.DEFAULT_CIPHERS)
+        self.assertIsNone(ModbusClientSimulator.DEFAULT_CIPHERS)
+        self.assertIsNone(ModbusServerSimulator.DEFAULT_CIPHERS)
 
     def _secure_client(self, **kwargs):
         """Build a secure client whose context came from the permissive double."""
-        with mock.patch.object(omb_client, "ssl", WeakPlatformSsl()):
-            client = OmbClientSim(secure=True, **kwargs)
+        with mock.patch.object(client_simulator, "ssl", WeakPlatformSsl()):
+            client = ModbusClientSimulator(secure=True, **kwargs)
 
         self.addCleanup(client.sock.close)
         return client
 
     def _secure_server(self, **kwargs):
         """Build a secure server whose context came from the permissive double."""
-        with mock.patch.object(omb_server, "ssl", WeakPlatformSsl()):
-            return OmbServerSim(secure=True, **kwargs)
+        with mock.patch.object(server_simulator, "ssl", WeakPlatformSsl()):
+            return ModbusServerSimulator(secure=True, **kwargs)
 
     def test_client_declares_the_tls_floor_rather_than_inheriting_it(self):
         # MB-TCP-Security v21, R-32 and R-34: an mbaps device provides TLS 1.2
@@ -162,7 +162,7 @@ class TestMutualTls(unittest.TestCase):
         # named port that has just carried a connection can still refuse the
         # next bind while that connection sits in TIME_WAIT. Letting the
         # operating system choose sidesteps that rather than timing it.
-        self.server = OmbServerSim(port=0, secure=True, cert=SERVER_CRT, key=SERVER_KEY, ca_chain=CA)
+        self.server = ModbusServerSimulator(port=0, secure=True, cert=SERVER_CRT, key=SERVER_KEY, ca_chain=CA)
 
         # start() returns only once the listener is accepting: it waits on the
         # server's own started event, bounded by STARTUP_TIMEOUT, and raises
@@ -203,7 +203,7 @@ class TestMutualTls(unittest.TestCase):
             "ca_chain": CA,
         }
         options.update(kwargs)
-        self.client = OmbClientSim(**options)
+        self.client = ModbusClientSimulator(**options)
         self.client.connect()
 
         return self.client

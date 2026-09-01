@@ -142,12 +142,12 @@ MODBUS TCP RSP -> | HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 4, Unit-ID: 1) | P
 ### Run the server and client simulators
 
 ```python
-from pyomb import OmbClientSim, OmbServerSim
+from pyomb import ModbusClientSimulator, ModbusServerSimulator
 
-server = OmbServerSim(port=502)
+server = ModbusServerSimulator(port=502)
 server.start()
 
-client = OmbClientSim(port=502)
+client = ModbusClientSimulator(port=502)
 client.connect()
 
 header, pdu = client.request(fc=1, readAddress=0, readCount=10)
@@ -203,8 +203,8 @@ on the message text.
 src/pyomb/              # The library
   packets.py            # Codec: MBAP header, PDU classes, parser, frame wrappers
   stream.py             # Transport: length-driven framing and fragmentation
-  omb_client.py         # Client simulator and request builder
-  omb_server.py         # Server simulator, select loop and response factory
+  client_simulator.py   # Client simulator and request builder
+  server_simulator.py   # Server simulator, select loop and response factory
   errors.py             # Modbus exception codes as a Python hierarchy
   logger.py             # Logger that writes to stdout and optionally a file
   defines.py            # Protocol constants

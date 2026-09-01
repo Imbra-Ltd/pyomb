@@ -18,18 +18,18 @@ import socket
 import struct
 import unittest
 
+from pyomb.client_simulator import ModbusClientSimulator
 from pyomb.errors import ModbusNetworkError
-from pyomb.omb_client import OmbClientSim
 
 
 def disconnected_client():
     """A client whose socket has been closed and cleared.
 
     Returns:
-        OmbClientSim : The client, holding no socket
+        ModbusClientSimulator : The client, holding no socket
     """
 
-    client = OmbClientSim(host=b"127.0.0.1", port=502)
+    client = ModbusClientSimulator(host=b"127.0.0.1", port=502)
     client.disconnect()
 
     return client

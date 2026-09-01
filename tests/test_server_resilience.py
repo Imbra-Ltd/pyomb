@@ -17,8 +17,8 @@ import struct
 import time
 import unittest
 
-from pyomb.omb_server import OmbServerSim
 from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest, ModbusTcpResponse
+from pyomb.server_simulator import ModbusServerSimulator
 
 
 def read_request(address=0, count=8, trans_id=1):
@@ -54,14 +54,14 @@ class TestDisconnectToleratesADeadSocket(unittest.TestCase):
     """
 
     def test_disconnect_does_not_raise_when_shutdown_fails(self):
-        OmbServerSim().disconnect(DeadSocket())
+        ModbusServerSimulator().disconnect(DeadSocket())
 
     def test_socket_is_closed_even_when_shutdown_fails(self):
         # The close is the part that matters; the orderly shutdown is a
         # courtesy to a peer that is no longer listening.
         sock = DeadSocket()
 
-        OmbServerSim().disconnect(sock)
+        ModbusServerSimulator().disconnect(sock)
 
         self.assertTrue(sock.closed)
 
@@ -74,7 +74,7 @@ class TestAbruptDisconnect(unittest.TestCase):
         # Port 0 asks the operating system for a free one, so a listener the
         # previous test has not finished releasing cannot collide with this
         # one. The port is read back below, once the listener is up.
-        self.server = OmbServerSim(port=0, inactiveTimeout=30.0)
+        self.server = ModbusServerSimulator(port=0, inactiveTimeout=30.0)
         self.server.daemon = True
         self.server.start()
 

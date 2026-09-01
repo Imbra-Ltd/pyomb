@@ -385,9 +385,9 @@ inside them.
    `tests/test_packet_signature_contract.py` fails on a class that diverges.
 2. Register both at the bottom of the module, where every other class is
    registered.
-3. Add a builder to `RequestFactory` in `src/pyomb/omb_client.py` and a
+3. Add a builder to `RequestFactory` in `src/pyomb/client_simulator.py` and a
    branch to `sendRequest`.
-4. Add a responder to `ResponseFactory` in `src/pyomb/omb_server.py` and a
+4. Add a responder to `ResponseFactory` in `src/pyomb/server_simulator.py` and a
    branch to `on_data`.
 5. Add the code to the tables in `tests/test_server_dispatch.py` and
    `tests/test_client_requests.py`; both iterate a table, so one row each.
@@ -838,11 +838,17 @@ rather than a reference, so a name can sit in it with nothing bound behind it;
 no other gate reports it. CLAUDE.md 2.2 states the export rule and this is what
 holds it.
 
-The module also pins the deferral the simulators rest on. `OmbClientSim` and
-`OmbServerSim` are bound through the package's `__getattr__` rather than
-imported at the top, because importing them costs every caller the ssl import
-for a transport most callers never open — roughly 13ms against the package's
-own 35ms. A plain `import pyomb` must therefore load neither simulator nor ssl.
+The module also pins the deferral the simulators rest on.
+`ModbusClientSimulator` and `ModbusServerSimulator` are bound through the
+package's `__getattr__` rather than imported at the top, because importing
+them costs every caller the ssl import for a transport most callers never
+open — roughly 13ms against the package's own 35ms. A plain `import pyomb`
+must therefore load neither simulator nor ssl.
+
+The same resolver answers the two spellings retired in 0.6.0, `OmbClientSim`
+and `OmbServerSim`, returning the renamed class and raising
+`DeprecationWarning`. Those two are absent from `__all__`, so the check above
+cannot reach them and they carry their own test. Both go in 0.7.0.
 
 That half runs a fresh interpreter and reads `sys.modules` in it. In-process
 the suite has already imported both submodules for other reasons, so asking
@@ -851,7 +857,7 @@ there would always answer yes.
 Re-measure before treating the numbers above as current:
 
 ```bash
-python -X importtime -c "import pyomb; import pyomb.omb_client; import pyomb.omb_server"
+python -X importtime -c "import pyomb; import pyomb.client_simulator; import pyomb.server_simulator"
 ```
 
 Read the cumulative column on the `pyomb` line and on the two that follow it.

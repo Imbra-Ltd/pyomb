@@ -11,8 +11,8 @@ import socket
 import threading
 import unittest
 
+from pyomb.client_simulator import ModbusClientSimulator
 from pyomb.errors import ModbusNetworkError
-from pyomb.omb_client import OmbClientSim
 
 
 class SilentServer:
@@ -48,16 +48,16 @@ class TestClientTimeout(unittest.TestCase):
         self.server.close()
 
     def test_default_timeout_is_finite(self):
-        self.assertIsNotNone(OmbClientSim.DEFAULT_TIMEOUT)
-        self.assertGreater(OmbClientSim.DEFAULT_TIMEOUT, 0)
+        self.assertIsNotNone(ModbusClientSimulator.DEFAULT_TIMEOUT)
+        self.assertGreater(ModbusClientSimulator.DEFAULT_TIMEOUT, 0)
 
     def test_socket_carries_the_timeout_before_connect(self):
-        client = OmbClientSim(timeout=2.5)
+        client = ModbusClientSimulator(timeout=2.5)
 
         self.assertEqual(client.sock.gettimeout(), 2.5)
 
     def test_unanswered_request_raises_instead_of_hanging(self):
-        client = OmbClientSim(host="127.0.0.1", port=self.server.port, timeout=0.5)
+        client = ModbusClientSimulator(host="127.0.0.1", port=self.server.port, timeout=0.5)
         client.connect()
 
         try:
@@ -67,7 +67,7 @@ class TestClientTimeout(unittest.TestCase):
             client.disconnect()
 
     def test_timeout_is_configurable(self):
-        client = OmbClientSim(host="127.0.0.1", port=self.server.port, timeout=0.25)
+        client = ModbusClientSimulator(host="127.0.0.1", port=self.server.port, timeout=0.25)
         client.connect()
 
         try:
@@ -76,7 +76,7 @@ class TestClientTimeout(unittest.TestCase):
             client.disconnect()
 
     def test_none_restores_blocking_behaviour(self):
-        client = OmbClientSim(timeout=None)
+        client = ModbusClientSimulator(timeout=None)
 
         self.assertIsNone(client.sock.gettimeout())
 

@@ -18,7 +18,7 @@ import threading
 import time
 import unittest
 
-from pyomb.omb_server import OmbServerSim
+from pyomb.server_simulator import ModbusServerSimulator
 
 
 class ServerThreadExceptions:
@@ -62,7 +62,7 @@ class TestInactivitySweep(unittest.TestCase):
             server.join(5.0)
 
     def start_server(self, **options):
-        self.server = OmbServerSim(port=self.port, **options)
+        self.server = ModbusServerSimulator(port=self.port, **options)
         self.server.daemon = True
         self.server.start()
 

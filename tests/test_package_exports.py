@@ -24,6 +24,7 @@ submodules for other reasons, so asking here would always say yes.
 import subprocess  # nosec B404
 import sys
 import unittest
+import warnings
 
 import pyomb
 
@@ -38,7 +39,7 @@ def imported_names(statement):
         set[str] : The watched module names present after it runs
     """
 
-    watched = ("ssl", "pyomb.omb_client", "pyomb.omb_server")
+    watched = ("ssl", "pyomb.client_simulator", "pyomb.server_simulator")
 
     program = "import sys\n" + statement + f"\nprint(' '.join(name for name in {watched!r} if name in sys.modules))"
 
@@ -75,16 +76,67 @@ class PackageExportsWhatItNames(unittest.TestCase):
     def test_the_simulators_are_the_classes_the_submodules_define(self):
         """A deferred binding must hand back the same class, not a copy of it."""
 
-        from pyomb.omb_client import OmbClientSim
-        from pyomb.omb_server import OmbServerSim
+        from pyomb.client_simulator import ModbusClientSimulator
+        from pyomb.server_simulator import ModbusServerSimulator
 
-        self.assertIs(pyomb.OmbClientSim, OmbClientSim)
-        self.assertIs(pyomb.OmbServerSim, OmbServerSim)
+        self.assertIs(pyomb.ModbusClientSimulator, ModbusClientSimulator)
+        self.assertIs(pyomb.ModbusServerSimulator, ModbusServerSimulator)
 
     def test_an_unknown_name_still_raises(self):
         """__getattr__ answers for two names and must not swallow the rest."""
 
         self.assertRaises(AttributeError, getattr, pyomb, "NoSuchName")
+
+
+class TheRetiredSpellingsStillResolve(unittest.TestCase):
+    """Pins the aliases the rename left behind, which __all__ cannot reach.
+
+    The check above walks `__all__`, and these two names are deliberately not
+    in it: they are supported until the removal release and are not what a new
+    caller should write. That is exactly why they need a test of their own --
+    dropping the alias branch from the resolver would break `from pyomb import
+    OmbServerSim` for every existing caller, and every other assertion in this
+    module would stay green.
+
+    Deleting this class is part of the removal, not a way to make a red run
+    green. Until then an alias that stops resolving is a defect.
+    """
+
+    def test_each_retired_name_returns_the_class_that_replaced_it(self):
+        """An alias that returns something else is worse than one that raises."""
+
+        from pyomb.client_simulator import ModbusClientSimulator
+        from pyomb.server_simulator import ModbusServerSimulator
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+
+            self.assertIs(pyomb.OmbClientSim, ModbusClientSimulator)
+            self.assertIs(pyomb.OmbServerSim, ModbusServerSimulator)
+
+    def test_reading_a_retired_name_warns_and_names_its_replacement(self):
+        """A warning that does not say what to write instead costs a search."""
+
+        for retired, replacement in (
+            ("OmbClientSim", "ModbusClientSimulator"),
+            ("OmbServerSim", "ModbusServerSimulator"),
+        ):
+            with self.subTest(retired=retired):
+                with warnings.catch_warnings(record=True) as raised:
+                    warnings.simplefilter("always")
+                    getattr(pyomb, retired)
+
+                self.assertEqual(len(raised), 1)
+                self.assertTrue(issubclass(raised[0].category, DeprecationWarning))
+                self.assertIn(replacement, str(raised[0].message))
+                self.assertIn("0.7.0", str(raised[0].message))
+
+    def test_the_retired_names_are_not_advertised(self):
+        """A deprecated spelling in __all__ reads as one of two equal options."""
+
+        advertised = [name for name in pyomb.__all__ if name.startswith("Omb")]
+
+        self.assertEqual(advertised, [])
 
 
 class ImportingThePackageDoesNotOpenTheTransport(unittest.TestCase):
@@ -98,7 +150,7 @@ class ImportingThePackageDoesNotOpenTheTransport(unittest.TestCase):
     def test_naming_a_simulator_loads_it(self):
         """The deferral has to end when someone asks, or the name is useless."""
 
-        self.assertIn("pyomb.omb_server", imported_names("import pyomb; pyomb.OmbServerSim"))
+        self.assertIn("pyomb.server_simulator", imported_names("import pyomb; pyomb.ModbusServerSimulator"))
 
 
 if __name__ == "__main__":

@@ -30,7 +30,7 @@ from .packets import (
 from .stream import ModbusTcpStream
 
 
-class OmbClientSim(object):
+class ModbusClientSimulator(object):
     """Very simple Modbus TCP Client used for testing purposes.
 
     Args:
@@ -142,7 +142,7 @@ class OmbClientSim(object):
     ):
 
         # Initialize the logger
-        self.log = log or Logger(name="OmbClientSim")
+        self.log = log or Logger(name="ModbusClientSimulator")
         self.log.addHandler(logging.NullHandler())
 
         # Initialize the client parameters
@@ -874,8 +874,8 @@ class RequestFactory(object):
 
 
 def run_client():
-    logger = Logger(name="OmbClientSim")
-    client = OmbClientSim(
+    logger = Logger(name="ModbusClientSimulator")
+    client = ModbusClientSimulator(
         log=logger,
         host=b"localhost",
         port=502,

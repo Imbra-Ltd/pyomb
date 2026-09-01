@@ -11,8 +11,8 @@ import unittest
 
 from stub_socket import LoopbackSocket
 
+from pyomb.client_simulator import ModbusClientSimulator
 from pyomb.errors import ModbusIllegalDataValue, ModbusProtocolError
-from pyomb.omb_client import OmbClientSim
 from pyomb.packets import ModbusTcpRequest
 
 # The function codes that narrow a sequence to one value.
@@ -21,7 +21,7 @@ SINGLE_WRITE_CODES = (5, 6)
 
 class ClientOnAStubSocket(unittest.TestCase):
     def make_client(self, **options):
-        client = OmbClientSim(**options)
+        client = ModbusClientSimulator(**options)
 
         # The constructor opens a real socket that is never connected here.
         client.sock.close()

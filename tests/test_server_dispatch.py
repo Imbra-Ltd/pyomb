@@ -15,7 +15,6 @@ import unittest
 from unittest import mock
 
 from pyomb.errors import ModbusSlaveDeviceFailure
-from pyomb.omb_server import OmbServerSim
 from pyomb.packets import (
     ModbusError,
     ModbusHeader,
@@ -47,6 +46,7 @@ from pyomb.packets import (
     ModbusTcpRequest,
     ModbusTcpResponse,
 )
+from pyomb.server_simulator import ModbusServerSimulator
 
 # One request per supported function code, paired with the response class the
 # dispatch is expected to answer with.
@@ -102,7 +102,7 @@ class ServerUnderTest(unittest.TestCase):
     """Builds a server object without starting its listener thread."""
 
     def setUp(self):
-        self.server = OmbServerSim()
+        self.server = ModbusServerSimulator()
 
     def frame_for(self, pdu, trans_id=0x1234, prot_id=0, unit_id=17):
         header = ModbusHeader(trans_id=trans_id, prot_id=prot_id, length=len(pdu) + 1, unit_id=unit_id)
@@ -226,18 +226,18 @@ class TestResponseDelay(ServerUnderTest):
         # among the calls rather than that it is the only one.
         self.server.setDelay(0.25)
 
-        with mock.patch("pyomb.omb_server.time.sleep") as sleep:
+        with mock.patch("pyomb.server_simulator.time.sleep") as sleep:
             self.dispatch(ModbusRequestFC1(start_addr=0, quantity=8))
 
         sleep.assert_any_call(0.25)
 
     def test_no_delay_is_configured_by_default(self):
-        self.assertEqual(OmbServerSim().delay, 0)
+        self.assertEqual(ModbusServerSimulator().delay, 0)
 
 
 class TestServerConfiguration(unittest.TestCase):
     def test_setters_take_effect(self):
-        server = OmbServerSim()
+        server = ModbusServerSimulator()
 
         server.setDelay(1.5)
         server.setConnLimit(3)
@@ -250,17 +250,17 @@ class TestServerConfiguration(unittest.TestCase):
     def test_secure_mode_moves_off_the_plaintext_port(self):
         # MB-TCP-Security puts TLS on 802. The switch only applies to the
         # default, so an explicitly chosen port is left alone.
-        self.assertEqual(OmbServerSim.PLAINTEXT_PORT, 502)
-        self.assertEqual(OmbServerSim.ENCRYPTED_PORT, 802)
+        self.assertEqual(ModbusServerSimulator.PLAINTEXT_PORT, 502)
+        self.assertEqual(ModbusServerSimulator.ENCRYPTED_PORT, 802)
 
     def test_plaintext_server_builds_no_ssl_context(self):
-        server = OmbServerSim(secure=False)
+        server = ModbusServerSimulator(secure=False)
 
         self.assertFalse(hasattr(server, "ssl_context"))
         self.assertEqual(server.port, 502)
 
     def test_no_peers_before_any_client_connects(self):
-        self.assertEqual(OmbServerSim().getPeers(), [])
+        self.assertEqual(ModbusServerSimulator().getPeers(), [])
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ a peer observes, so it is pinned.
 import contextlib
 import unittest
 
-from pyomb.omb_client import OmbClientSim
+from pyomb.client_simulator import ModbusClientSimulator
 
 
 class ClosingRaises:
@@ -64,10 +64,10 @@ def client_whose_close_fails():
     """A connected-looking client whose socket refuses to close.
 
     Returns:
-        tuple[OmbClientSim, ClosingRaises] : The client and its socket double
+        tuple[ModbusClientSimulator, ClosingRaises] : The client and its socket double
     """
 
-    client = OmbClientSim(host=b"127.0.0.1", port=502)
+    client = ModbusClientSimulator(host=b"127.0.0.1", port=502)
 
     # The constructor opens a real socket. Close it before the double takes its
     # place, so the test leaves no descriptor behind.

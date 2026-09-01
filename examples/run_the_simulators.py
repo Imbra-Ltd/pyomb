@@ -13,7 +13,7 @@ This asks for a free port instead, which is what lets the file run without
 privileges on any machine.
 """
 
-from pyomb import OmbClientSim, OmbServerSim
+from pyomb import ModbusClientSimulator, ModbusServerSimulator
 
 # Seconds to wait for the listener. Bounded rather than blocking, so a startup
 # failure reports itself instead of hanging with the reason on stderr.
@@ -24,7 +24,7 @@ NO_LISTENER = "the server never reached its accept loop"
 
 def main() -> None:
     """Start both simulators, read 10 coils, and shut them down."""
-    server = OmbServerSim(port=0)
+    server = ModbusServerSimulator(port=0)
     server.daemon = True
     server.start()
 
@@ -33,7 +33,7 @@ def main() -> None:
 
     print(f"server listening on port {server.port}")
 
-    client = OmbClientSim(port=server.port)
+    client = ModbusClientSimulator(port=server.port)
 
     try:
         client.connect()

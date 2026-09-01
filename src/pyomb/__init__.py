@@ -10,8 +10,12 @@ The names re-exported here are the supported public API, alongside one
 submodule that is equally public: pyomb.packets for the function-code packet
 classes (ModbusRequestFC1, ModbusResponseFC3, ...). The two simulators are
 re-exported as well, bound on first use rather than on import.
+
+The spellings the simulators carried before 0.6.0, OmbClientSim and
+OmbServerSim, still resolve from here and warn. They are removed in 0.7.0.
 """
 
+import warnings
 from importlib import import_module
 from typing import TYPE_CHECKING
 
@@ -56,14 +60,28 @@ from .stream import ModbusTcpStream
 # `python -X importtime -c "import pyomb"` before treating the numbers as
 # current.
 if TYPE_CHECKING:
-    from .omb_client import OmbClientSim
-    from .omb_server import OmbServerSim
+    from .client_simulator import ModbusClientSimulator
+    from .server_simulator import ModbusServerSimulator
 
 # Each deferred name against the submodule that defines it.
 _DEFERRED = {
-    "OmbClientSim": "omb_client",
-    "OmbServerSim": "omb_server",
+    "ModbusClientSimulator": "client_simulator",
+    "ModbusServerSimulator": "server_simulator",
 }
+
+# The spelling each class carried before 0.6.0, against the one it carries
+# now. The map is the whole alias mechanism: the resolver below already looks
+# a name up to find its submodule, so an alias is one more lookup rather than
+# a module that re-imports under the old name. Removing these is deleting the
+# two entries and the branch that reads them.
+_RENAMED_IN_0_6_0 = {
+    "OmbClientSim": "ModbusClientSimulator",
+    "OmbServerSim": "ModbusServerSimulator",
+}
+
+# The release that drops the names above. Named once, so the warning text and
+# the removal cannot disagree.
+_ALIAS_REMOVAL = "0.7.0"
 
 __version__ = "0.5.1"
 
@@ -103,13 +121,18 @@ __all__ = [
     # Logging
     "Logger",
     # Simulators
-    "OmbClientSim",
-    "OmbServerSim",
+    "ModbusClientSimulator",
+    "ModbusServerSimulator",
 ]
 
 
 def __getattr__(name: str) -> object:
     """Bind a simulator class on the first access that names it.
+
+    A name retired in 0.6.0 resolves to its replacement and warns. Those two
+    are deliberately absent from __all__: they are supported until the
+    removal release and are not what a new caller should write, so the export
+    list advertises the current spelling alone.
 
     Args:
         name (str) : The attribute being read from this module
@@ -120,6 +143,16 @@ def __getattr__(name: str) -> object:
     Raises:
         AttributeError : The name is not one this module exports
     """
+    renamed = _RENAMED_IN_0_6_0.get(name)
+
+    if renamed is not None:
+        warnings.warn(
+            f"{name} is renamed to {renamed} and is removed in {_ALIAS_REMOVAL}",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        name = renamed
+
     submodule = _DEFERRED.get(name)
 
     if submodule is None:
