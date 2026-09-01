@@ -3252,3 +3252,72 @@ package, per ADR-002. See `README.md` for usage and
   sub-function code is an enumerated set it cannot express. #266 leaves the
   new capability with a feature bullet and no runnable example. #149 is a
   FAIL in three consecutive audits.
+
+## 2026-09-01 -- Groom the backlog, ship v0.5.1 (evening)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Groomed all sixteen open issues against the current tree.** Ten held
+    exactly as filed, line numbers included. Seven took dated correction
+    notes: #268 was measuring a range two releases short, #172 and #170 had
+    drifted on counts again, #210's open question was answerable from CI,
+    #187's second criterion asks for a convention its destination does not
+    carry, and #231 was still telling a reader to consult a spike that had
+    closed. The corrections are notes above the body, never rewrites of it --
+    a body edited in silence reads as freshly measured.
+  - **Documented the constraint capability and shipped v0.5.1 (#266, #270,
+    #271).** A runnable example, a usage section, and the examples index
+    entry with its real output. The release exists because the tagged tree of
+    v0.5.0 documented the capability nowhere, which the section below covers.
+  - **Scoped v0.6.0 to the simulator public API.** ADR-035 unblocked #173,
+    #192 and #194 the session before, and all three name each other as
+    wanting one release because they break the same public API. #173 is a
+    spike and goes first: it settles the module names, the class names, the
+    call sites and the alias policy that the other two implement against.
+    The milestone carries the sequence and the out-of-scope list.
+  - **Wrote PLAYBOOK 4.7 for the grooming pass.** Three prior sessions left
+    correction notes in issue bodies and the convention lived only in those
+    notes, so the next session had nothing to copy but an example.
+- **PRs merged:** #270 and #271.
+- **Issues closed/created:** one closed, #266, shipped rather than declined.
+  None created here; the two findings worth a ticket went upstream instead.
+- **Lesson:** a tag freezes the documentation as well as the code, and the
+  rule meant to prevent that does not reach it. `readme.md` requires the
+  README to change in the same commit as the behaviour it describes. v0.5.0
+  satisfied it -- the feature bullet merged eleven minutes after the tag, the
+  usage section the next afternoon, both correctly reviewed and gated -- and
+  the tagged tree still described the new capability nowhere, in the source
+  archive, the sdist and the wheel metadata alike. A rule phrased against
+  commits cannot see a tag. `git show v0.5.0:README.md | grep -c
+  'violations\|constraint'` returns 0, and nothing else in the pipeline reads
+  that file as the tag froze it.
+- **Lesson:** an issue that cites a sibling's approach cites a plan. #254
+  described #247's chosen route as marking three examples with a skip marker,
+  and set two acceptance criteria against it. #247 shipped deselect entries
+  in the manifest instead, which is the better answer, and left #254 naming a
+  mechanism nobody built. Both mechanical checks the review template gives
+  came back clean: no open pull request closed it, and no decision record had
+  moved it. What moved it was an implementer making a better choice, which
+  leaves no trace in either place.
+- **Lesson:** a listing read straight after the writes it should reflect
+  reported one of three. Assigning the milestone to #173, #192 and #194
+  succeeded three times, and `gh issue list --milestone` then returned #173
+  alone; reading each issue directly confirmed all three carried it. Whether
+  that was propagation or a limit was not established, and the fix does not
+  depend on knowing: read back per item after a batch of writes, never
+  through the listing that aggregates them. This is the third instance in two
+  sessions of a filter answering plausibly and wrongly, which makes it a
+  pattern rather than three accidents.
+- **Upstream:** two filings, both against rules that passed while the defect
+  shipped. braboj/solid-ai-templates#1397 against `review.md`, proposing a
+  sixth shape for the issue-verification section -- stale by a sibling's
+  route -- since its two checks look at pull requests and decision records
+  and this moves through neither. braboj/solid-ai-templates#1398 against
+  `git.md`, that a pre-release check should confirm the tree being tagged
+  documents the features its own list claims.
+- **Pending:** the pin still sits at `v2.61.0` against `v2.71.0`, and #268
+  now carries the corrected range -- ten releases, 76 commits, eleven bound
+  files. It needs the owner's approval before the pointer moves. v0.6.0 is
+  scoped and unstarted. #262 and #149 are where the previous entry left them,
+  and #149 is now a FAIL in three consecutive audits with no work against it.
+  Both upstream filings are open rather than landed.

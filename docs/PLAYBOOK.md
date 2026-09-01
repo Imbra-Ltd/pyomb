@@ -1294,6 +1294,38 @@ the commands above are the manual path rather than the routine one. Treat a
 lock nobody has touched in months as a finding: it pins an ageing toolchain
 with no signal that it has aged.
 
+### 4.7 Groom the backlog
+
+An issue is written against the tree as it stood on its filing date, and this
+tree moves daily. Re-measure every claim in an open issue against the tree it
+will land in, rather than the one it was filed against — a count, a line
+number, a grep that printed nothing, a file that existed.
+
+Record what moved as a dated note at the top of the body, never by rewriting
+the text beneath it. The body is what the next reader triages from, and the
+note is what tells them which parts of it were checked and when:
+
+```markdown
+> **Corrected YYYY-MM-DD**, during the grooming pass after the vX.Y.Z release.
+> <what moved, with the new measurement>
+```
+
+Leave the superseded figures in place below it. A body rewritten in silence
+reads as freshly measured, and the reader cannot tell a claim verified today
+from one carried since filing.
+
+Four things move an issue without touching it, and only two have a check.
+Per `review.md`, list the decision records accepted since the filing date, and
+search open pull requests for one already closing it. The other two need
+reading: a sibling issue that shipped a different route from the one this body
+describes, and a spike that has closed since, whose record answers a criterion
+this body still poses as open.
+
+Verify a deferred issue's trigger against the system rather than re-reading
+the body, since a trigger that has fired and one that has not read the same
+from the text. A fired trigger makes the issue open work rather than deferred
+work, and the body says so.
+
 ## 5. Release and deploy
 
 Releases are tagged and published on GitHub. The distribution is not on a
