@@ -19,6 +19,31 @@ numbers follow [Semantic Versioning](https://semver.org/).
   carry, rather than a structure to build; six capabilities tracing to no
   requirement are refused outright; serial transport is in scope and
   unscheduled. Nothing on the wire changes. See #224, ADR-035
+- A PDU payload may be given as bytes, which is documented and supported.
+  Bytes carry any sequence, where the format string they replace describes
+  only the layouts `struct` can write. See #229, ADR-036
+
+### Changed
+
+- `ModbusPdu.pack` and `ModbusPdu.unpack` are deprecated and are removed in
+  0.6.0. They warn and still work; the packet classes call internal helpers
+  and emit nothing. Build the bytes and pass them as `data` instead. See
+  #229, ADR-036
+
+### Fixed
+
+- Changing a value on a packet changes the bytes it sends. Every concrete
+  class stored each value twice, as the named attribute and as a combined
+  payload built once at construction, and only the second was serialized --
+  so setting a quantity of 2001 on an FC3 request still emitted a frame
+  asking for 10, with nothing raised. The classes now declare their fields
+  and derive the payload from them on every read. Two packets carrying the
+  same values compare equal, which was broken for the same reason. Assigning
+  the derived payload raises and names the fields to set instead. No wire
+  output changes. See #228
+- A packet built from bytes survives a round trip. It carried the same frame
+  as the packet read back from its own output while comparing unequal to it.
+  See #229, ADR-036
 
 ## [0.4.4] - 2026-09-01
 

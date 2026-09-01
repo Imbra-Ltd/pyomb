@@ -66,10 +66,10 @@ class TestPacketApi(unittest.TestCase):
         print(pdu1)
 
         # Serialize the PDU
-        stream = pdu1.pack(">B5B")
+        stream = pdu1.serialize()
 
         # Deserialize the PDU
-        pdu2 = ModbusPdu.unpack(stream, ">B5B")
+        pdu2 = ModbusPdu.deserialize(stream)
         print(pdu2)
 
         # Assert the PDUs are equal
@@ -87,7 +87,7 @@ class TestPacketApi(unittest.TestCase):
         test_pdu = ModbusPdu(fc=1, data=(0, 2, 0, 3))
 
         # Serialize the test pdu
-        stream = test_pdu.pack(">B4B")
+        stream = test_pdu.serialize()
 
         # Parse the request pdu
         parsed_pdu = ModbusPduParser.parse_request(stream)
