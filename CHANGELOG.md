@@ -17,6 +17,10 @@ numbers follow [Semantic Versioning](https://semver.org/).
 - `ModbusHeader`'s docstring example passes a protocol id of zero, the only
   value a Modbus TCP frame may carry, where it previously passed 2. Both `Args`
   blocks now state that. No behaviour changes. See #232
+- `ModbusTcpPacket`'s docstring example asserts what the class provides. It
+  compared a hand-built packet against a deserialized one and failed, because
+  deserializing yields a generic PDU by design; it now compares the frames,
+  which do survive the round trip. No behaviour changes. See #246
 - The mypy freeze comment states the count it actually hides, 597 rather than
   594, and says the figure is a dated measurement so the next reader
   re-measures instead of trusting it. See #248
