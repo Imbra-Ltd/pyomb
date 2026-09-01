@@ -3321,3 +3321,72 @@ package, per ADR-002. See `README.md` for usage and
   scoped and unstarted. #262 and #149 are where the previous entry left them,
   and #149 is now a FAIL in three consecutive audits with no work against it.
   Both upstream filings are open rather than landed.
+
+## 2026-09-01 -- Rename the simulators, PEP 8 their API (night)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Ran spike #173 to a record (ADR-038).** `omb_client.py` and
+    `omb_server.py` promised a client and a server, held simulators, and
+    repeated the package name in a prefix. The record settles the module
+    names, the class names and the alias policy the two follow-ons implement
+    against. One acceptance criterion was already met on arrival: the two
+    TODOs proposing the rename went under an hour after the issue was filed,
+    in the TODO triage pass, so the spike owed nothing there.
+  - **Carried the move (#274, PR #276).** 28 files and 115 lines, two of them
+    strings rather than imports. One of those two was a defect in its own
+    right and is covered below.
+  - **Gave the public API PEP 8 names (#192, PR #277, ADR-039).** The issue
+    counted seven camelCase names; running ruff past its own freeze found
+    eighteen, plus four instance attributes no lint rule reaches at all. The
+    server now takes `host`, a string, where it took `ipAddress` as a 32-bit
+    integer unpacked with `inet_ntoa`, and `frag_count` became `frag_size` --
+    the server alone had carried one value under three spellings.
+  - **Broke every renamed name rather than aliasing.** The class rename
+    earlier the same day kept aliases because the resolver already existed.
+    Here a method alias is cheap and a keyword alias is not, and aliasing the
+    methods alone leaves a call that resolves and then raises on its own
+    keyword, naming a method the caller never wrote.
+  - **Took `N802` and `N803` off both freeze entries**, rule lists otherwise
+    byte-identical, and gave PLAYBOOK 3.4 the command that sizes a frozen
+    family without editing the freeze.
+- **PRs merged:** #273, #276 and #277.
+- **Issues closed/created:** three closed -- #173, #274 and #192. Created #274
+  and #275; the first closed the same session, the second is unmilestoned and
+  holds the 0.7.0 alias removal so the obligation does not live only in a
+  record. Correction notes on #210, #170 and #268.
+- **Lesson:** a guard that matches live state against a string constant fails
+  open, and no run reports it. `conftest.py` held the leak guard's thread name
+  and nothing pinned it to the class that sets it, so the rename would have
+  left the guard comparing against a name nothing produces -- matching no
+  thread, returning empty, passing every test including one leaking the thread
+  it exists to catch. The rename is what surfaced it, not a failure.
+- **Lesson:** a negative control aimed at one break says nothing about
+  another. The `host` tests were drafted asserting the attribute and a
+  loopback connection, with a docstring claiming they would catch a server
+  that accepted `host` and ignored it. They would not: a wildcard listener
+  serves a loopback client the same way. Only planting that second shape
+  showed it, and the control for the first break had passed convincingly.
+- **Lesson:** an edit that rewrites line endings destroys the evidence a plant
+  landed. Scripting one with `write_text` on Windows turned the file's LF into
+  CRLF, so the diff meant to confirm a single planted line reported all 1,065.
+  Nothing was wrong with the plant; the confirmation was unreadable, which is
+  indistinguishable from a plant that missed. Re-planting with newlines
+  preserved is the fix, and confirming before reading the run is what caught
+  it at all.
+- **Upstream:** three filings. braboj/solid-ai-templates#1404 against
+  `python-lib.md`, that a package already binding a name through a module
+  `__getattr__` owns the mechanism a deprecation alias needs.
+  braboj/solid-ai-templates#1405 against `quality.md`, that a rename spanning
+  one call site is deprecated whole or not at all. And
+  braboj/solid-ai-templates#1406 against `quality-gates.md`, that sizing a
+  frozen rule family needs no edit to the freeze. A fourth candidate, the
+  drift guard above, is already covered by `testing-drift-guard` and was not
+  filed.
+- **Pending:** #194 is the last of v0.6.0 and is unstarted -- the TLS settings
+  are still loose keyword arguments and a raw OpenSSL cipher string, and it
+  wants a config-object shape decided before code. The pin stays at `v2.61.0`
+  against `v2.72.0`, now 88 commits over 12 of the 16 bound files, and the
+  pointer needs the owner's approval. #210 now has three tests producing its
+  warning rather than two. All three upstream filings are open rather than
+  landed.

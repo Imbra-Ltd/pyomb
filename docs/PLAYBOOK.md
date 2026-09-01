@@ -462,6 +462,21 @@ suppresses exactly the findings the table has to be rebuilt from, so
 `ruff check src tests scripts examples --output-format=json` reports nothing
 and the table would come back empty.
 
+To size one rule family before taking it on, run it past the table instead of
+editing the table. `--isolated` ignores `pyproject.toml`, so nothing is
+suppressed:
+
+```bash
+python -m ruff check --isolated --select N802,N803 src/pyomb/
+```
+
+Pass condition: the command reports every finding those rules hide, and it
+reports zero once the family has been taken on. Name the rules, because
+`--isolated` drops the project's own `select`, `line-length` and
+`target-version` along with the freeze — a bare `--isolated` measures ruff's
+defaults rather than this project's gate. That is why it sizes one family and
+does not replace emptying the block to rebuild the whole table.
+
 ruff is pinned to a minor range in `pyproject.toml`, because a release that
 adds rules to an already-selected family, or that changes what the formatter
 emits, would fail a gate on untouched code. Bump it deliberately, not on the
