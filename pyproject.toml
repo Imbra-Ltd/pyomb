@@ -138,8 +138,12 @@ convention = "google"
 strict = true
 files = ["src"]
 
-# 594 findings across six modules, and only two distinct codes, both of them
-# annotations the tree does not yet carry: no-untyped-call and no-untyped-def.
+# 597 findings across six modules when measured on 2026-09-01, and only two
+# distinct codes, both of them annotations the tree does not yet carry:
+# no-untyped-call at 327 and no-untyped-def at 270. The figure is a
+# measurement rather than a constant, and it rises as the tree grows, so
+# re-measure it by emptying the blocks below and rerunning the checker rather
+# than trusting the number written here.
 # Nothing frozen here is a real defect any more. The override code went when
 # one signature per operation was settled across the packet classes and across
 # the sender and receiver; assignment went when the client's socket attribute
