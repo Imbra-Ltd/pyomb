@@ -21,6 +21,10 @@ numbers follow [Semantic Versioning](https://semver.org/).
   three dated reports and nine release entries, where they sat at two and six.
   A floor below its corpus still catches a total enumeration failure and stops
   catching a partial one. See #249
+- `ModbusTcpPacket`'s docstring example asserts what the class provides. It
+  compared a hand-built packet against a deserialized one and failed, because
+  deserializing yields a generic PDU by design; it now compares the frames,
+  which do survive the round trip. No behaviour changes. See #246
 - The mypy freeze comment states the count it actually hides, 597 rather than
   594, and says the figure is a dated measurement so the next reader
   re-measures instead of trusting it. See #248
