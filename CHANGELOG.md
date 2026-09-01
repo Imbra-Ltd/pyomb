@@ -8,6 +8,11 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A runnable example and a README usage section for the constraint checking
+  v0.5.0 shipped, showing a violation reported and the frame serialized
+  anyway. The feature list named the capability and nothing demonstrated it,
+  which left a reader to infer that the library refuses to send a bad frame --
+  the opposite of what it does. See #266
 - ADR-037 records the contract v0.5.0 shipped: a packet holds each value once,
   the payload is a view derived from the named fields on every read, and
   assigning that view raises rather than silently doing nothing. The record is

@@ -12,7 +12,7 @@ pip install .
 
 Every example runs offline. The two that need a Modbus server start this
 project's own simulator in-process rather than reaching for a host, so a reader
-with the repository and nothing else can run all four.
+with the repository and nothing else can run all five.
 
 ## A note on ports
 
@@ -63,6 +63,33 @@ MODBUS TCP REQ -> | HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 6, Unit-ID: 1) | P
 round trip reproduces the frame: True
 frame matches the written-out vector: True
 ```
+
+### Report a constraint violation
+
+```bash
+python examples/report_a_constraint_violation.py
+```
+
+Asks two read-holding-registers requests which of the specification's
+constraints they break, and serializes the one that breaks a constraint. No
+socket, for the same reason as the two above.
+
+```text
+quantity=125 reports 0 violations
+ModbusRequestFC3.quantity is 126; the specification requires 0x0001 to 0x007D
+  field=quantity value=126
+serialized anyway: 030000007e
+validate() raises: ModbusRequestFC3.quantity is 126; the specification requires 0x0001 to 0x007D
+```
+
+The Modbus Application Protocol v1.1b3 caps Read Holding Registers at 125
+registers per request, so 125 reports nothing and 126 is one past the edge.
+The bound is the document's, not this library's.
+
+The last two bytes of the serialized frame are `007e`, the quantity the
+specification does not allow. That the frame goes out at all is the behaviour
+being shown: the check reports and never refuses, because sending a frame a
+device should reject is how you find out whether it does.
 
 ### Send a fragmented message
 

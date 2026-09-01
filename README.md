@@ -165,6 +165,38 @@ HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 5, Unit-ID: 1)
 PDU: (FC: 01, Data: (2, 255, 255))
 ```
 
+### Ask a packet what it breaks
+
+The Modbus Application Protocol caps Read Holding Registers at 125 registers
+per request, so a quantity of 126 is one past the edge:
+
+```python
+from pyomb.packets import ModbusRequestFC3
+
+request = ModbusRequestFC3(start_addr=0, quantity=126)
+
+for finding in request.violations():
+    print(finding)
+
+print(request.serialize().hex())
+```
+
+The violation is reported and the frame still goes out:
+
+```text
+ModbusRequestFC3.quantity is 126; the specification requires 0x0001 to 0x007D
+030000007e
+```
+
+The trailing `007e` is the disallowed quantity, on the wire. That is the
+point: `serialize()` reaches neither `violations()` nor `validate()`, so
+sending a frame a device should reject stays possible, which is how you find
+out whether the device rejects it. `validate()` is the same check with the
+opposite manners — it raises a `ModbusPacketError` where `violations()`
+returns a tuple of findings. A finding carries `field`, `value`, `rule` and
+`source`, so a harness can assert which bound was crossed rather than match
+on the message text.
+
 ## Project structure
 
 ```text
