@@ -103,16 +103,24 @@ REPORT = re.compile(r"^(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})-360(-skipped)?[.]md$
 # classes are spelled out for the same reason as above.
 VERSION = re.compile(r"^(?P<major>[0-9]+)[.](?P<minor>[0-9]+)[.](?P<patch>[0-9]+)")
 
-# What the tree held when this floor was set: the 2026-08-18 report and the
-# 2026-08-29 one added beside this gate. A dated report is immutable once
-# merged, so this corpus only ever grows and the floor takes the measured count
-# rather than a margin below it. A listing that comes back short means the
-# enumeration broke, not that a report was retired.
-REPORTS_AT_LEAST = 2
+# What the tree held on 2026-09-01: the 2026-08-18 and 2026-08-29 reports and
+# the 2026-08-31 skip record. A dated report is immutable once merged, so this
+# corpus only ever grows and the floor takes the measured count rather than a
+# margin below it. A listing that comes back short means the enumeration broke,
+# not that a report was retired.
+#
+# Raise it when a report lands. It sat at 2 while the corpus reached 3, which
+# is the failure this floor exists to catch, one level up: the assertion passed
+# and measured less than it claimed to.
+REPORTS_AT_LEAST = 3
 
-# The six releases the changelog recorded when this floor was set, 0.1.0 through
-# 0.4.0. Append-only for the same reason, and sized the same way.
-RELEASES_AT_LEAST = 6
+# The nine releases the changelog recorded on 2026-09-01, 0.1.0 through 0.4.3.
+# Append-only for the same reason, and sized the same way.
+#
+# Nine and not ten. The reader this is compared against drops the `Unreleased`
+# section, so counting the file's `## [` headings overstates it by exactly one
+# and would fail this gate on a correct tree.
+RELEASES_AT_LEAST = 9
 
 NOT_A_CHECKOUT = "not a git checkout, so there is no tracked-file list to read"
 
