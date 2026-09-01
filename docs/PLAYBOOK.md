@@ -1013,6 +1013,37 @@ Two ways to clear it. Run the audit per 4.4, or write
 Declining the step is a judgement call an operator is allowed to make; what the
 gate refuses is passing over it in silence, which is what four releases did.
 
+### 3.24 Docstring examples (pytest)
+
+```bash
+pytest --doctest-modules src/
+pytest tests/test_doctests_are_gated.py
+```
+
+The package's docstring examples run as part of the default suite, so an
+example that stops holding fails a pull request. `testpaths` carries `src` and
+`addopts` carries `--doctest-modules`; neither is optional, and dropping either
+stops every example being collected while the suite reports the same green.
+
+Three examples are deselected by name. Each opens a socket to a Modbus server
+on localhost that nothing starts, so each raises a connection error wherever it
+runs. A bare `pytest` therefore reports deselected examples on a healthy tree —
+that is the freeze, not a fault.
+
+They are frozen one docstring at a time rather than by excluding their module,
+because a fourth example in the same file needs no peer and stays gated.
+Excluding the file would drop a working example along with the broken ones,
+which is narrowing the gate rather than exempting what fails.
+
+Never add a name to that list to make the gate pass. An example that cannot run
+is a defect in the example; the freeze records the three that were already
+broken. #254 carries them.
+
+The second command is the control. It fails when the collect flag or the
+package path leaves the manifest, when a frozen name no longer matches an
+example that exists, and when the manifest and the test disagree about which
+examples are exempt.
+
 ## 4. Maintenance
 
 ### 4.1 Bump the templates submodule
