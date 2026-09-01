@@ -3172,3 +3172,83 @@ package, per ADR-002. See `README.md` for usage and
   transport examples remain unrunnable and are frozen, not fixed. Whether the
   process machinery this session left standing is still too heavy is a
   question the next measurement answers, not this entry.
+
+## 2026-09-01 -- Single-source the packets, ship v0.5.0 (afternoon)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Cut v0.5.0 across eight pull requests**, closing #224, #228, #229 and
+    #196 -- the whole `v0.5.0` milestone, created at the start of the session
+    and closed at the end. Unlike v0.4.4 this release changes the library:
+    `packets.py` grew by roughly 400 lines and gained a public type. Nothing
+    on the wire moved, because the per-function-code suites assert against the
+    published vectors and none was touched.
+  - **Settled the architecture direction note (#224, ADR-035).** Its six
+    layers are adopted as vocabulary for responsibilities the three packages
+    already carry, not as a structure to build, so `CLAUDE.md` 1.2 is
+    unchanged and no module was split. Six capabilities tracing to no
+    requirement are refused with no tracking issue. Serial transport is in
+    scope because the project claims RTU and ships only its codec half.
+    Refusing the restructure is what unblocked #173, #192 and #194, which had
+    been waiting to be sequenced behind a document change that will not
+    happen.
+  - **Single-sourced the packet fields (#228, ADR-037).** The only P1: every
+    concrete class stored each value twice and serialized the copy nobody
+    wrote to, so setting a quantity of 2001 still emitted a frame asking for
+    10. Classes now declare `PDU_FIELDS` and derive the payload on every
+    read. Deleting the second copy is also what repaired equality, since a
+    property leaves the instance dictionary -- that was one fix, not two.
+  - **Made the payload take bytes and retired the format string (#229,
+    ADR-036).** Two routes produced identical frames and the documented one
+    was the narrower. `pack` and `unpack` warn and go in 0.6.0 rather than
+    being removed outright, because a documented escape hatch removed without
+    warning surfaces as an `AttributeError` far from the cause.
+  - **Declared the specification's bounds and made them queryable (#196,
+    ADR-031).** The deliverable was the reading: quantities, the coil value
+    set and the MEI type from the Application Protocol, the protocol
+    identifier from the Messaging Implementation Guide, the slave address
+    range from PI-MBUS-300. `serialize()` calls neither `violations()` nor
+    `validate()` and gains no parameter, because emitting a frame a device
+    rejects is the product.
+  - **Ran the third 360 audit.** Overall stays B+, 8 findings, 0 critical.
+    Protocol correctness moves B+ to A- on the field-range work. Code quality
+    and CI/CD hold at B+ on #149 and #217, neither of which moved.
+- **PRs merged:** #258, #259, #260, #261, #263, #264, #265 and #267.
+- **Issues closed/created:** four closed, all shipped rather than declined.
+  Created #262, #266 and #268.
+- **Lesson:** a per-item declaration with a permissive default is a blind
+  spot no coverage assertion reaches. Every packet class declares its bounds
+  and the base declares an empty mapping, so a class that never declared one
+  inherits it, reports clean, and is indistinguishable from a class the
+  specification bounds in no way. The enumeration was correct and the data
+  was vacuous. The test asserting each class declares its own failed on its
+  first run and named `ModbusPdu` -- four lines, written as an afterthought,
+  finding a real hole in the work they were meant to confirm.
+- **Lesson:** a filter that returns a plausible wrong answer twice in one
+  session. During the audit a piped `grep` reported no `fetch-depth` in the
+  secrets job, which reads exactly like a scan covering only the tip; the job
+  carries it. At wrap-up `git tag --list 'v2.6*'` reported the newest
+  upstream tag as `v2.69.0`, and it cannot match `v2.70.0`. Neither was
+  caught by a check. The first was caught by disbelieving a result that
+  contradicted the prior audit, the second by the previous journal entry
+  naming a tag my glob could not produce -- so the record caught what the
+  tooling did not.
+- **Lesson:** a mechanical migration should delete and insert whole lines,
+  never regenerate them. Rewriting 27 constructor calls from the syntax tree
+  lost the original indentation and turned `fc=0x03` into `fc=3` -- both
+  correct, both wrong to ship. Deleting only the line being removed left
+  every surrounding byte untouched, and the diff became reviewable instead of
+  noise. The script is scaffolding; the diff is the audit trail.
+- **Upstream:** one filing. braboj/solid-ai-templates#1384 against
+  `testing.md`, that `testing-negative-assertion-coverage` covers a check
+  reaching nothing but not one reaching everything and asking a question the
+  subject cannot fail. ADR-035, ADR-036 and ADR-037 each judged reusability
+  at decision time and recorded `none` with a revisit condition.
+- **Pending:** the pin sits at `v2.61.0` against `v2.71.0`, 76 commits and
+  eleven bound files, now proposed as #268 rather than left as a standing
+  gap -- the pointer is off-limits and needs the owner's approval before it
+  moves. #262 is a gap in the work this session shipped: the constraint pass
+  encoded ranges, fixed values and cross-field rules, and the Diagnostics
+  sub-function code is an enumerated set it cannot express. #266 leaves the
+  new capability with a feature bullet and no runnable example. #149 is a
+  FAIL in three consecutive audits.
