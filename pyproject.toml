@@ -81,6 +81,12 @@ packages = ["src/pyomb"]
 # depth, so an unanchored `tests` or `LICENSE` also selects the copy inside the
 # templates submodule and republishes it here. See
 # tests/test_sdist_includes_are_anchored.py.
+#
+# CHANGELOG.md is deliberately not here. It is carried by the tree each tag
+# names, which is what the source archives generated from that tag ship, and
+# the release page renders it besides -- so a consumer arriving from a release
+# already has it. The sdist is a build input, and the standing direction is to
+# ship less of the repository in it rather than more.
 include = ["/src/pyomb", "/tests", "/README.md", "/LICENSE"]
 
 [tool.ruff]
