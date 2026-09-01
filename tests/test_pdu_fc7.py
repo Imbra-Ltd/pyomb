@@ -25,11 +25,14 @@ class TestPduRequestFC7(unittest.TestCase):
 
     def test_inequality(self):
 
-        request1 = ModbusRequestFC7()
-        request2 = ModbusRequestFC7()
-        request2.data = 1
+        # This request carries no named field, so two of them are always
+        # equal and inequality has to come from a different packet. The
+        # assertion used to write request2.data directly, which is the second
+        # copy the packets no longer keep -- assigning it now raises.
+        request = ModbusRequestFC7()
+        response = ModbusResponseFC7(status=1)
 
-        self.assertTrue(request2 != request1)
+        self.assertTrue(response != request)
 
     def test_serialization(self):
 

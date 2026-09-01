@@ -20,6 +20,7 @@ from __future__ import division, print_function
 
 import struct
 from abc import ABCMeta, abstractmethod
+from typing import ClassVar
 
 from .errors import ModbusPacketError
 
@@ -213,7 +214,8 @@ class ModbusPdu(ModbusPacketAbc):
 
     Args:
         fc (int)     : Function code
-        data (tuple)        : Packed PDU data
+        data (tuple) : Packed PDU data. A subclass declaring PDU_FIELDS
+            derives its payload from those fields and ignores this argument
 
     Example:
         >>> pdu1 = ModbusPdu(fc=1, data=(1, 2))
@@ -228,12 +230,83 @@ class ModbusPdu(ModbusPacketAbc):
     # Default PDU ID
     PDU_ID = 0x0000
 
-    def __init__(self, fc, data):
+    # The named fields the class carries, in wire order. None means the class
+    # stores its payload rather than deriving one, which is what this class
+    # does: it models no function code, so it has no named fields to read.
+    PDU_FIELDS: ClassVar[tuple[str, ...] | None] = None
+
+    # The trailing field holding a sequence that flattens into the payload,
+    # or None where the layout is scalars only.
+    PDU_TAIL: ClassVar[str | None] = None
+
+    def __init__(self, fc, data=None):
         """Initialize the Modbus PDU."""
 
-        # Set the instance attributes
         self.fc = fc
-        self.data = data
+
+        # A class declaring named fields reads its payload back from them, so
+        # storing the argument here would restore the second copy the property
+        # below exists to remove. Only a storing class takes the argument.
+        if self.PDU_FIELDS is None:
+            self.data = data
+
+    def _field_names(self):
+        """Name every field the payload is derived from, in wire order.
+
+        Returns:
+            list : The declared field names, empty where the class carries none
+        """
+
+        names = list(self.PDU_FIELDS or ())
+
+        if self.PDU_TAIL is not None:
+            names.append(self.PDU_TAIL)
+
+        return names
+
+    @property
+    def data(self):
+        """The PDU payload.
+
+        A class declaring named fields derives this from them on every read,
+        so a field changed after construction reaches the wire. The generic
+        PDU declares none and stores what it was given.
+
+        Returns:
+            tuple : The payload in wire order
+        """
+
+        if self.PDU_FIELDS is None:
+            return self._data
+
+        values = tuple(getattr(self, name) for name in self.PDU_FIELDS)
+
+        if self.PDU_TAIL is not None:
+            values += tuple(getattr(self, self.PDU_TAIL))
+
+        return values
+
+    @data.setter
+    def data(self, value):
+        """Store the payload, or refuse where the class derives it.
+
+        Args:
+            value (tuple) : The payload to store
+
+        Raises:
+            ModbusPacketError : If the class derives its payload from fields
+        """
+
+        if self.PDU_FIELDS is not None:
+            names = self._field_names()
+            instead = "set " + ", ".join(names) if names else "it carries none"
+            message = "{0} derives data from its named fields; {1}".format(
+                type(self).__name__,
+                instead,
+            )
+            raise ModbusPacketError(message)
+
+        self._data = value
 
     def __len__(self):
         """Return the length of the PDU data"""
@@ -517,6 +590,7 @@ class ModbusError(ModbusPdu):
 
     PDU_FORMAT = ">BB"
     PDU_ID = 0x8000
+    PDU_FIELDS = ("exc_code",)
     ERROR_MASK = 0x80
 
     def __init__(self, fc, exc_code):
@@ -528,7 +602,6 @@ class ModbusError(ModbusPdu):
         # Call parent constructor
         super(ModbusError, self).__init__(
             fc=fc,
-            data=(exc_code,),
         )
 
     def __len__(self):
@@ -614,6 +687,7 @@ class ModbusRequestFC1(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x0001
+    PDU_FIELDS = ("start_addr", "quantity")
 
     def __init__(self, start_addr, quantity):
         """Initialize the Modbus Request FC1 PDU."""
@@ -625,7 +699,6 @@ class ModbusRequestFC1(ModbusPdu):
         # Call parent constructor
         super(ModbusRequestFC1, self).__init__(
             fc=0x01,
-            data=(start_addr, quantity),
         )
 
     def __len__(self):
@@ -696,6 +769,8 @@ class ModbusResponseFC1(ModbusPdu):
 
     PDU_FORMAT = ">BB{0}B"
     PDU_ID = 0x8001
+    PDU_FIELDS = ("byte_count",)
+    PDU_TAIL = "output_status"
 
     def __init__(self, byte_count, output_status):
         # Set instance attributes
@@ -705,7 +780,6 @@ class ModbusResponseFC1(ModbusPdu):
         # Call parent constructor
         super(ModbusResponseFC1, self).__init__(
             fc=0x01,
-            data=(byte_count,) + tuple(output_status),
         )
 
     def __len__(self):
@@ -790,6 +864,7 @@ class ModbusRequestFC2(ModbusPdu):
     # Generic PDU format string of the FC2 request PDU
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x0002
+    PDU_FIELDS = ("start_addr", "quantity")
 
     def __init__(self, start_addr, quantity):
         """Initialize the Modbus Request FC2 PDU."""
@@ -801,7 +876,6 @@ class ModbusRequestFC2(ModbusPdu):
         # Call parent constructor
         super(ModbusRequestFC2, self).__init__(
             fc=0x02,
-            data=(start_addr, quantity),
         )
 
     def __len__(self):
@@ -873,18 +947,19 @@ class ModbusResponseFC2(ModbusPdu):
     # Generic PDU format string of the FC2 response PDU
     PDU_FORMAT = ">BB{0}B"
     PDU_ID = 0x8002
+    PDU_FIELDS = ("byte_count",)
+    PDU_TAIL = "input_status"
 
     def __init__(self, byte_count, input_status):
         """Initialize the Modbus Response FC2 PDU."""
 
         # Set the instance attributes
         self.byte_count = byte_count
-        self.input_status = input_status
+        self.input_status = tuple(input_status)
 
         # Call the parent constructor
         super(ModbusResponseFC2, self).__init__(
             fc=0x02,
-            data=(byte_count,) + tuple(input_status),
         )
 
     def __len__(self):
@@ -967,6 +1042,7 @@ class ModbusRequestFC3(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x0003
+    PDU_FIELDS = ("start_addr", "quantity")
 
     def __init__(self, start_addr, quantity):
         """Initialize the Modbus Request FC3 PDU."""
@@ -978,7 +1054,6 @@ class ModbusRequestFC3(ModbusPdu):
         # Call the parent constructor
         super(ModbusRequestFC3, self).__init__(
             fc=0x03,
-            data=(start_addr, quantity),
         )
 
     def __len__(self):
@@ -1050,18 +1125,19 @@ class ModbusResponseFC3(ModbusPdu):
 
     PDU_FORMAT = ">BB{0}H"
     PDU_ID = 0x8003
+    PDU_FIELDS = ("byte_count",)
+    PDU_TAIL = "values"
 
     def __init__(self, byte_count, values):
         """Initialize the Modbus Response FC3 PDU."""
 
         # Set the instance attributes
         self.byte_count = byte_count
-        self.values = values
+        self.values = tuple(values)
 
         # Call the parent constructor
         super(ModbusResponseFC3, self).__init__(
             fc=0x03,
-            data=(byte_count,) + tuple(values),
         )
 
     def __len__(self):
@@ -1148,6 +1224,7 @@ class ModbusRequestFC4(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x0004
+    PDU_FIELDS = ("start_addr", "quantity")
 
     def __init__(self, start_addr, quantity):
         """Initialize the Modbus Request FC4 PDU"""
@@ -1159,7 +1236,6 @@ class ModbusRequestFC4(ModbusPdu):
         # Call the parent constructor
         super(ModbusRequestFC4, self).__init__(
             fc=0x04,
-            data=(start_addr, quantity),
         )
 
     def __len__(self):
@@ -1231,18 +1307,19 @@ class ModbusResponseFC4(ModbusPdu):
 
     PDU_FORMAT = ">BB{0}H"
     PDU_ID = 0x8004
+    PDU_FIELDS = ("byte_count",)
+    PDU_TAIL = "values"
 
     def __init__(self, byte_count, values):
         """Initialize the Modbus Response FC4 PDU."""
 
         # Set the instance attributes
         self.byte_count = byte_count
-        self.values = values
+        self.values = tuple(values)
 
         # Call the parent constructor
         super(ModbusResponseFC4, self).__init__(
             fc=0x04,
-            data=(byte_count,) + tuple(values),
         )
 
     def __len__(self):
@@ -1329,6 +1406,7 @@ class ModbusRequestFC5(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x0005
+    PDU_FIELDS = ("output_address", "output_value")
 
     def __init__(self, output_address, output_value):
         """Initialize the Modbus Request FC5 PDU."""
@@ -1340,7 +1418,6 @@ class ModbusRequestFC5(ModbusPdu):
         # Call the parent constructor
         super(ModbusRequestFC5, self).__init__(
             fc=0x05,
-            data=(output_address, output_value),
         )
 
     def __len__(self):
@@ -1410,6 +1487,7 @@ class ModbusResponseFC5(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x8005
+    PDU_FIELDS = ("output_address", "output_value")
 
     def __init__(self, output_address, output_value):
         """Initialize the Modbus Response FC5 PDU"""
@@ -1421,7 +1499,6 @@ class ModbusResponseFC5(ModbusPdu):
         # Call the parent constructor
         super(ModbusResponseFC5, self).__init__(
             fc=0x05,
-            data=(output_address, output_value),
         )
 
     def __len__(self):
@@ -1491,6 +1568,7 @@ class ModbusRequestFC6(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x0006
+    PDU_FIELDS = ("output_address", "output_value")
 
     def __init__(self, output_address, output_value):
         """Initialize the Modbus Request FC6 PDU."""
@@ -1502,7 +1580,6 @@ class ModbusRequestFC6(ModbusPdu):
         # Call the parent constructor
         super(ModbusRequestFC6, self).__init__(
             fc=0x06,
-            data=(output_address, output_value),
         )
 
     def __len__(self):
@@ -1572,6 +1649,7 @@ class ModbusResponseFC6(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x8006
+    PDU_FIELDS = ("output_address", "output_value")
 
     def __init__(self, output_address, output_value):
         """Initialize the Modbus Response FC6 PDU."""
@@ -1583,7 +1661,6 @@ class ModbusResponseFC6(ModbusPdu):
         # Call the parent constructor
         super(ModbusResponseFC6, self).__init__(
             fc=0x06,
-            data=(output_address, output_value),
         )
 
     def __len__(self):
@@ -1645,6 +1722,7 @@ class ModbusRequestFC7(ModbusPdu):
 
     PDU_FORMAT = ">B"
     PDU_ID = 0x0007
+    PDU_FIELDS = ()
 
     def __init__(self):
         """Initialize the Modbus Request FC7 PDU."""
@@ -1652,7 +1730,6 @@ class ModbusRequestFC7(ModbusPdu):
         # Call the parent constructor
         super(ModbusRequestFC7, self).__init__(
             fc=0x07,
-            data=(),
         )
 
     def __len__(self):
@@ -1717,6 +1794,7 @@ class ModbusResponseFC7(ModbusPdu):
 
     PDU_FORMAT = ">BB"
     PDU_ID = 0x8007
+    PDU_FIELDS = ("status",)
 
     def __init__(self, status):
         """Initialize the Modbus Response FC7 PDU."""
@@ -1727,7 +1805,6 @@ class ModbusResponseFC7(ModbusPdu):
         # Call the parent constructor
         super(ModbusResponseFC7, self).__init__(
             fc=0x07,
-            data=(status,),
         )
 
     def __len__(self):
@@ -1800,18 +1877,19 @@ class ModbusRequestFC8(ModbusPdu):
 
     PDU_FORMAT = ">BH{0}H"
     PDU_ID = 0x0008
+    PDU_FIELDS = ("sub_func",)
+    PDU_TAIL = "subfunc_data"
 
     def __init__(self, sub_func, subfunc_data):
         """Initialize the Modbus Request FC8 PDU"""
 
         # Set the instance attributes
         self.sub_func = sub_func
-        self.subfunc_data = subfunc_data
+        self.subfunc_data = tuple(subfunc_data)
 
         # Call the parent constructor
         super(ModbusRequestFC8, self).__init__(
             fc=0x08,
-            data=(sub_func,) + tuple(subfunc_data),
         )
 
     def __len__(self):
@@ -1898,18 +1976,19 @@ class ModbusResponseFC8(ModbusPdu):
 
     PDU_FORMAT = ">BH{0}H"
     PDU_ID = 0x8008
+    PDU_FIELDS = ("sub_func",)
+    PDU_TAIL = "subfunc_data"
 
     def __init__(self, sub_func, subfunc_data):
         """Initialize the Modbus Response FC8 PDU."""
 
         # Set the instance attributes
         self.sub_func = sub_func
-        self.subfunc_data = subfunc_data
+        self.subfunc_data = tuple(subfunc_data)
 
         # Call the parent constructor
         super(ModbusResponseFC8, self).__init__(
             fc=0x08,
-            data=(sub_func,) + tuple(subfunc_data),
         )
 
     def __len__(self):
@@ -2002,6 +2081,8 @@ class ModbusRequestFC15(ModbusPdu):
 
     PDU_FORMAT = ">BHHB{0}B"
     PDU_ID = 0x000F
+    PDU_FIELDS = ("start_addr", "quantity", "byte_count")
+    PDU_TAIL = "values"
 
     def __init__(self, start_addr, quantity, byte_count, values):
         """Initialize the Modbus Request FC15 PDU."""
@@ -2010,11 +2091,10 @@ class ModbusRequestFC15(ModbusPdu):
         self.start_addr = start_addr
         self.quantity = quantity
         self.byte_count = byte_count
-        self.values = values
+        self.values = tuple(values)
 
         super(ModbusRequestFC15, self).__init__(
             fc=0x0F,
-            data=(start_addr, quantity, byte_count) + tuple(values),
         )
 
     def __len__(self):
@@ -2107,6 +2187,7 @@ class ModbusResponseFC15(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x800F
+    PDU_FIELDS = ("start_addr", "quantity")
 
     def __init__(self, start_addr, quantity):
         """Initialize the Modbus Response FC15 PDU."""
@@ -2118,7 +2199,6 @@ class ModbusResponseFC15(ModbusPdu):
         # Call the parent constructor
         super(ModbusResponseFC15, self).__init__(
             fc=0x0F,
-            data=(start_addr, quantity),
         )
 
     def __len__(self):
@@ -2202,6 +2282,8 @@ class ModbusRequestFC16(ModbusPdu):
 
     PDU_FORMAT = ">BHHB{0}H"
     PDU_ID = 0x0010
+    PDU_FIELDS = ("start_addr", "quantity", "byte_count")
+    PDU_TAIL = "values"
 
     def __init__(self, start_addr, quantity, byte_count, values):
         """Initialize the Modbus Request FC16 PDU."""
@@ -2210,12 +2292,11 @@ class ModbusRequestFC16(ModbusPdu):
         self.start_addr = start_addr
         self.quantity = quantity
         self.byte_count = byte_count
-        self.values = values
+        self.values = tuple(values)
 
         # Call the parent constructor
         super(ModbusRequestFC16, self).__init__(
             fc=0x10,
-            data=(start_addr, quantity, byte_count) + tuple(values),
         )
 
     def __len__(self):
@@ -2310,6 +2391,7 @@ class ModbusResponseFC16(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x8010
+    PDU_FIELDS = ("start_addr", "quantity")
 
     def __init__(self, start_addr, quantity):
         """Initialize the Modbus Response FC16 PDU."""
@@ -2321,7 +2403,6 @@ class ModbusResponseFC16(ModbusPdu):
         # Call the parent constructor
         super(ModbusResponseFC16, self).__init__(
             fc=0x10,
-            data=(start_addr, quantity),
         )
 
     def __len__(self):
@@ -2400,6 +2481,7 @@ class ModbusRequestFC22(ModbusPdu):
 
     PDU_FORMAT = ">BHHH"
     PDU_ID = 0x0016
+    PDU_FIELDS = ("ref_addr", "and_mask", "or_mask")
 
     def __init__(self, ref_addr, and_mask, or_mask):
         """Initialize the Modbus Request FC22 PDU."""
@@ -2412,7 +2494,6 @@ class ModbusRequestFC22(ModbusPdu):
         # Call the parent constructor
         super(ModbusRequestFC22, self).__init__(
             fc=0x16,
-            data=(ref_addr, and_mask, or_mask),
         )
 
     def __len__(self):
@@ -2485,6 +2566,7 @@ class ModbusResponseFC22(ModbusPdu):
 
     PDU_FORMAT = ">BHHH"
     PDU_ID = 0x8016
+    PDU_FIELDS = ("ref_addr", "and_mask", "or_mask")
 
     def __init__(self, ref_addr, and_mask, or_mask):
         """Initialize the Modbus Response FC22 PDU."""
@@ -2497,7 +2579,6 @@ class ModbusResponseFC22(ModbusPdu):
         # Call the parent constructor
         super(ModbusResponseFC22, self).__init__(
             fc=0x16,
-            data=(ref_addr, and_mask, or_mask),
         )
 
     def __len__(self):
@@ -2587,6 +2668,8 @@ class ModbusRequestFC23(ModbusPdu):
 
     PDU_FORMAT = ">BHHHHB{0}H"
     PDU_ID = 0x0017
+    PDU_FIELDS = ("read_start_addr", "read_quantity", "write_start_addr", "write_quantity", "write_byte_count")
+    PDU_TAIL = "write_values"
 
     def __init__(
         self, read_start_addr, read_quantity, write_start_addr, write_quantity, write_byte_count, write_values
@@ -2599,13 +2682,11 @@ class ModbusRequestFC23(ModbusPdu):
         self.write_start_addr = write_start_addr
         self.write_quantity = write_quantity
         self.write_byte_count = write_byte_count
-        self.write_values = write_values
+        self.write_values = tuple(write_values)
 
         # Call the parent constructor
         super(ModbusRequestFC23, self).__init__(
             fc=0x17,
-            data=(read_start_addr, read_quantity, write_start_addr, write_quantity, write_byte_count)
-            + tuple(write_values),
         )
 
     def __len__(self):
@@ -2716,18 +2797,19 @@ class ModbusResponseFC23(ModbusPdu):
 
     PDU_FORMAT = ">BB{0}H"
     PDU_ID = 0x8017
+    PDU_FIELDS = ("byte_count",)
+    PDU_TAIL = "values"
 
     def __init__(self, byte_count, values):
         """Initialize the Modbus Response FC23 PDU."""
 
         # Set the instance attributes
         self.byte_count = byte_count
-        self.values = values
+        self.values = tuple(values)
 
         # Call the parent constructor
         super(ModbusResponseFC23, self).__init__(
             fc=0x17,
-            data=(byte_count,) + tuple(values),
         )
 
     def __len__(self):
@@ -2818,18 +2900,19 @@ class ModbusRequestFC43(ModbusPdu):
 
     PDU_FORMAT = ">BB{0}B"
     PDU_ID = 0x002B
+    PDU_FIELDS = ("mei_type",)
+    PDU_TAIL = "mei_data"
 
     def __init__(self, mei_type, mei_data):
         """Initialize the Modbus Request FC43 PDU."""
 
         # Set the instance attributes
         self.mei_type = mei_type
-        self.mei_data = mei_data
+        self.mei_data = tuple(mei_data)
 
         # Call the parent constructor
         super(ModbusRequestFC43, self).__init__(
             fc=0x2B,
-            data=(mei_type,) + tuple(mei_data),
         )
 
     def __len__(self):
@@ -2918,18 +3001,19 @@ class ModbusResponseFC43(ModbusPdu):
 
     PDU_FORMAT = ">BB{0}B"
     PDU_ID = 0x802B
+    PDU_FIELDS = ("mei_type",)
+    PDU_TAIL = "mei_data"
 
     def __init__(self, mei_type, mei_data):
         """Initialize the Modbus Response FC43 PDU."""
 
         # Set the instance attributes
         self.mei_type = mei_type
-        self.mei_data = mei_data
+        self.mei_data = tuple(mei_data)
 
         # Call the parent constructor
         super(ModbusResponseFC43, self).__init__(
             fc=0x2B,
-            data=(mei_type,) + tuple(mei_data),
         )
 
     def __len__(self):
