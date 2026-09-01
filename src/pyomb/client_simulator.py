@@ -124,7 +124,7 @@ class ModbusClientSimulator(object):
     def __init__(
         self,
         log=None,
-        host=b"localhost",
+        host="localhost",
         port=502,
         unit_id=1,
         frag_size=0,
@@ -250,7 +250,7 @@ class ModbusClientSimulator(object):
         set during initialization. If no socket exists, a new socket is created.
 
         Args:
-            host (bytes)    : The host address to connect to.
+            host (str)      : The host address to connect to.
             port (int)      : The port number to connect to.
         """
 
@@ -879,7 +879,7 @@ def run_client():
     logger = Logger(name="ModbusClientSimulator")
     client = ModbusClientSimulator(
         log=logger,
-        host=b"localhost",
+        host="localhost",
         port=502,
         # frag_size=2,
         secure=False,
