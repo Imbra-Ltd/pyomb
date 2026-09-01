@@ -12,7 +12,7 @@ pip install .
 
 Every example runs offline. The two that need a Modbus server start this
 project's own simulator in-process rather than reaching for a host, so a reader
-with the repository and nothing else can run all five.
+with the repository and nothing else can run all six.
 
 ## A note on ports
 
@@ -63,6 +63,41 @@ MODBUS TCP REQ -> | HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 6, Unit-ID: 1) | P
 round trip reproduces the frame: True
 frame matches the written-out vector: True
 ```
+
+### Checksum an RTU frame
+
+```bash
+python examples/checksum_an_rtu_frame.py
+```
+
+Walks two published RTU frames through the checksum: what it covers, what
+value it produces, and which way round those two bytes are sent. No socket,
+for the same reason as the two above.
+
+```text
+payload    : 11 03 00 00 00 02
+crc value  : 0x9BC6
+on the wire: c6 9b
+full frame : 11 03 00 00 00 02 c6 9b
+
+payload    : 01 04 02 ff ff
+crc value  : 0x80B8
+on the wire: b8 80
+full frame : 01 04 02 ff ff b8 80
+
+2 frames match their published bytes
+```
+
+Read the first frame's last two lines together. The checksum is `0x9BC6` and
+it goes out as `c6 9b` -- low byte first, which is the one place in Modbus
+where a multi-byte field is not big-endian. Every other field, including the
+addresses and quantities in the examples above, is sent the other way round.
+
+The comparison is against the complete published frames, checksum bytes
+included, rather than against the 16-bit values. A value matches whichever
+order it is packed in afterwards, so checking only the number would agree
+with the byte-swapped frame a real device rejects. Either break makes this
+example exit non-zero, which is what the run above is asserting.
 
 ### Report a constraint violation
 

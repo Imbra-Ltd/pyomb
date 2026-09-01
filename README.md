@@ -210,7 +210,7 @@ src/pyomb/              # The library
   defines.py            # Protocol constants
 tests/                  # Per-module tests, regression modules, convention gates
 examples/               # Runnable usage patterns, executed by CI
-scripts/                # Certificate generation and a CRC walkthrough
+scripts/                # Certificate generation
 docs/                   # Guides, decisions, journal, audits
   design/               # Direction notes the project has not adopted
   specs/                # Vendor Modbus specifications and the protocol tutorial
