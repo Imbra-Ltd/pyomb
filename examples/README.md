@@ -11,12 +11,13 @@ pip install .
 ```
 
 Every example runs offline. The two that need a Modbus server start this
-project's own simulator in-process rather than reaching for a host, so a reader
-with the repository and nothing else can run all six.
+project's own simulator in-process rather than reaching for a host, and the
+third holds both ends of a connection itself, so a reader with the repository
+and nothing else can run all seven.
 
 ## A note on ports
 
-The two socket examples ask the operating system for a free port by passing
+The three socket examples ask the operating system for a free port by passing
 `port=0`, and read the assigned port back once the listener is up. The project
 README shows port 502 instead, which is the registered Modbus port and what a
 real device listens on.
@@ -145,6 +146,33 @@ MODBUS TCP RSP -> | HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 4, Unit-ID: 1) | P
 ```
 
 The response carries one byte of coil data.
+
+### Capture a burst of packets
+
+```bash
+python examples/capture_a_burst_of_packets.py
+```
+
+Sends three requests in a single shot with `ModbusTcpSender` and captures
+them at the far end with `ModbusTcpReceiver`. Both ends are held here rather
+than pointed at a device: a listener on an assigned port, a second socket
+connected to it, and the accepted connection as the receiving end.
+
+```text
+listening on port <assigned>
+sent 3, captured 3
+MODBUS TCP PCKT -> | HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 6, Unit-ID: 1) | PDU: (FC: 01, Data: (0, 0, 0, 1))
+MODBUS TCP PCKT -> | HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 6, Unit-ID: 1) | PDU: (FC: 01, Data: (0, 8, 0, 16))
+MODBUS TCP PCKT -> | HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 6, Unit-ID: 1) | PDU: (FC: 03, Data: (0, 0, 0, 2))
+```
+
+The three captured packets are the three that were sent, in order, with the
+length field recomputed by the sender rather than carried from the caller.
+
+What ends the capture is the sending socket closing. `run_once` reads until
+the peer goes away or `stop` is called, so a monitor that keeps the
+connection open drives it from its own thread; this example takes the
+simpler route.
 
 ### Run the simulators
 

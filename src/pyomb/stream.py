@@ -249,25 +249,12 @@ class ModbusTcpStream(ModbusStreamAbc):
         frag_size (int)                     : The size of the fragments
         burst (bool)                        : Burst mode.
 
-    Example:
-        >>> from pyomb.packets import ModbusRequestFC1, ModbusHeader, ModbusTcpRequest
-        >>>
-        >>> # Send a Modbus message to a Modbus server
-        >>> sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        >>> sock.connect(('localhost', 502))
-        >>>
-        >>> # Create the desired PDU
-        >>> pdu = ModbusRequestFC1(start_addr=0, quantity=1)
-        >>>
-        >>> # Create the Modbus header and set the length (Unit-ID + PDU)
-        >>> header = ModbusHeader(length=len(pdu)+1)
-        >>>
-        >>> # Create the Modbus message
-        >>> packet = ModbusTcpRequest(header=header, pdu=pdu)
-        >>>
-        >>> # Create the Modbus stream and send the message
-        >>> stream = ModbusTcpStream(sock)
-        >>> stream.send(packet.serialize())
+    Usage:
+        This class needs a connected socket, so the demonstration lives in
+        `examples/fragmented_send.py` rather than here. It starts this
+        project's own server simulator on a port the operating system picks,
+        sends a request in 8-byte pieces, and reassembles the reply by the
+        length its header declares. CI runs it on every pull request.
     """
 
     def __init__(self, sock, fragmenter=ModbusFragmenter(), frag_delay=0, frag_size=0, burst=False):
@@ -445,25 +432,17 @@ class ModbusTcpSender(ModbusSenderAbc):
         sock (socket.socket)    : A TCP socket.
         packets (iterable)      : A list of Modbus packets.
 
-    Example:
-        >>> from pyomb.packets import ModbusHeader
-        >>> from pyomb.packets import ModbusRequestFC1, ModbusResponseFC1
-        >>>
-        >>> # Send packets to a Modbus server
-        >>> sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        >>> sock.connect(('localhost', 502))
-        >>> buf = [ModbusTcpPacket(header=ModbusHeader(), pdu=ModbusRequestFC1(start_addr=0, quantity=1))]
-        >>> sender = ModbusTcpSender(sock=sock, packets=buf)
-        >>> sender.run_once()
-        >>>
-        >>> # Send packets to a Modbus client
-        >>> sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        >>> sock.bind(('localhost', 502))
-        >>> sock.listen(1)
-        >>> conn, addr = sock.accept()
-        >>> buf = [ModbusTcpPacket(header=ModbusHeader(), pdu=ModbusResponseFC1(byte_count=2, data=(0, 1)))]
-        >>> sender = ModbusTcpSender(sock=sock, packets=buf)
-        >>> sender.run_once()
+    Usage:
+        This class needs a connected socket, so the demonstration lives in
+        `examples/capture_a_burst_of_packets.py` rather than here. It opens
+        both ends in one process, sends three requests in a single shot, and
+        captures them with `ModbusTcpReceiver` at the far end. CI runs it on
+        every pull request.
+
+        The socket may be either end of a connection. A sender on a client
+        socket drives requests at a server; a sender on a connection returned
+        by `accept` drives responses back at a client. The class does not
+        care which, and the example uses the first.
     """
 
     def __init__(self, sock, packets=(), frag_size=0, frag_delay=0, burst_mode=False):
@@ -572,23 +551,16 @@ class ModbusTcpReceiver(ModbusReceiverAbc):
     Args:
         sock (socket.socket)    : A TCP socket to receive messages.
 
-    Example:
-        >>> # Receive packets from a Modbus server
-        >>> sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        >>> sock.connect(('localhost', 502))
-        >>> receiver = ModbusTcpReceiver(sock)
-        >>> receiver.run_once()
-        >>> print(receiver.packets)
-        >>>
-        >>> # Receive packets from a Modbus client
-        >>> sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        >>> sock.bind(('localhost', 502))
-        >>> sock.listen(1)
-        >>> conn, addr = sock.accept()
-        >>> receiver = ModbusTcpReceiver(conn)
-        >>> receiver.run_once()
-        >>> print(receiver.packets)
+    Usage:
+        This class needs a connected socket, so the demonstration lives in
+        `examples/capture_a_burst_of_packets.py` rather than here. It sends
+        three requests down one end of a connection and captures them off the
+        other. CI runs it on every pull request.
 
+        `run_once` reads until the peer goes away or `stop` is called, so a
+        caller that keeps the connection open drives it from its own thread
+        and calls `stop` to end the capture. The example takes the simpler
+        route and closes the sending end.
     """
 
     def __init__(self, sock, frag_size=0):

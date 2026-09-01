@@ -6,18 +6,23 @@ them until the configuration this module guards was added, and what that hid
 was an example asserting a property its class does not provide -- green on
 main, for as long as anyone had been reading it.
 
-Three examples are exempt because they open a socket to a Modbus server on
-localhost that nothing starts, so they raise a connection error wherever they
-run. They are frozen one docstring at a time rather than by excluding their
-module, because a fourth example in the same file needs no peer and stays
-gated. Excluding the file would have dropped that one too, which is the
-difference between freezing the failing instances and narrowing the gate.
+Nothing is exempt. Three transport examples were, because each opened a socket
+to a server nothing starts; they raised a connection error wherever they ran,
+including in the hands of the reader they were written for. They are gone
+rather than exempt, and the runnable demonstrations they were reaching for
+live in `examples/`, where a peer can be started and CI executes the result.
 
-Two ways this gate goes quietly blind, and one test each. The configuration
+The exemption machinery stays because the next unrunnable example is a
+question of when. An exemption freezes one docstring at a time rather than
+excluding a module, so a sibling example that needs no peer keeps its gate --
+the difference between freezing the failing instances and narrowing the check.
+
+Three ways this gate goes quietly blind, and one test each. The configuration
 can stop reaching the package, in which case every example passes by not being
-collected. Or a frozen name can drift -- an example renamed or removed leaves a
+collected. An exempt name can drift -- an example renamed or removed leaves a
 deselect matching nothing, which stops freezing anything and reads exactly like
-a freeze that is still working.
+a freeze that is still working. Or the two lists can disagree, leaving either
+an exemption nobody wrote a reason for or a reason for one not in force.
 """
 
 import doctest
@@ -45,21 +50,21 @@ COLLECTS_EXAMPLES = "--doctest-modules"
 
 PACKAGE_PATH = re.compile(r"^testpaths *= *\[[^\]]*\"src\"", re.M)
 
-# The examples that cannot run, each named as the deselect names it. A socket
-# to a host the project does not start is the reason for all three; nothing
-# else belongs here. An example that fails for any other reason is a defect in
-# the example.
-DEFERRED = (
-    "pyomb.stream.ModbusTcpStream",
-    "pyomb.stream.ModbusTcpSender",
-    "pyomb.stream.ModbusTcpReceiver",
-)
+# The examples that cannot run, each named as the deselect names it. Empty:
+# the three transport docstrings that were here no longer carry examples at
+# all, so there is nothing left to exempt. The only reason that belongs here
+# is an example needing a peer the project cannot start; one failing for any
+# other reason is a defect in the example.
+DEFERRED = ()
 
-# What the package carried on 2026-09-01: 35 examples in the packet classes and
-# one in the fragmenter. Unlike the append-only corpora the release-audit gate
-# reads, an example can legitimately be removed -- rewriting the three deferred
-# ones may well replace rather than add -- so this takes a stated margin below
-# the measured count rather than the count itself.
+# Re-measured on 2026-09-01 after the transport docstrings stopped carrying
+# examples: 37 gated, 36 in the packet classes and one in the fragmenter. The
+# gated count is unchanged by that work, because the three it removed were
+# exempt and so were never counted here -- they were removed rather than
+# replaced, which is the outcome the previous note left open. Unlike the
+# append-only corpora the release-audit gate reads, an example can
+# legitimately be removed, so this takes a stated margin below the measured
+# count rather than the count itself.
 GATED_AT_LEAST = 30
 
 
