@@ -62,7 +62,7 @@ class TestClientTimeout(unittest.TestCase):
 
         try:
             with self.assertRaises(ModbusNetworkError):
-                client.request(fc=1, readAddress=0, readCount=1)
+                client.request(fc=1, read_address=0, read_count=1)
         finally:
             client.disconnect()
 

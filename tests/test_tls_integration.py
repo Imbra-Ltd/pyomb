@@ -227,7 +227,7 @@ class TestMutualTls(unittest.TestCase):
 
     def test_request_round_trips_over_tls(self):
         client = self.connect()
-        header, pdu = client.request(fc=1, readAddress=0, readCount=10)
+        header, pdu = client.request(fc=1, read_address=0, read_count=10)
 
         self.assertIsNotNone(header)
         self.assertEqual(pdu.fc, 1)

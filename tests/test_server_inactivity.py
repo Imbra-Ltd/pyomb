@@ -5,7 +5,7 @@ socket is the server's own address and therefore identical for every client.
 All connections collapsed onto a single entry. The sweep deleted that entry
 when it closed the first idle connection, and the second one in the same pass
 read it and raised KeyError, which left run() and ended the thread. The
-default inactiveTimeout is one second, so two clients pausing together was
+default inactive_timeout is one second, so two clients pausing together was
 enough.
 
 The same loop also mutated the list it was iterating, so it skipped whichever
@@ -66,7 +66,7 @@ class TestInactivitySweep(unittest.TestCase):
         self.server.daemon = True
         self.server.start()
 
-        self.assertTrue(self.server.startedEvent.wait(5.0), "the server never reached its accept loop")
+        self.assertTrue(self.server.started_event.wait(5.0), "the server never reached its accept loop")
 
         self.port = self.server.port
 
@@ -84,7 +84,7 @@ class TestInactivitySweep(unittest.TestCase):
         # The regression. Previously the second connection in the sweep hit a
         # KeyError on the entry the first one had just deleted.
         with ServerThreadExceptions() as thread_errors:
-            self.start_server(inactiveTimeout=0.5)
+            self.start_server(inactive_timeout=0.5)
             self.connect()
             self.connect()
             time.sleep(2.5)
@@ -94,7 +94,7 @@ class TestInactivitySweep(unittest.TestCase):
 
     def test_several_idle_clients_do_not_kill_the_server(self):
         with ServerThreadExceptions() as thread_errors:
-            self.start_server(inactiveTimeout=0.5)
+            self.start_server(inactive_timeout=0.5)
 
             for _ in range(5):
                 self.connect()
@@ -106,20 +106,20 @@ class TestInactivitySweep(unittest.TestCase):
     def test_every_idle_client_is_closed(self):
         # The list was mutated while being iterated, so a closed connection
         # made the sweep skip the one after it and leave it registered.
-        self.start_server(inactiveTimeout=0.5)
+        self.start_server(inactive_timeout=0.5)
 
         for _ in range(4):
             self.connect()
 
         time.sleep(2.5)
 
-        self.assertEqual(self.server.getPeers(), [])
+        self.assertEqual(self.server.get_peers(), [])
 
     def test_a_client_is_not_closed_while_it_is_still_talking(self):
         # Activity used to be recorded against the shared key, so any one
         # client's traffic kept every other one alive. This holds the opposite
         # property: an idle client goes even though a busy one stays.
-        self.start_server(inactiveTimeout=1.0)
+        self.start_server(inactive_timeout=1.0)
         busy = self.connect()
         self.connect()
 
@@ -130,11 +130,11 @@ class TestInactivitySweep(unittest.TestCase):
             busy.recv(256)
             time.sleep(0.2)
 
-        self.assertEqual(len(self.server.getPeers()), 1, "the busy client should be the only one left")
+        self.assertEqual(len(self.server.get_peers()), 1, "the busy client should be the only one left")
 
     def test_server_survives_a_full_sweep_and_still_accepts(self):
         with ServerThreadExceptions() as thread_errors:
-            self.start_server(inactiveTimeout=0.5)
+            self.start_server(inactive_timeout=0.5)
             self.connect()
             self.connect()
             time.sleep(2.5)

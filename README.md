@@ -150,7 +150,7 @@ server.start()
 client = ModbusClientSimulator(port=502)
 client.connect()
 
-header, pdu = client.request(fc=1, readAddress=0, readCount=10)
+header, pdu = client.request(fc=1, read_address=0, read_count=10)
 print(header)
 print(pdu)
 

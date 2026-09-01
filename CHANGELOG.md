@@ -22,6 +22,38 @@ numbers follow [Semantic Versioning](https://semver.org/).
   stopped being public when the classes moved to the package root in 0.3.0.
   Import from `pyomb` instead, which is the documented form
 
+- The simulator public API takes PEP 8 names, with no aliases. Seven methods,
+  seven keyword parameters and the instance attributes behind them change at
+  once, and every existing call breaks. A method alias is cheap and a keyword
+  alias is not, so aliasing the methods alone would leave a call that resolves
+  and then raises on its own keyword, naming a method the caller never wrote.
+  See #192, ADR-039
+
+  | Before | After |
+  | --- | --- |
+  | `sendRequest` | `send_request` |
+  | `waitResponse` | `wait_response` |
+  | `getPeers` | `get_peers` |
+  | `setDelay` | `set_delay` |
+  | `setConnLimit` | `set_connection_limit` |
+  | `setFail` | `set_fail` |
+  | `setDataHandler` | `set_data_handler` |
+  | `readAddress`, `readCount` | `read_address`, `read_count` |
+  | `writeAddress`, `writeCount` | `write_address`, `write_count` |
+  | `connLimit`, `inactiveTimeout` | `connection_limit`, `inactive_timeout` |
+  | `readList`, `startedEvent` | `read_list`, `started_event` |
+  | `newConnEvent`, `quitEvent` | `new_connection_event`, `quit_event` |
+
+- The server takes `host`, a string, where it took `ipAddress` as a 32-bit
+  integer. `""` is the default and binds every interface, which is what
+  `ipAddress=0` meant. A caller no longer converts a dotted quad by hand, and
+  the two simulators now agree on what an address is. Passing an integer
+  raises from the socket rather than being unpacked
+- `frag_count` becomes `frag_size` on both simulators, and on the server's
+  attribute, which was a third name for the same value. The transport already
+  called it `frag_size` and sliced it as a byte width, so the transport's
+  spelling is the correct one
+
 ### Deprecated
 
 - `OmbClientSim` and `OmbServerSim` still resolve from the package root and

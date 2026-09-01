@@ -67,12 +67,12 @@ class ServerFixture(unittest.TestCase):
             self.server.join(5.0)
 
     def start_server(self, process_connections=True, **options):
-        options.setdefault("inactiveTimeout", 30.0)
+        options.setdefault("inactive_timeout", 30.0)
         self.server = ModbusServerSimulator(port=self.port, **options)
         self.server.daemon = True
         self.server.start(process_connections=process_connections)
 
-        self.assertTrue(self.server.startedEvent.wait(5.0), "the server never reached its accept loop")
+        self.assertTrue(self.server.started_event.wait(5.0), "the server never reached its accept loop")
 
         self.port = self.server.port
 
@@ -124,7 +124,7 @@ class TestConnectionLimit(ServerFixture):
     def test_exceeding_the_limit_does_not_stop_the_server(self):
         # Previously the third client ended the run loop.
         with ServerThreadExceptions() as errors:
-            self.start_server(connLimit=2)
+            self.start_server(connection_limit=2)
 
             for _ in range(4):
                 with contextlib.suppress(OSError):
@@ -136,7 +136,7 @@ class TestConnectionLimit(ServerFixture):
     def test_established_sessions_survive_a_refused_connection(self):
         # The collateral damage is the point: the limit used to abort the very
         # sessions it exists to protect.
-        self.start_server(connLimit=2)
+        self.start_server(connection_limit=2)
         first = self.connect()
         self.exchange(first)
         self.connect()
@@ -151,17 +151,17 @@ class TestConnectionLimit(ServerFixture):
     def test_the_limit_admits_exactly_its_number_of_clients(self):
         # The comparison counted the listening socket, so the limit tripped one
         # client later than its name.
-        self.start_server(connLimit=3)
+        self.start_server(connection_limit=3)
 
         for _ in range(5):
             with contextlib.suppress(OSError):
                 self.connect()
             time.sleep(0.3)
 
-        self.assertEqual(len(self.server.getPeers()), 3)
+        self.assertEqual(len(self.server.get_peers()), 3)
 
     def test_a_refused_client_is_closed_rather_than_left_hanging(self):
-        self.start_server(connLimit=1)
+        self.start_server(connection_limit=1)
         self.connect()
         time.sleep(0.3)
 
@@ -220,6 +220,52 @@ class TestStartup(ServerFixture):
             self.server.start(timeout=30.0)
 
         self.assertLess(time.time() - started, 5.0)
+
+
+class TestHostSelection(ServerFixture):
+    """The interface the server binds is named the way the client names it.
+
+    The parameter was a 32-bit integer the server unpacked with inet_ntoa, so
+    passing the dotted quad a caller actually holds raised `struct.error`
+    inside the server thread. The first two cases fail against that signature
+    for that reason, and they are not enough on their own: a server that
+    accepted the string and then bound the wildcard anyway would satisfy both,
+    because a loopback client reaches a wildcard listener either way.
+
+    The third case is the one that discriminates. It names an address in
+    TEST-NET-3, which is reserved for documentation and so is assigned to no
+    interface on any host running this suite. Binding it has to fail. A server
+    ignoring the parameter would bind successfully and start.
+    """
+
+    # RFC 5737 reserves this block for documentation, which is what makes it
+    # reliably absent from every machine rather than merely unlikely.
+    UNASSIGNABLE_HOST = "203.0.113.1"
+
+    def test_a_dotted_quad_is_accepted(self):
+        """The form a caller has is the form the parameter takes."""
+
+        self.start_server(host="127.0.0.1")
+
+        self.assertEqual(self.server.host, "127.0.0.1")
+        self.assertTrue(self.connect())
+
+    def test_the_default_binds_every_interface(self):
+        """The empty default carries what ipAddress=0 used to mean."""
+
+        self.start_server()
+
+        self.assertEqual(self.server.host, "")
+        self.assertTrue(self.connect())
+
+    def test_an_unassignable_interface_is_refused(self):
+        """A host the parameter reaches is a host the bind can fail on."""
+
+        self.server = ModbusServerSimulator(host=self.UNASSIGNABLE_HOST, port=0)
+        self.server.daemon = True
+
+        with self.assertRaises(ModbusNetworkError):
+            self.server.start(timeout=5.0)
 
 
 class TestManualAccept(ServerFixture):

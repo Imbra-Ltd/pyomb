@@ -74,11 +74,11 @@ class TestAbruptDisconnect(unittest.TestCase):
         # Port 0 asks the operating system for a free one, so a listener the
         # previous test has not finished releasing cannot collide with this
         # one. The port is read back below, once the listener is up.
-        self.server = ModbusServerSimulator(port=0, inactiveTimeout=30.0)
+        self.server = ModbusServerSimulator(port=0, inactive_timeout=30.0)
         self.server.daemon = True
         self.server.start()
 
-        self.assertTrue(self.server.startedEvent.wait(5.0), "the server never reached its accept loop")
+        self.assertTrue(self.server.started_event.wait(5.0), "the server never reached its accept loop")
 
         self.port = self.server.port
 

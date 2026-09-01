@@ -62,7 +62,7 @@ def main() -> None:
     server.daemon = True
     server.start()
 
-    if not server.startedEvent.wait(TIMEOUT):
+    if not server.started_event.wait(TIMEOUT):
         raise SystemExit(NO_LISTENER)
 
     # Valid only once the listener is up, because that is when the operating

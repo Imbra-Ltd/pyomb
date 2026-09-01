@@ -166,7 +166,7 @@ class TestResponseHeader(ServerUnderTest):
 
 class TestFailureSimulation(ServerUnderTest):
     def test_fail_flag_turns_every_response_into_an_exception(self):
-        self.server.setFail(True)
+        self.server.set_fail(True)
 
         response = self.dispatch(ModbusRequestFC1(start_addr=0, quantity=8))
 
@@ -174,7 +174,7 @@ class TestFailureSimulation(ServerUnderTest):
         self.assertEqual(response.pdu.fc, 1)
 
     def test_exception_response_reports_slave_device_failure(self):
-        self.server.setFail(True)
+        self.server.set_fail(True)
 
         response = self.dispatch(ModbusRequestFC3(start_addr=0, quantity=1))
 
@@ -193,7 +193,7 @@ class TestDataHandler(ServerUnderTest):
             seen.append((header, request, conn))
             return True
 
-        self.server.setDataHandler(handler)
+        self.server.set_data_handler(handler)
         conn = RecordingConnection()
         self.dispatch(ModbusRequestFC1(start_addr=0, quantity=8), conn=conn, trans_id=0x0007)
 
@@ -204,14 +204,14 @@ class TestDataHandler(ServerUnderTest):
         self.assertIs(handler_conn, conn)
 
     def test_handler_veto_produces_an_exception_response(self):
-        self.server.setDataHandler(lambda log, header, request, conn: False)
+        self.server.set_data_handler(lambda log, header, request, conn: False)
 
         response = self.dispatch(ModbusRequestFC1(start_addr=0, quantity=8))
 
         self.assertIsInstance(response.pdu, ModbusError)
 
     def test_handler_approval_leaves_the_normal_response(self):
-        self.server.setDataHandler(lambda log, header, request, conn: True)
+        self.server.set_data_handler(lambda log, header, request, conn: True)
 
         response = self.dispatch(ModbusRequestFC1(start_addr=0, quantity=8))
 
@@ -224,7 +224,7 @@ class TestResponseDelay(ServerUnderTest):
         # stays fast. The transport sleeps for its own fragment delay through
         # the same function, so this asks whether the configured delay is
         # among the calls rather than that it is the only one.
-        self.server.setDelay(0.25)
+        self.server.set_delay(0.25)
 
         with mock.patch("pyomb.server_simulator.time.sleep") as sleep:
             self.dispatch(ModbusRequestFC1(start_addr=0, quantity=8))
@@ -239,12 +239,12 @@ class TestServerConfiguration(unittest.TestCase):
     def test_setters_take_effect(self):
         server = ModbusServerSimulator()
 
-        server.setDelay(1.5)
-        server.setConnLimit(3)
-        server.setFail(True)
+        server.set_delay(1.5)
+        server.set_connection_limit(3)
+        server.set_fail(True)
 
         self.assertEqual(server.delay, 1.5)
-        self.assertEqual(server.connLimit, 3)
+        self.assertEqual(server.connection_limit, 3)
         self.assertTrue(server.fail)
 
     def test_secure_mode_moves_off_the_plaintext_port(self):
@@ -260,7 +260,7 @@ class TestServerConfiguration(unittest.TestCase):
         self.assertEqual(server.port, 502)
 
     def test_no_peers_before_any_client_connects(self):
-        self.assertEqual(ModbusServerSimulator().getPeers(), [])
+        self.assertEqual(ModbusServerSimulator().get_peers(), [])
 
 
 if __name__ == "__main__":

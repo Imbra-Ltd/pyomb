@@ -386,7 +386,7 @@ inside them.
 2. Register both at the bottom of the module, where every other class is
    registered.
 3. Add a builder to `RequestFactory` in `src/pyomb/client_simulator.py` and a
-   branch to `sendRequest`.
+   branch to `send_request`.
 4. Add a responder to `ResponseFactory` in `src/pyomb/server_simulator.py` and a
    branch to `on_data`.
 5. Add the code to the tables in `tests/test_server_dispatch.py` and
