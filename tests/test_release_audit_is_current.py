@@ -1,4 +1,4 @@
-"""A release carries an audit run since the release before it.
+"""A minor or major release carries an audit run since the release before it.
 
 The release procedure's step 2 says to run a 360-degree audit and not to ship
 with critical findings open. Four releases were cut without one -- v0.2.0,
@@ -16,6 +16,20 @@ however the sequence reads.
 The rule is that the newest audit is not older than the release before the one
 being cut. An audit run before that release shipped says nothing about the
 changes since, so it fails; an audit dated the same day passes.
+
+It applies to a minor or major release only. A patch release owes no audit and
+returns before any of the comparison below runs. Until 2026-08-31 every release
+owed one, and what that produced was two consecutive declines: v0.4.2 wrote a
+skip record and v0.4.3 reused it, leaving three releases resting on one report.
+A patch fixes a defect and changes no interface, so the half-day review has
+nothing new to review, and an obligation discharged by writing a document is
+not an obligation. Tying it to the version number also replaces the condition
+that briefly stood in its place -- the next audit when the backlog reaches zero
+-- which nothing watched and nothing would have raised.
+
+A version the gate cannot read is a finding rather than a pass. Not knowing
+whether an audit is owed is not the same as none being owed, and the quiet
+reading would turn a typo in the version literal into a silent exemption.
 
 Same-day was refused until 2026-08-31 and is now accepted, which is a decision
 about cost rather than a sharpening of the rule. Dates carry no time, so an
@@ -44,10 +58,17 @@ releases are read from the changelog's dated entries. Tags would be the obvious
 source and are not available: CI checks out shallow and fetches none, so a
 tag-based rule would find nothing and report a clean tree from it.
 
-The gate is unconditional. It does not detect a release branch and does not
-need to -- its comparison only tightens when a new dated entry appears, which
-is step 4 of the same procedure, so it is silent between releases and fails on
-the branch that is cutting one.
+The gate reads the version and nothing else about the branch. It does not
+detect a release branch and does not need to -- its comparison only tightens
+when a new dated entry appears, which is step 4 of the same procedure, so it is
+silent between releases and fails on the branch that is cutting a minor or a
+major one.
+
+One consequence is worth stating, because it is invisible in a green run: while
+the package reports a patch version, the live assertion below passes without
+comparing anything. What keeps the rule honest in that state is the fixture
+tests, which is why they name a minor version and why the patch case is pinned
+rather than left to follow from the absence of a failure.
 """
 
 import datetime
@@ -75,6 +96,12 @@ AUDITS = "docs/audits/"
 # The character classes are spelled out rather than written as a shorthand
 # escape, which can be lost on the way into a file while still compiling.
 REPORT = re.compile(r"^(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})-360(-skipped)?[.]md$")
+
+# The version the package reports, read as far as the patch component. Anything
+# after it is a pre-release suffix, which says when a release ships rather than
+# what it carries, so it does not change what the release owes. The character
+# classes are spelled out for the same reason as above.
+VERSION = re.compile(r"^(?P<major>[0-9]+)[.](?P<minor>[0-9]+)[.](?P<patch>[0-9]+)")
 
 # What the tree held when this floor was set: the 2026-08-18 report and the
 # 2026-08-29 one added beside this gate. A dated report is immutable once
@@ -157,6 +184,27 @@ def previous_release(sections, version):
     return sections[0] if sections else None
 
 
+def owes_an_audit(version):
+    """Whether a release of this version owes a 360-degree audit.
+
+    Args:
+        version (str) : The version the package reports
+
+    Returns:
+        bool | None : True for a minor or major release, False for a patch,
+            None when the version cannot be read
+    """
+
+    matched = VERSION.match(version)
+
+    if matched is None:
+        return None
+
+    # A patch release fixes a defect and changes no interface. A minor or major
+    # release is where new surface arrives, which is what the audit reviews.
+    return matched.group("patch") == "0"
+
+
 def stale_audit(dates, sections, version):
     """Report an audit that does not cover the release under consideration.
 
@@ -166,9 +214,19 @@ def stale_audit(dates, sections, version):
         version (str)      : The version the package reports
 
     Returns:
-        list[str] : Empty when the newest report is not older than the previous
-            release
+        list[str] : Empty when no audit is owed, or when the newest report is
+            not older than the previous release
     """
+
+    owed = owes_an_audit(version)
+
+    # Not knowing whether an audit is owed is not the same as none being owed,
+    # so an unreadable version is a finding rather than a quiet pass.
+    if owed is None:
+        return [f"{version} is not a version this gate can read, so whether it owes an audit is unknown"]
+
+    if not owed:
+        return []
 
     previous = previous_release(sections, version)
 
@@ -199,9 +257,13 @@ def stale_audit(dates, sections, version):
 # A tree satisfying the rule: two releases, and a report dated after the older
 # of them. The version under consideration is the newer entry, so the report has
 # to postdate the older one.
-CLEAN_VERSION = "9.9.9"
+#
+# It names a minor release, because a patch owes no audit and the rule returns
+# before reading any of this. Fixtures naming a patch would retire every break
+# below while the suite stayed green.
+CLEAN_VERSION = "9.10.0"
 
-CLEAN_SECTIONS = read_sections("## [Unreleased]\n\n## [9.9.9] - 2026-01-10\n\n## [9.9.8] - 2026-01-01\n")
+CLEAN_SECTIONS = read_sections("## [Unreleased]\n\n## [9.10.0] - 2026-01-10\n\n## [9.9.8] - 2026-01-01\n")
 
 CLEAN_DATES = ["2026-01-05"]
 
@@ -213,23 +275,53 @@ BREAKS = (
         "the audit predates the release before this one",
         ["2025-12-20"],
         CLEAN_SECTIONS,
+        CLEAN_VERSION,
     ),
     (
         "no audit has ever been written",
         [],
         CLEAN_SECTIONS,
+        CLEAN_VERSION,
     ),
     (
         "the previous entry was cut without a date",
         CLEAN_DATES,
-        read_sections("## [9.9.9] - 2026-01-10\n\n## [9.9.8]\n"),
+        read_sections("## [9.10.0] - 2026-01-10\n\n## [9.9.8]\n"),
+        CLEAN_VERSION,
+    ),
+    (
+        "a major release carries an audit older than the release before it",
+        ["2026-01-05"],
+        read_sections("## [10.0.0] - 2026-03-01\n\n## [9.10.1] - 2026-02-01\n"),
+        "10.0.0",
     ),
 )
+
+# An unreadable version on a tree that is otherwise spotless: the report
+# postdates every entry, so the comparison has nothing to complain about and the
+# only finding available is the version itself. A tree that failed for a second
+# reason would report this case green whether or not the guard exists.
+UNREADABLE_VERSION = "not-a-version"
+
+FRESH_DATES = ["2026-12-31"]
 
 # The case the comparison was loosened to admit, asserted rather than left to
 # follow from the absence of a break above. A loosening that nothing pins reads
 # as an oversight to the next person tightening the rule back up.
 SAME_DAY_DATES = ["2026-01-01"]
+
+# The case the rule was narrowed to admit, pinned for the same reason. This tree
+# is stale by the old standard and passes only because a patch owes no audit:
+# 9.10.1 follows 9.10.0, which shipped on 2026-01-10, and the newest report is
+# dated 2026-01-05. Swap the version for a minor and it becomes the first break
+# above.
+PATCH_VERSION = "9.10.1"
+
+PATCH_SECTIONS = read_sections("## [Unreleased]\n\n## [9.10.1] - 2026-02-01\n\n## [9.10.0] - 2026-01-10\n")
+
+# A release candidate for a minor owes the audit its final release owes, so the
+# parse reads the patch component and ignores what follows it.
+PRERELEASE_VERSION = "9.11.0-rc.1"
 
 
 class ReleaseAuditIsCurrent(unittest.TestCase):
@@ -319,13 +411,57 @@ class ReleaseAuditIsCurrent(unittest.TestCase):
             "no way to clear the gate at all.",
         )
 
+    def test_a_patch_release_owes_no_audit(self):
+        """The case the rule was narrowed to admit, on a deliberately stale tree."""
+
+        self.assertEqual(
+            stale_audit(CLEAN_DATES, PATCH_SECTIONS, PATCH_VERSION),
+            [],
+            "a patch release was refused over a stale audit. A patch fixes a "
+            "defect and changes no interface, so it owes no audit at all -- "
+            "which is the whole of what this narrowing changed. This tree is "
+            "stale by the old standard, and that is what makes it the pin.",
+        )
+
+    def test_a_release_candidate_owes_what_its_final_release_owes(self):
+        """The patch component decides, and a suffix after it does not."""
+
+        self.assertNotEqual(
+            stale_audit(["2025-12-20"], CLEAN_SECTIONS, PRERELEASE_VERSION),
+            [],
+            "a release candidate for a minor was let through with an audit "
+            "predating the release before it. The parse reads the patch "
+            "component; a pre-release suffix does not make the version "
+            "unreadable and does not excuse the audit.",
+        )
+
+    def test_an_unreadable_version_fails_rather_than_passing_quietly(self):
+        """Not knowing whether an audit is owed is not the same as none being owed."""
+
+        found = stale_audit(FRESH_DATES, CLEAN_SECTIONS, UNREADABLE_VERSION)
+
+        self.assertNotEqual(
+            found,
+            [],
+            "a version the gate cannot read was treated as owing no audit. "
+            "Everything else about this tree is clean, so nothing else could "
+            "have raised a finding -- which is what makes the silence the "
+            "version guard's own.",
+        )
+        self.assertIn(
+            UNREADABLE_VERSION,
+            " ".join(found),
+            f"the finding does not name {UNREADABLE_VERSION}, so an operator "
+            "reading it cannot tell which version could not be read.",
+        )
+
     def test_the_rule_flags_the_break_it_exists_to_catch(self):
         """A rule that has never failed is a rule nothing has tested."""
 
-        for description, dates, sections in BREAKS:
+        for description, dates, sections, version in BREAKS:
             with self.subTest(planted=description):
                 self.assertNotEqual(
-                    stale_audit(dates, sections, CLEAN_VERSION),
+                    stale_audit(dates, sections, version),
                     [],
                     f"the rule reported nothing against a tree where {description}, so it would pass that release.",
                 )
