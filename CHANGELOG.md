@@ -6,6 +6,14 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- ADR-037 records the contract v0.5.0 shipped: a packet holds each value once,
+  the payload is a view derived from the named fields on every read, and
+  assigning that view raises rather than silently doing nothing. The record is
+  written after the change rather than before it, which is later than the
+  decision-log rule asks for. See #228, ADR-037
+
 ## [0.5.0] - 2026-09-01
 
 The packet classes stop storing each value twice, which is what makes a
