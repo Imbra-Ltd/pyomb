@@ -14,6 +14,11 @@ numbers follow [Semantic Versioning](https://semver.org/).
   carries it in the precedence block. See ADR-034
 - PLAYBOOK 3.24, on the docstring-example gate and the three examples frozen
   because they need a Modbus server nothing starts. See #247, #254
+- ADR-035 settles what the architecture direction note contributes. Its six
+  layers become vocabulary for responsibilities the three packages already
+  carry, rather than a structure to build; six capabilities tracing to no
+  requirement are refused outright; serial transport is in scope and
+  unscheduled. Nothing on the wire changes. See #224, ADR-035
 
 ## [0.4.4] - 2026-09-01
 
