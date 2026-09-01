@@ -201,22 +201,18 @@ testpaths = ["tests", "src"]
 # each test module's own directory on sys.path, which is what resolves
 # `from stub_socket import ...`. Making tests/ a package breaks those imports.
 #
-# The three deselected examples each open a socket to a Modbus server on
-# localhost that nothing starts, so they raise a connection error wherever they
-# run. They are frozen one docstring at a time rather than by excluding the
-# module, because a fourth example in the same file needs no peer and stays
-# gated. Never add a name here to make the gate pass: an example that cannot
-# run is a defect in the example, and the freeze records the ones that were
-# already broken rather than the ones that may be.
+# Nothing is deselected. Three transport examples were, because each opened a
+# socket to a server nothing starts; they are gone rather than exempt, and the
+# runnable demonstrations they were reaching for live in examples/, which CI
+# executes against a plain install. Never add a name here to make the gate
+# pass: an example that cannot run is a defect in the example, and an exemption
+# records one that was already broken rather than one that may be.
 #
-# tests/test_doctests_are_gated.py asserts this list names examples that exist
-# and that the gate still reaches the rest.
+# tests/test_doctests_are_gated.py asserts that this list and the list recorded
+# there agree, and that the gate still reaches the examples in the package.
 addopts = [
     "--import-mode=prepend",
     "--doctest-modules",
-    "--deselect=src/pyomb/stream.py::pyomb.stream.ModbusTcpStream",
-    "--deselect=src/pyomb/stream.py::pyomb.stream.ModbusTcpSender",
-    "--deselect=src/pyomb/stream.py::pyomb.stream.ModbusTcpReceiver",
 ]
 
 [tool.coverage.run]
