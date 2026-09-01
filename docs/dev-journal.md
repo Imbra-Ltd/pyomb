@@ -3104,3 +3104,71 @@ package, per ADR-002. See `README.md` for usage and
   guessed. The pin moved twice during the session and stands at `v2.61.0`
   with `v2.68.0` out; #208 carries it and the submodule stays off-limits. The
   88-column ruler still has no recorded rationale beside it.
+
+## 2026-09-01 -- Ship v0.4.4, then measure where the effort went
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Cut v0.4.4 across nine pull requests**, closing #243, #232, #248, #207,
+    #249, #246 and #247. The release changed zero lines of library behaviour:
+    seventeen source lines, all docstrings and a version bump. Five of its
+    seven items were corrections to statements the tree was making about
+    itself -- a protocol id no frame may carry, a freeze count wrong by three,
+    a reason naming an artifact that never held the thing, two coverage floors
+    below their corpora, and an assertion a class never promised.
+  - **Narrowed the audit gate to minor and major releases (ADR-033).** Two
+    consecutive declines had left three releases resting on one report, and
+    the position standing was a deferral to zero backlog that nothing watched.
+    v0.4.4 is the first release cut under it, and the gate is silent rather
+    than cleared by a record. Filed upstream as
+    braboj/solid-ai-templates#1337.
+  - **Gated the docstring examples (#247).** Nothing had ever run them, which
+    is how #246 sat on `main` green. Three transport examples are frozen one
+    docstring at a time rather than by excluding their module, because a
+    fourth in the same file needs no peer and stays gated.
+  - **Re-ranked the backlog by risk to a user, on the owner's challenge.** The
+    measurement is the substance: across 156 commits since the first release,
+    `src/` took 605 of 19,937 changed lines, three per cent; sixteen of
+    twenty-five open issues traced to the template chain; seven session
+    headings here contain "bump the pin". Twenty-five issues became seventeen.
+    #228 became the only P1. Eight closed as `wontdo`, including #208, the pin
+    bump, which is closed with a trigger rather than deferred.
+  - **Inverted the template-adoption default (ADR-034).** A rule is adopted
+    when someone can name the defect it would have caught here; otherwise it
+    is declined in one line, with no record and no ticket. The last clause is
+    load-bearing, since requiring a record to decline is what built the
+    asymmetry. CLAUDE.md carries it in the precedence block so a session meets
+    it before reading the chain. Filed upstream as
+    braboj/solid-ai-templates#1353.
+- **PRs merged:** #244, #245, #250, #251, #252, #253, #255 and #256.
+- **Issues closed/created:** sixteen closed, seven shipped and nine `wontdo`.
+  Created #243, #246, #247, #248, #249 and #254.
+- **Lesson:** a count from a tool is not a risk assessment. I told the owner
+  the largest risk was 140 blind-except sites in the module that parses
+  untrusted input, from a lint total. Reading them inverted it: all seventy
+  broad handlers in `packets.py` re-raise as a typed error and none swallows,
+  and the seven genuine swallows are in the simulators, four of which log. The
+  real defect is error misclassification -- a bug in this library reported as a
+  malformed frame -- which is diagnosability, not data loss. The correction is
+  on #170, where the misleading number lives.
+- **Lesson:** the same failure produced the session it was diagnosing. Every
+  step of the release was individually defensible and the aggregate was a day
+  spent on a library that parses hostile input, without reading one exception
+  handler. Nothing in the process could report that, because each gate
+  measured its own subject and none measured the ratio.
+- **Lesson:** an issue written from a `grep` carries the `grep`'s blind spot.
+  #249 asked for a floor of ten; the assertion compares against a reader that
+  drops the `Unreleased` heading, so the answer was nine and ten would have
+  failed a correct tree. Measuring through the reader the assertion uses is
+  what caught it, and the issue was corrected rather than implemented.
+- **Upstream:** two filings. braboj/solid-ai-templates#1337 against `git.md`,
+  that a periodic review attached to every release decays into paperwork.
+  braboj/solid-ai-templates#1353 against `scope.md`, that a vendored rule set
+  shipping MUSTs on a schedule must state its adoption bar or downstream
+  backlogs fill from the release schedule.
+- **Pending:** #228 is the P1 and is not started -- changing a value on a
+  packet still sends the old bytes. The pin stays at `v2.61.0` against
+  `v2.70.0`, which is now the decision rather than a gap. #254's three
+  transport examples remain unrunnable and are frozen, not fixed. Whether the
+  process machinery this session left standing is still too heavy is a
+  question the next measurement answers, not this entry.

@@ -6,6 +6,15 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- ADR-034 inverts how a rule from the pinned templates is adopted: a rule binds
+  when someone can name the defect it would have caught in this repository, and
+  is otherwise declined in one line with no record and no ticket. `CLAUDE.md`
+  carries it in the precedence block. See ADR-034
+- PLAYBOOK 3.24, on the docstring-example gate and the three examples frozen
+  because they need a Modbus server nothing starts. See #247, #254
+
 ## [0.4.4] - 2026-09-01
 
 No change to what the library does on the wire. This release carries a

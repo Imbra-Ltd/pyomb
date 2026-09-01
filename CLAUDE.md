@@ -41,6 +41,12 @@ pinned templates. Ask rather than guess when this file and a template
 conflict. Where a dated audit report exists, it ranks below all of them: an
 audit is an observation from one day, not a standing rule.
 
+Read the templates in full, and adopt a rule from them only when you can name
+the defect it would have caught in this repository. Otherwise decline it in
+one line and move on -- no record, no ticket. A rule stating itself as a MUST
+is not evidence that it reduces risk here; see ADR-034, which carries the
+measurement that produced this. Rules already adopted stay adopted.
+
 This file describes the target, which the code does not yet meet. Every rule
 binds new and modified code; do not rewrite untouched code to match it outside
 a tracked migration issue. The open issues are the authority on what is
