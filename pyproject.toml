@@ -190,12 +190,34 @@ exclude_dirs = ["./docs", "./assets"]
 skips = ["*test_*.py"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+
+# src/ is here so the docstring examples are executed. They are the part of the
+# documentation a reader is most likely to copy and the part most able to be
+# checked, and until this was added nothing ran them -- one example had been
+# asserting something its class does not provide, on main, unnoticed.
+testpaths = ["tests", "src"]
 
 # tests/ deliberately has no __init__.py: the default prepend import mode puts
 # each test module's own directory on sys.path, which is what resolves
 # `from stub_socket import ...`. Making tests/ a package breaks those imports.
-addopts = "--import-mode=prepend"
+#
+# The three deselected examples each open a socket to a Modbus server on
+# localhost that nothing starts, so they raise a connection error wherever they
+# run. They are frozen one docstring at a time rather than by excluding the
+# module, because a fourth example in the same file needs no peer and stays
+# gated. Never add a name here to make the gate pass: an example that cannot
+# run is a defect in the example, and the freeze records the ones that were
+# already broken rather than the ones that may be.
+#
+# tests/test_doctests_are_gated.py asserts this list names examples that exist
+# and that the gate still reaches the rest.
+addopts = [
+    "--import-mode=prepend",
+    "--doctest-modules",
+    "--deselect=src/pyomb/stream.py::pyomb.stream.ModbusTcpStream",
+    "--deselect=src/pyomb/stream.py::pyomb.stream.ModbusTcpSender",
+    "--deselect=src/pyomb/stream.py::pyomb.stream.ModbusTcpReceiver",
+]
 
 [tool.coverage.run]
 source = ["pyomb"]

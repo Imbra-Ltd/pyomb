@@ -6,6 +6,16 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- The package's docstring examples are executed by the default test run. They
+  are the part of the documentation a reader is most likely to copy and nothing
+  ran them, which is how an example asserting a property its class does not
+  provide sat on `main` unnoticed. Three transport examples open a socket to a
+  server nothing starts and are exempt by name, one docstring at a time rather
+  than by excluding their module, so a fourth example in the same file stays
+  gated. See #247
+
 ### Changed
 
 - The 360-degree audit is owed before a minor or major release. A patch
