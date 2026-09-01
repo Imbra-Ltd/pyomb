@@ -1283,9 +1283,11 @@ To cut a release:
    add its compare link beside the others at the foot of the file, and move
    the `Unreleased` link to compare from the version just cut.
    `tests/test_changelog_release_entry.py` fails until all three are done.
-   Doing it on this branch is what puts the entry inside the tagged sdist —
-   done afterwards it corrects `main` and leaves the published archive
-   describing the release before this one, which no later edit reaches
+   Doing it on this branch is what puts the entry in the tree the tag names,
+   which is what every source archive GitHub generates from that tag carries —
+   done afterwards it corrects `main` and leaves the tagged tree describing the
+   release before this one, which no later edit reaches. The artifact is the
+   tag's tree rather than the sdist; the sdist carries no changelog
 5. Point the README quick start install command at the wheel the new tag will
    carry. `tests/test_readme_install_command.py` fails until it matches. Doing
    it on this branch is what keeps the README inside the tagged sdist naming

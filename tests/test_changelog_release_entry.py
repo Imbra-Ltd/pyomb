@@ -8,11 +8,19 @@ cannot be missed. The second was gated by nothing.
 
 So it was missed. `v0.3.0` was tagged and published with no `[0.3.0]` section
 and with `[Unreleased]` still comparing against `v0.2.1`; the entry and the
-links were written afterwards, which corrects `main` and cannot correct the
-sdist inside the tag. Re-tagging a published release to fix an asset is worse
-than the gap, so that archive keeps a changelog that does not mention the
-release it is part of. That asymmetry is the whole argument for catching this
-before the tag rather than after.
+links were written afterwards, which corrects `main` and cannot correct what
+the tag names. A tag points at one commit, and the changelog in that commit's
+tree is the one every source archive the host generates from the tag carries.
+Re-tagging a published release to repair it is worse than the gap, so the
+v0.3.0 tree keeps a changelog that does not mention the release it is part of.
+That asymmetry is the whole argument for catching this before the tag rather
+than after.
+
+The artifact is the tag's tree, not the sdist. The sdist has never carried
+`CHANGELOG.md` -- the include list names four anchored paths and the changelog
+is not among them -- so a reason phrased around it is falsifiable in one
+command, and a reader who checks it could conclude the step is unnecessary.
+The step is necessary; only the artifact was misnamed.
 
 Nothing about the omission was visible at the time. Its neighbour passed, every
 documented pre-release check ran and reported clean, and a procedure whose

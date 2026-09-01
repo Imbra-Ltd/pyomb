@@ -17,6 +17,10 @@ numbers follow [Semantic Versioning](https://semver.org/).
 - `ModbusHeader`'s docstring example passes a protocol id of zero, the only
   value a Modbus TCP frame may carry, where it previously passed 2. Both `Args`
   blocks now state that. No behaviour changes. See #232
+- The reason recorded for cutting the changelog entry before the tag names the
+  tree the tag points at, which is what the generated source archives carry.
+  It named the sdist, which has never carried `CHANGELOG.md`, so the reason was
+  falsifiable in one command while the step it justifies is sound. See #207
 
 ## [0.4.3] - 2026-08-31
 
