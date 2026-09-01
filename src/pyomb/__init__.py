@@ -39,6 +39,7 @@ from .packets import ModbusRtuResponse
 from .packets import ModbusTcpPacket
 from .packets import ModbusTcpRequest
 from .packets import ModbusTcpResponse
+from .packets import ModbusViolation
 from .stream import ModbusFragmenter
 from .stream import ModbusTcpReceiver
 from .stream import ModbusTcpSender
@@ -78,6 +79,7 @@ __all__ = [
     "ModbusTcpResponse",
     "ModbusRtuRequest",
     "ModbusRtuResponse",
+    "ModbusViolation",
     # Stream
     "ModbusTcpStream",
     "ModbusTcpSender",
