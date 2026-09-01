@@ -1,3 +1,4 @@
+import struct
 import unittest
 
 from pyomb.packets import ModbusError, ModbusPdu
@@ -37,15 +38,27 @@ class TestModbusPdu(unittest.TestCase):
 
     def test_serialization(self):
         expected = b"\x01\x00\x01\x02\x00\x03\x04"
-        pdu = ModbusPdu(fc=1, data=(1, 2, 3, 4))
-        serialized = pdu.pack(">BHBHB")
-        self.assertEqual(serialized, expected)
+
+        # This frame mixes 16-bit and 8-bit fields, which is the layout the
+        # format string used to express. Bytes express it too, so the
+        # assertion is unchanged while the route to it is the supported one.
+        pdu = ModbusPdu(fc=1, data=struct.pack(">HBHB", 1, 2, 3, 4))
+
+        self.assertEqual(pdu.serialize(), expected)
 
     def test_deserialization(self):
         message = b"\x01\x00\x01\x02\x00\x03\x04"
-        pdu = ModbusPdu.unpack(message, ">BHBHB")
+
+        pdu = ModbusPdu.deserialize(message)
+
         self.assertEqual(pdu.fc, 1)
-        self.assertEqual(pdu.data, (1, 2, 3, 4))
+
+        # Read back without a format string, the payload is its six byte
+        # values rather than the four mixed-width fields the sender meant.
+        # The frame is what survives the round trip; the widths were never
+        # in the bytes.
+        self.assertEqual(pdu.data, (0, 1, 2, 0, 3, 4))
+        self.assertEqual(pdu.serialize(), message)
 
 
 if __name__ == "__main__":
