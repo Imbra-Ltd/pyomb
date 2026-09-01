@@ -116,8 +116,8 @@ the certificate generator are reported on their own line.
 | --- | --- |
 | `src/pyomb/packets.py` | The codec — MBAP header, one class per function code, the PDU registry, TCP and RTU frame wrappers |
 | `src/pyomb/stream.py` | The transport — length-driven framing, deliberate fragmentation |
-| `src/pyomb/omb_client.py` | Client simulator and the request builder |
-| `src/pyomb/omb_server.py` | Server simulator, its select loop and the response factory |
+| `src/pyomb/client_simulator.py` | Client simulator and the request builder |
+| `src/pyomb/server_simulator.py` | Server simulator, its select loop and the response factory |
 | `src/pyomb/errors.py` | Modbus exception codes as a Python exception hierarchy |
 | `tests/stub_socket.py` | The socket doubles most tests build on |
 | `examples/README.md` | Four runnable usage patterns with their real output, and the quickest read of what the library does |

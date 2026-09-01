@@ -34,7 +34,7 @@ from .packets import (
 from .stream import ModbusTcpStream
 
 
-class OmbServerSim(threading.Thread):
+class ModbusServerSimulator(threading.Thread):
     """Very simple Modbus TCP Server for test purposes.
 
     This class can be used to simulate a Modbus server for testing or
@@ -126,7 +126,7 @@ class OmbServerSim(threading.Thread):
         threading.Thread.__init__(self)
 
         # Set the thread name and logger
-        self.name = str("OmbServerSim")
+        self.name = str("ModbusServerSimulator")
         self.log = log or Logger(self.name)
         self.log.addHandler(logging.NullHandler())
 
@@ -170,8 +170,8 @@ class OmbServerSim(threading.Thread):
 
         # SSL configuration
         if secure:
-            if port == OmbServerSim.PLAINTEXT_PORT:
-                self.port = OmbServerSim.ENCRYPTED_PORT
+            if port == ModbusServerSimulator.PLAINTEXT_PORT:
+                self.port = ModbusServerSimulator.ENCRYPTED_PORT
             self.ssl_context = ssl.SSLContext(protocol)
             self.ssl_context.load_cert_chain(self.cert, self.key)
             self.ssl_context.load_verify_locations(self.ca_chain)
@@ -602,7 +602,7 @@ class OmbServerSim(threading.Thread):
         self.process_connections = process_connections
 
         # Start the server thread
-        super(OmbServerSim, self).start()
+        super(ModbusServerSimulator, self).start()
 
         # Wait for the listener, bounded. This used to spin on the event with
         # no timeout and no liveness check, so anything that stopped run()
@@ -1022,8 +1022,8 @@ class ResponseFactory(object):
 def run_server():
     """Run the Modbus server to simulate a Modbus device."""
 
-    log = Logger("OmbServerSim")
-    server_thread = OmbServerSim(
+    log = Logger("ModbusServerSimulator")
+    server_thread = ModbusServerSimulator(
         log=log,
         ipAddress=0,
         connLimit=50,

@@ -16,7 +16,7 @@ import threading
 
 import pytest
 
-SERVER_THREAD_NAME = "OmbServerSim"
+SERVER_THREAD_NAME = "ModbusServerSimulator"
 
 
 @pytest.fixture(autouse=True)

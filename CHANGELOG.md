@@ -6,6 +6,29 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The two simulator modules and their classes are renamed for what they hold.
+  `omb_client.py` becomes `client_simulator.py` and `omb_server.py` becomes
+  `server_simulator.py`; `OmbClientSim` becomes `ModbusClientSimulator` and
+  `OmbServerSim` becomes `ModbusServerSimulator`. Neither file held a client
+  or a server: this library provides neither, and the `omb_` prefix repeated
+  the name of the package containing it. `RequestFactory` and
+  `ResponseFactory` keep their names. See #274, ADR-038
+- `from pyomb.omb_client import ...` and `from pyomb.omb_server import ...`
+  raise `ModuleNotFoundError`. A submodule import resolves against the
+  filesystem rather than the package, so keeping the old paths alive means
+  shipping a module whose only job is to re-import -- and the two submodules
+  stopped being public when the classes moved to the package root in 0.3.0.
+  Import from `pyomb` instead, which is the documented form
+
+### Deprecated
+
+- `OmbClientSim` and `OmbServerSim` still resolve from the package root and
+  raise `DeprecationWarning` naming the new spelling. They are absent from
+  `__all__`, so a star import no longer offers them. Both are removed in
+  0.7.0; see #275
+
 ## [0.5.1] - 2026-09-01
 
 Documentation for what 0.5.0 shipped. That release added constraint checking

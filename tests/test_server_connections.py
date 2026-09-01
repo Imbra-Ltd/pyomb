@@ -16,7 +16,7 @@ import time
 import unittest
 
 from pyomb.errors import ModbusModeError, ModbusNetworkError
-from pyomb.omb_server import OmbServerSim
+from pyomb.server_simulator import ModbusServerSimulator
 
 
 class ServerThreadExceptions:
@@ -68,7 +68,7 @@ class ServerFixture(unittest.TestCase):
 
     def start_server(self, process_connections=True, **options):
         options.setdefault("inactiveTimeout", 30.0)
-        self.server = OmbServerSim(port=self.port, **options)
+        self.server = ModbusServerSimulator(port=self.port, **options)
         self.server.daemon = True
         self.server.start(process_connections=process_connections)
 
@@ -202,7 +202,7 @@ class TestStartup(ServerFixture):
         # on stderr where nothing could act on it.
         self.port = self.occupy_a_port()
 
-        self.server = OmbServerSim(port=self.port)
+        self.server = ModbusServerSimulator(port=self.port)
         self.server.daemon = True
 
         with self.assertRaises(ModbusNetworkError):
@@ -212,7 +212,7 @@ class TestStartup(ServerFixture):
         # The liveness check should end the wait well inside the timeout.
         self.port = self.occupy_a_port()
 
-        self.server = OmbServerSim(port=self.port)
+        self.server = ModbusServerSimulator(port=self.port)
         self.server.daemon = True
         started = time.time()
 

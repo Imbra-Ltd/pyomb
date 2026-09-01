@@ -13,8 +13,8 @@ import unittest
 
 from stub_socket import LoopbackSocket
 
+from pyomb.client_simulator import ModbusClientSimulator
 from pyomb.errors import ModbusIllegalFunction
-from pyomb.omb_client import OmbClientSim
 from pyomb.packets import (
     ModbusHeader,
     ModbusRequestFC1,
@@ -54,7 +54,7 @@ class ClientOnAStubSocket(unittest.TestCase):
     """Builds a client whose socket is a stub rather than a real connection."""
 
     def make_client(self, **options):
-        client = OmbClientSim(**options)
+        client = ModbusClientSimulator(**options)
 
         # The constructor opens a real socket that is never connected here.
         client.sock.close()
