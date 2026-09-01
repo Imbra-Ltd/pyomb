@@ -32,6 +32,9 @@ through cases a compliant peer would never produce.
 - Drive a client simulator that matches responses to requests by transaction
   identifier and discards anything else
 - Raise Modbus exception codes as a Python exception hierarchy
+- Ask a packet which of the specification's constraints it breaks, and still
+  send it — the check reports, it never refuses, because putting a frame a
+  device rejects on the wire is how you grade the device
 - Depend on nothing outside the standard library
 
 ## Quick start
