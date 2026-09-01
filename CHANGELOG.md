@@ -17,6 +17,10 @@ numbers follow [Semantic Versioning](https://semver.org/).
 - `ModbusHeader`'s docstring example passes a protocol id of zero, the only
   value a Modbus TCP frame may carry, where it previously passed 2. Both `Args`
   blocks now state that. No behaviour changes. See #232
+- The release-audit gate's two coverage floors match the corpora they guard,
+  three dated reports and nine release entries, where they sat at two and six.
+  A floor below its corpus still catches a total enumeration failure and stops
+  catching a partial one. See #249
 - `ModbusTcpPacket`'s docstring example asserts what the class provides. It
   compared a hand-built packet against a deserialized one and failed, because
   deserializing yields a generic PDU by design; it now compares the frames,
