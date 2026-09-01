@@ -919,11 +919,12 @@ covered by existing. It also counts what it ran and fails on zero — an empty
 directory, a renamed suffix or a mistyped path would otherwise look exactly
 like every example passing.
 
-The two socket examples start the server simulator on port 0 rather than 502.
-A port below 1024 needs privileges on Linux, so an example fixed at the
-registered Modbus port could not run here at all. `examples/README.md` states
-that beside the commands, and the project README keeps 502 because that is what
-a real device listens on.
+Every example that opens a socket binds a port the operating system assigns
+rather than 502, whether it starts the server simulator or holds both ends of
+a connection itself. A port below 1024 needs privileges on Linux, so an
+example fixed at the registered Modbus port could not run here at all.
+`examples/README.md` states that beside the commands, and the project README
+keeps 502 because that is what a real device listens on.
 
 An example is documentation that runs, so a failure here is usually the
 documentation going stale rather than a defect in the library. Read what the

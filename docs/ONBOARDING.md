@@ -120,7 +120,7 @@ the certificate generator are reported on their own line.
 | `src/pyomb/server_simulator.py` | Server simulator, its select loop and the response factory |
 | `src/pyomb/errors.py` | Modbus exception codes as a Python exception hierarchy |
 | `tests/stub_socket.py` | The socket doubles most tests build on |
-| `examples/README.md` | Four runnable usage patterns with their real output, and the quickest read of what the library does |
+| `examples/README.md` | Every runnable usage pattern with its real output, and the quickest read of what the library does |
 | `CLAUDE.md` | Conventions and the target the rewrite aims at |
 | `docs/dev-journal.md` | What changed, why, and the post-mortems |
 
