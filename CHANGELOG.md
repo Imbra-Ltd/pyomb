@@ -6,6 +6,14 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-09-01
+
+Documentation for what 0.5.0 shipped. That release added constraint checking
+to every packet component and named it nowhere a consumer would look: the
+tagged tree's README mentioned neither method, so the sdist and the wheel
+metadata both carried the capability undocumented. Nothing in the library
+changes -- no source module is touched, and the wire output is identical.
+
 ### Added
 
 - A runnable example and a README usage section for the constraint checking
@@ -468,7 +476,8 @@ no upgrade path to describe and no consumer to break.
   committed chain was rotated; it was self-signed and installed in no trust
   store
 
-[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.4...v0.5.0
 [0.4.4]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.2...v0.4.3
