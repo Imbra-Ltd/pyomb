@@ -110,12 +110,12 @@ class ModbusHeader(ModbusPacketAbc):
 
     Args:
         trans_id (int)  : The transaction id
-        prot_id (int)   : The protocol id
+        prot_id (int)   : The protocol id; zero for Modbus TCP
         length (int)    : The length of the data
         unit_id (int)   : The unit id
 
     Example:
-        >>> header1 = ModbusHeader(trans_id=1, prot_id=2, length=3, unit_id=4)
+        >>> header1 = ModbusHeader(trans_id=1, prot_id=0, length=3, unit_id=4)
         >>> stream = header1.serialize()
         >>> header2 = ModbusHeader.deserialize(stream)
         >>> assert header1 == header2
@@ -142,7 +142,7 @@ class ModbusHeader(ModbusPacketAbc):
 
         Args:
             trans_id (int)  : The transaction id
-            prot_id (int)   : The protocol id
+            prot_id (int)   : The protocol id; zero for Modbus TCP
             length (int)    : The length of the data
             unit_id (int)   : The unit id
         """
