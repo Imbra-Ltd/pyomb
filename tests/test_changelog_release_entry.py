@@ -68,9 +68,9 @@ VERSION_TARGET = re.compile(r"/(?:compare/v.+?\.\.\.v|releases/tag/v)(?P<version
 CUT_THE_BLOCK = (
     "Cut the `Unreleased` block into a dated `[X.Y.Z]` entry, the way the "
     "release procedure's step 4 says. Doing it on the release branch is what "
-    "puts the entry inside the tagged sdist; doing it afterwards corrects the "
-    "branch and leaves the published archive describing the release before "
-    "this one."
+    "puts the entry in the tree the tag names, which is what every source "
+    "archive generated from that tag carries; doing it afterwards corrects the "
+    "branch and leaves the tagged tree describing the release before this one."
 )
 
 MOVE_THE_LINK = (
