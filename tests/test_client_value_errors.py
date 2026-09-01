@@ -1,6 +1,6 @@
 """Bad write values are refused as Modbus errors, not as IndexError.
 
-FC5 and FC6 write a single value, so sendRequest() narrows a sequence to its
+FC5 and FC6 write a single value, so send_request() narrows a sequence to its
 first element. An empty sequence reached the subscript and raised IndexError
 from inside the argument normalisation -- an exception naming neither the
 argument nor the caller, and the only place in the library reporting bad input
@@ -38,20 +38,20 @@ class TestEmptyWriteValues(ClientOnAStubSocket):
                     client = self.make_client()
 
                     with self.assertRaises(ModbusIllegalDataValue):
-                        client.sendRequest(fc=fc, writeAddress=0, values=empty)
+                        client.send_request(fc=fc, write_address=0, values=empty)
 
     def test_the_error_is_a_protocol_error(self):
         # Callers catch the family, not the leaf.
         client = self.make_client()
 
         with self.assertRaises(ModbusProtocolError):
-            client.sendRequest(fc=5, writeAddress=0, values=())
+            client.send_request(fc=5, write_address=0, values=())
 
     def test_nothing_is_sent_when_the_value_is_refused(self):
         client = self.make_client()
 
         with self.assertRaises(ModbusIllegalDataValue):
-            client.sendRequest(fc=6, writeAddress=0, values=[])
+            client.send_request(fc=6, write_address=0, values=[])
 
         self.assertEqual(client.sock.sent, [])
 
@@ -61,9 +61,9 @@ class TestEmptyWriteValues(ClientOnAStubSocket):
         client = self.make_client()
 
         with self.assertRaises(ModbusIllegalDataValue):
-            client.sendRequest(fc=5, writeAddress=0, values=())
+            client.send_request(fc=5, write_address=0, values=())
 
-        client.sendRequest(fc=1, readAddress=0, readCount=1)
+        client.send_request(fc=1, read_address=0, read_count=1)
         request = ModbusTcpRequest.deserialize(client.sock.frame())
 
         self.assertEqual(request.header.trans_id, 0)
@@ -76,7 +76,7 @@ class TestValuesStillAccepted(ClientOnAStubSocket):
         for fc in SINGLE_WRITE_CODES:
             with self.subTest(fc=fc):
                 client = self.make_client()
-                client.sendRequest(fc=fc, writeAddress=1, values=[0x1234, 0x5678])
+                client.send_request(fc=fc, write_address=1, values=[0x1234, 0x5678])
                 request = ModbusTcpRequest.deserialize(client.sock.frame())
 
                 self.assertEqual(request.pdu.output_value, 0x1234)
@@ -85,7 +85,7 @@ class TestValuesStillAccepted(ClientOnAStubSocket):
         for fc in SINGLE_WRITE_CODES:
             with self.subTest(fc=fc):
                 client = self.make_client()
-                client.sendRequest(fc=fc, writeAddress=1, values=0x1234)
+                client.send_request(fc=fc, write_address=1, values=0x1234)
                 request = ModbusTcpRequest.deserialize(client.sock.frame())
 
                 self.assertEqual(request.pdu.output_value, 0x1234)
@@ -95,7 +95,7 @@ class TestValuesStillAccepted(ClientOnAStubSocket):
         # normalisation would have swallowed it and treated the generator as a
         # scalar.
         client = self.make_client()
-        client.sendRequest(fc=6, writeAddress=1, values=(v for v in [0x0042]))
+        client.send_request(fc=6, write_address=1, values=(v for v in [0x0042]))
         request = ModbusTcpRequest.deserialize(client.sock.frame())
 
         self.assertEqual(request.pdu.output_value, 0x0042)
@@ -104,13 +104,13 @@ class TestValuesStillAccepted(ClientOnAStubSocket):
         client = self.make_client()
 
         with self.assertRaises(ModbusIllegalDataValue):
-            client.sendRequest(fc=6, writeAddress=1, values=(v for v in []))
+            client.send_request(fc=6, write_address=1, values=(v for v in []))
 
     def test_multiple_write_codes_are_untouched(self):
         # Only FC5 and FC6 narrow, so the guard must not reach the codes that
         # legitimately take a sequence.
         client = self.make_client()
-        client.sendRequest(fc=16, writeAddress=0, writeCount=2, values=[1, 2])
+        client.send_request(fc=16, write_address=0, write_count=2, values=[1, 2])
         request = ModbusTcpRequest.deserialize(client.sock.frame())
 
         self.assertEqual(tuple(request.pdu.values), (1, 2))

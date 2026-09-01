@@ -51,7 +51,7 @@ class TestTransactionId(ClientOnAStubSocket):
         client = self.make_client()
 
         for _ in range(3):
-            client.sendRequest(fc=1, readAddress=0, readCount=1)
+            client.send_request(fc=1, read_address=0, read_count=1)
 
         self.assertEqual([h.trans_id for h in self.sent_headers(client)], [0, 1, 2])
 
@@ -60,7 +60,7 @@ class TestTransactionId(ClientOnAStubSocket):
         client._next_trans_id = 0xFFFF
 
         for _ in range(2):
-            client.sendRequest(fc=1, readAddress=0, readCount=1)
+            client.send_request(fc=1, read_address=0, read_count=1)
 
         self.assertEqual([h.trans_id for h in self.sent_headers(client)], [0xFFFF, 0])
 
@@ -69,7 +69,7 @@ class TestUnitId(ClientOnAStubSocket):
     def test_defaults_to_one(self):
         client = self.make_client()
 
-        client.sendRequest(fc=1, readAddress=0, readCount=1)
+        client.send_request(fc=1, read_address=0, read_count=1)
 
         self.assertEqual(self.sent_headers(client)[0].unit_id, 1)
 
@@ -78,7 +78,7 @@ class TestUnitId(ClientOnAStubSocket):
         # id could not be addressed at all.
         client = self.make_client(unit_id=17)
 
-        client.sendRequest(fc=1, readAddress=0, readCount=1)
+        client.send_request(fc=1, read_address=0, read_count=1)
 
         self.assertEqual(self.sent_headers(client)[0].unit_id, 17)
 
@@ -87,8 +87,8 @@ class TestResponseCorrelation(ClientOnAStubSocket):
     def test_matching_response_is_returned(self):
         client = self.make_client(inbox=response_frame(trans_id=0))
 
-        client.sendRequest(fc=1, readAddress=0, readCount=1)
-        header, pdu = client.waitResponse()
+        client.send_request(fc=1, read_address=0, read_count=1)
+        header, pdu = client.wait_response()
 
         self.assertEqual(header.trans_id, 0)
         self.assertIsNotNone(pdu)
@@ -98,9 +98,9 @@ class TestResponseCorrelation(ClientOnAStubSocket):
         # reply to 0 arrives first. Previously it was returned as the answer.
         client = self.make_client(inbox=response_frame(trans_id=0) + response_frame(trans_id=1))
 
-        client.sendRequest(fc=1, readAddress=0, readCount=1)
-        client.sendRequest(fc=1, readAddress=0, readCount=1)
-        header, _ = client.waitResponse()
+        client.send_request(fc=1, read_address=0, read_count=1)
+        client.send_request(fc=1, read_address=0, read_count=1)
+        header, _ = client.wait_response()
 
         self.assertEqual(header.trans_id, 1)
 
@@ -108,19 +108,19 @@ class TestResponseCorrelation(ClientOnAStubSocket):
         stale = b"".join(response_frame(trans_id=999) for _ in range(32))
         client = self.make_client(inbox=stale)
 
-        client.sendRequest(fc=1, readAddress=0, readCount=1)
+        client.send_request(fc=1, read_address=0, read_count=1)
 
         with self.assertRaises(ModbusNetworkError):
-            client.waitResponse()
+            client.wait_response()
 
     def test_closed_connection_reports_no_response(self):
         # Previously raised AttributeError: the empty-response placeholder was
         # a plain tuple, and the return statement asked it for .header.
         client = self.make_client()
 
-        client.sendRequest(fc=1, readAddress=0, readCount=1)
+        client.send_request(fc=1, read_address=0, read_count=1)
 
-        self.assertEqual(client.waitResponse(), (None, None))
+        self.assertEqual(client.wait_response(), (None, None))
 
 
 if __name__ == "__main__":

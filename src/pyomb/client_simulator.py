@@ -47,7 +47,7 @@ class ModbusClientSimulator(object):
             The unit identifier addressed by every request. Defaults to 1.
             A device behind a gateway needs the id the gateway routes on.
 
-        frag_count (int):
+        frag_size (int):
             Fragmentation size. Defaults to 0.
 
         frag_delay (int):
@@ -127,7 +127,7 @@ class ModbusClientSimulator(object):
         host=b"localhost",
         port=502,
         unit_id=1,
-        frag_count=0,
+        frag_size=0,
         frag_delay=0,
         secure=False,
         protocol=ssl.PROTOCOL_TLS_CLIENT,
@@ -150,7 +150,7 @@ class ModbusClientSimulator(object):
         self.host = host
         self.port = port
         self.unit_id = unit_id
-        self.frag_count = frag_count
+        self.frag_size = frag_size
         self.frag_delay = frag_delay
         self.header_size = 8
 
@@ -361,7 +361,7 @@ class ModbusClientSimulator(object):
     def _take_trans_id(self):
         """Claims the next transaction identifier for a request.
 
-        The identifier is recorded as pending so that waitResponse() can tell
+        The identifier is recorded as pending so that wait_response() can tell
         the reply to this request from a late reply to an earlier one.
 
         Returns:
@@ -376,13 +376,13 @@ class ModbusClientSimulator(object):
         return trans_id
 
     ############################################################################
-    def sendRequest(
+    def send_request(
         self,
         fc,
-        readAddress=0,
-        readCount=1,
-        writeAddress=0,
-        writeCount=1,
+        read_address=0,
+        read_count=1,
+        write_address=0,
+        write_count=1,
         values=(0,),
         and_mask=0xFFFF,
         or_mask=0,
@@ -431,27 +431,27 @@ class ModbusClientSimulator(object):
 
         # Read Coils (FC1)
         if fc == 1:
-            pdu = RequestFactory.create_fc1_req(read_address=readAddress, read_count=readCount)
+            pdu = RequestFactory.create_fc1_req(read_address=read_address, read_count=read_count)
 
         # Read Discrete Inputs (FC2)
         elif fc == 2:
-            pdu = RequestFactory.create_fc2_req(read_address=readAddress, read_count=readCount)
+            pdu = RequestFactory.create_fc2_req(read_address=read_address, read_count=read_count)
 
         # Read Holding Registers (FC3)
         elif fc == 3:
-            pdu = RequestFactory.create_fc3_req(read_address=readAddress, read_count=readCount)
+            pdu = RequestFactory.create_fc3_req(read_address=read_address, read_count=read_count)
 
         # Read Input Registers (FC4)
         elif fc == 4:
-            pdu = RequestFactory.create_fc4_req(read_address=readAddress, read_count=readCount)
+            pdu = RequestFactory.create_fc4_req(read_address=read_address, read_count=read_count)
 
         # Write Single Coil (FC5)
         elif fc == 5:
-            pdu = RequestFactory.create_fc5_req(write_address=writeAddress, value=values)
+            pdu = RequestFactory.create_fc5_req(write_address=write_address, value=values)
 
         # Write Single Register (FC6)
         elif fc == 6:
-            pdu = RequestFactory.create_fc6_req(write_address=writeAddress, value=values)
+            pdu = RequestFactory.create_fc6_req(write_address=write_address, value=values)
 
         # Read Exception Status (FC7)
         elif fc == 7:
@@ -459,23 +459,23 @@ class ModbusClientSimulator(object):
 
         # Write Multiple Coils (FC15)
         elif fc == 15:
-            pdu = RequestFactory.create_fc15_req(write_address=writeAddress, write_count=writeCount, values=values)
+            pdu = RequestFactory.create_fc15_req(write_address=write_address, write_count=write_count, values=values)
 
         # Write Multiple Registers (FC16)
         elif fc == 16:
-            pdu = RequestFactory.create_fc16_req(write_address=writeAddress, write_count=writeCount, values=values)
+            pdu = RequestFactory.create_fc16_req(write_address=write_address, write_count=write_count, values=values)
 
         # Mask Write Register (FC22)
         elif fc == 22:
-            pdu = RequestFactory.create_fc22_req(write_address=writeAddress, and_mask=and_mask, or_mask=or_mask)
+            pdu = RequestFactory.create_fc22_req(write_address=write_address, and_mask=and_mask, or_mask=or_mask)
 
         # Read/Write Multiple Registers (FC23)
         elif fc == 23:
             pdu = RequestFactory.create_fc23_req(
-                read_addr=readAddress,
-                read_count=readCount,
-                write_addr=writeAddress,
-                write_count=writeCount,
+                read_addr=read_address,
+                read_count=read_count,
+                write_addr=write_address,
+                write_count=write_count,
                 write_values=values,
             )
 
@@ -495,13 +495,13 @@ class ModbusClientSimulator(object):
         self.log.info("{0}".format(request))
 
         # Create a Modbus TCP stream object
-        sender = ModbusTcpStream(sock=self.sock, frag_delay=self.frag_delay, frag_size=self.frag_count)
+        sender = ModbusTcpStream(sock=self.sock, frag_delay=self.frag_delay, frag_size=self.frag_size)
 
         # Send the request bytes over the socket
         sender.send(request.serialize())
 
     ############################################################################
-    def waitResponse(self):
+    def wait_response(self):
         """Waits for the response to the pending request and parses it.
 
         A response is accepted only when its transaction identifier matches the
@@ -556,13 +556,13 @@ class ModbusClientSimulator(object):
     ############################################################################
 
     def request(
-        self, fc, readAddress=0, readCount=1, writeAddress=0, writeCount=1, values=(0,), and_mask=0xFFFF, or_mask=0
+        self, fc, read_address=0, read_count=1, write_address=0, write_count=1, values=(0,), and_mask=0xFFFF, or_mask=0
     ):
         """Sends a Modbus request and waits for the response.
 
-        This methods wraps the `sendRequest` and `waitResponse` methods to send
+        This methods wraps the `send_request` and `wait_response` methods to send
         a request and wait for the response in a single call. It takes the same
-        arguments as the `sendRequest` method and returns the response header
+        arguments as the `send_request` method and returns the response header
         and PDU instances.
 
         It is used to simplify the process of sending a request and waiting for
@@ -571,27 +571,27 @@ class ModbusClientSimulator(object):
 
         Args:
             fc (int)            : The function code of the request.
-            readAddress (int)   : The starting address to read from.
-            readCount (int)     : The number of registers to read.
-            writeAddress (int)  : The starting address to write to.
-            writeCount (int)    : The number of registers to write.
+            read_address (int)  : The starting address to read from.
+            read_count (int)    : The number of registers to read.
+            write_address (int) : The starting address to write to.
+            write_count (int)   : The number of registers to write.
             values (list)       : The list of values to write.
             and_mask (int)      : The AND mask value.
             or_mask (int)       : The OR mask value.
 
         """
 
-        self.sendRequest(
+        self.send_request(
             fc=fc,
-            readAddress=readAddress,
-            readCount=readCount,
-            writeAddress=writeAddress,
-            writeCount=writeCount,
+            read_address=read_address,
+            read_count=read_count,
+            write_address=write_address,
+            write_count=write_count,
             values=values,
             and_mask=and_mask,
             or_mask=or_mask,
         )
-        response = self.waitResponse()
+        response = self.wait_response()
 
         return response
 
@@ -672,16 +672,18 @@ class ModbusClientSimulator(object):
 
         # Exchange data
         for i in range(1):
-            self.request(fc=1, readAddress=addr, readCount=1)
-            self.request(fc=2, readAddress=addr, readCount=1)
-            self.request(fc=3, readAddress=addr, readCount=1)
-            self.request(fc=4, readAddress=addr, readCount=1)
-            self.request(fc=5, writeAddress=addr, writeCount=count, values=[i] * count)
-            self.request(fc=6, writeAddress=addr, writeCount=count, values=[i] * count)
-            self.request(fc=15, writeAddress=addr, writeCount=1, values=[i] * count)
-            self.request(fc=16, writeAddress=addr, writeCount=count, values=[i] * count)
-            self.request(fc=22, writeAddress=addr, and_mask=0x55, or_mask=0xAA)
-            self.request(fc=23, readAddress=addr, readCount=count, writeAddress=0, writeCount=count, values=[i] * count)
+            self.request(fc=1, read_address=addr, read_count=1)
+            self.request(fc=2, read_address=addr, read_count=1)
+            self.request(fc=3, read_address=addr, read_count=1)
+            self.request(fc=4, read_address=addr, read_count=1)
+            self.request(fc=5, write_address=addr, write_count=count, values=[i] * count)
+            self.request(fc=6, write_address=addr, write_count=count, values=[i] * count)
+            self.request(fc=15, write_address=addr, write_count=1, values=[i] * count)
+            self.request(fc=16, write_address=addr, write_count=count, values=[i] * count)
+            self.request(fc=22, write_address=addr, and_mask=0x55, or_mask=0xAA)
+            self.request(
+                fc=23, read_address=addr, read_count=count, write_address=0, write_count=count, values=[i] * count
+            )
 
         self.disconnect()
 
@@ -879,7 +881,7 @@ def run_client():
         log=logger,
         host=b"localhost",
         port=502,
-        # frag_count=2,
+        # frag_size=2,
         secure=False,
     )
     client.test()

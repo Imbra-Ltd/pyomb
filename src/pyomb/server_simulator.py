@@ -46,35 +46,41 @@ class ModbusServerSimulator(threading.Thread):
     communication, the server listens on port 802.
 
     Args:
-        log (Logger)            : The logger instance used to log messages.
-        ipAddress (int)         : The IP address of the server as a 32-bit integer.
-        port (int)              : The port of the server as a 16-bit integer.
-                                  Pass 0 to let the operating system choose a
-                                  free one; the attribute then reports that
-                                  choice once start() returns.
-        delay (float)           : The delay time for server response in seconds.
-        frag_count (int)        : The Modbus message fragmentation size.
-        frag_delay (float)      : The delay time between fragments.
-        connLimit (int)         : The maximum number of clients allowed to connect.
-        inactiveTimeout (float) : The inactivity timeout for a client.
-        daemon (bool)           : Kill the server after the caller exits.
-        secure (bool)           : Security (SSL context).
-        protocol (int)          : Secure protocol.
-        cert (str)              : Certificate in DER/PEM format.
-        key (str)               : Private key in DER/PEM format.
-        ca_chain (str)          : Certificate file in DER/PEM format.
-        ciphers (str)           : Supported ciphers as string in OpenSSL
-                                  format. Defaults to None, meaning the
-                                  interpreter's secure default suite.
-        verify_mode (int)       : Verify client's certificate. Defaults to
-                                  ssl.CERT_REQUIRED, as MB-TCP-Security is
-                                  built on mutual TLS.
-        verify_hostname (bool)  : Verify client's hostname. Server contexts do
-                                  not check hostnames; defaults to False.
-        ssl_options (int)       : SSL options OR-ed into the context. They can
-                                  only add a restriction, so a session may be
-                                  pinned above MINIMUM_TLS_VERSION but never
-                                  below it.
+        log (Logger)             : The logger instance used to log messages.
+        host (str)               : The interface to bind. Defaults to "",
+                                   which binds every interface. Any form
+                                   socket.bind accepts works, so a dotted
+                                   quad or a resolvable name both do.
+        port (int)               : The port of the server as a 16-bit integer.
+                                   Pass 0 to let the operating system choose a
+                                   free one; the attribute then reports that
+                                   choice once start() returns.
+        delay (float)            : The delay time for server response in
+                                   seconds.
+        frag_size (int)          : The Modbus message fragmentation size in
+                                   bytes. 0 sends each message whole.
+        frag_delay (float)       : The delay time between fragments.
+        connection_limit (int)   : The maximum number of clients allowed to
+                                   connect.
+        inactive_timeout (float) : The inactivity timeout for a client.
+        daemon (bool)            : Kill the server after the caller exits.
+        secure (bool)            : Security (SSL context).
+        protocol (int)           : Secure protocol.
+        cert (str)               : Certificate in DER/PEM format.
+        key (str)                : Private key in DER/PEM format.
+        ca_chain (str)           : Certificate file in DER/PEM format.
+        ciphers (str)            : Supported ciphers as string in OpenSSL
+                                   format. Defaults to None, meaning the
+                                   interpreter's secure default suite.
+        verify_mode (int)        : Verify client's certificate. Defaults to
+                                   ssl.CERT_REQUIRED, as MB-TCP-Security is
+                                   built on mutual TLS.
+        verify_hostname (bool)   : Verify client's hostname. Server contexts do
+                                   not check hostnames; defaults to False.
+        ssl_options (int)        : SSL options OR-ed into the context. They can
+                                   only add a restriction, so a session may be
+                                   pinned above MINIMUM_TLS_VERSION but never
+                                   below it.
     """
 
     # None means "inherit the interpreter's secure default suite". The previous
@@ -103,13 +109,13 @@ class ModbusServerSimulator(threading.Thread):
     def __init__(
         self,
         log=None,
-        ipAddress=0,
+        host="",
         port=502,
         delay=0,
-        frag_count=0,
+        frag_size=0,
         frag_delay=0.0,
-        connLimit=10,
-        inactiveTimeout=1.0,
+        connection_limit=10,
+        inactive_timeout=1.0,
         daemon=False,
         secure=False,
         protocol=ssl.PROTOCOL_TLS_SERVER,
@@ -131,19 +137,19 @@ class ModbusServerSimulator(threading.Thread):
         self.log.addHandler(logging.NullHandler())
 
         # Set the server parameters
-        self.ipAddress = ipAddress
+        self.host = host
         self.port = port
         self.delay = delay
-        self.fragment_count = frag_count
+        self.frag_size = frag_size
         self.frag_delay = frag_delay
         self.header_size = ModbusHeader.SIZE
-        self.connLimit = connLimit
-        self.inactiveTimeout = inactiveTimeout
+        self.connection_limit = connection_limit
+        self.inactive_timeout = inactive_timeout
         self.daemon = daemon
-        self.quitEvent = threading.Event()
-        self.startedEvent = threading.Event()
-        self.newConnEvent = threading.Event()
-        self.readList = []
+        self.quit_event = threading.Event()
+        self.started_event = threading.Event()
+        self.new_connection_event = threading.Event()
+        self.read_list = []
         self.clients = []
         self.peercerts = {}
         self.fail = False
@@ -196,32 +202,32 @@ class ModbusServerSimulator(threading.Thread):
 
     ############################################################################
 
-    def getPeers(self):
+    def get_peers(self):
         """Get a tuple clients as list of tuples in the form (IP, PORT)."""
         result = []
-        for x in self.readList[1:]:
+        for x in self.read_list[1:]:
             result.append(x.getpeername())
         return result
 
     ############################################################################
 
-    def setDelay(self, delay):
+    def set_delay(self, delay):
         """Set delay time for modbus response from server."""
         self.delay = delay
 
     ############################################################################
 
-    def setConnLimit(self, limit):
+    def set_connection_limit(self, limit):
         """Set connection limit for modbus clients.
 
         Args:
             limit (int): The maximum number of clients allowed to connect.
         """
-        self.connLimit = limit
+        self.connection_limit = limit
 
     ############################################################################
 
-    def setFail(self, fail):
+    def set_fail(self, fail):
         """Set fail flag for modbus server to return an exception as response
 
         Args:
@@ -231,7 +237,7 @@ class ModbusServerSimulator(threading.Thread):
 
     ############################################################################
 
-    def setDataHandler(self, data_handler):
+    def set_data_handler(self, data_handler):
         """Set a custom data handler.
 
         Args:
@@ -281,8 +287,8 @@ class ModbusServerSimulator(threading.Thread):
 
         self.disconnect(conn)
 
-        if conn in self.readList:
-            self.readList.remove(conn)
+        if conn in self.read_list:
+            self.read_list.remove(conn)
 
         # The live-client list feeds reset() and accept(), so a connection that
         # is gone has to leave it too. Left in, it accumulated every connection
@@ -303,25 +309,20 @@ class ModbusServerSimulator(threading.Thread):
 
         self.log.info("Server starting")
 
-        # Convert the IP address to a quad string (e.g., '192.168.210.1')
-        ip_address_str = ""
-        if 0 != self.ipAddress:
-            ip_address_str = socket.inet_ntoa(struct.pack(">L", self.ipAddress))
-
         # Create the server socket. An empty host binds every interface, which
-        # is what ipAddress = 0 asks for and is deliberate at the default: this
-        # server exists to accept connections from a device under test, and that
-        # device is normally on another host, so a loopback-only default would
-        # refuse the traffic the simulator is for. A caller wanting a narrower
-        # bind passes ipAddress and gets exactly the interface it names.
+        # is what the default asks for and is deliberate: this server exists to
+        # accept connections from a device under test, and that device is
+        # normally on another host, so a loopback-only default would refuse the
+        # traffic the simulator is for. A caller wanting a narrower bind passes
+        # host and gets exactly the interface it names.
         #
         # CodeQL reports this as py/bind-socket-all-network-interfaces. It is
         # dismissed there as intentional, and the reason is written here as well
         # so it survives migrating off that platform.
         srv = socket.socket()
-        srv.bind((ip_address_str, self.port))
+        srv.bind((self.host, self.port))
         srv.setblocking(False)
-        srv.listen(self.connLimit)
+        srv.listen(self.connection_limit)
 
         # Report back the port the socket actually got. Port 0 asks the operating system for a free one, and the
         # caller has no other way to learn which; without this it reads the 0 it passed in and cannot reach its own
@@ -329,7 +330,7 @@ class ModbusServerSimulator(threading.Thread):
         self.port = srv.getsockname()[1]
 
         # Add the server socket to the read list
-        self.readList.append(srv)
+        self.read_list.append(srv)
 
         # Last client activity, keyed by the connection itself. No address
         # works here: getsockname() reports the server's own address on every
@@ -340,28 +341,30 @@ class ModbusServerSimulator(threading.Thread):
         last_print_time = time.time()
 
         self.log.info("Server listening.")
-        self.startedEvent.set()
+        self.started_event.set()
 
         # Run the server until the quit event is set
-        while not self.quitEvent.is_set():
+        while not self.quit_event.is_set():
             # Wait for incoming connections or data from clients
             select_timeout = 1
-            (readyReadList, readyWriteList, errorList) = select.select(self.readList, [], [], select_timeout)
+            (readyReadList, readyWriteList, errorList) = select.select(self.read_list, [], [], select_timeout)
 
             # Check if the server socket is ready to accept a new connection
             current_time = time.time()
             if srv in readyReadList:
                 # The read list holds the listening socket plus one entry per
                 # client, so the client count is one short of its length.
-                client_count = len(self.readList) - 1
+                client_count = len(self.read_list) - 1
 
                 # Refuse the connection rather than leave the loop. Breaking
                 # here ended the server and aborted every established session
                 # with it, so any peer could stop the simulator by opening one
                 # connection more than the limit.
-                if client_count >= self.connLimit:
+                if client_count >= self.connection_limit:
                     refused, refused_addr = srv.accept()
-                    self.log.info("Connection limit of {0} reached. Refusing {1}.".format(self.connLimit, refused_addr))
+                    self.log.info(
+                        "Connection limit of {0} reached. Refusing {1}.".format(self.connection_limit, refused_addr)
+                    )
                     refused.close()
 
                 # Wait for a new connection
@@ -388,12 +391,12 @@ class ModbusServerSimulator(threading.Thread):
                     if self.process_connections:
                         # The connection will be processed by the simulator
                         # otherwise it is just stored and may be later processed from outside
-                        self.readList.append(conn)
+                        self.read_list.append(conn)
                         last_activity_time[conn] = current_time
 
                     # Notify that a new cleint has connected
                     self.clients.append(conn)
-                    self.newConnEvent.set()
+                    self.new_connection_event.set()
 
             # Process the incoming data from the clients
             for conn in readyReadList:
@@ -403,7 +406,7 @@ class ModbusServerSimulator(threading.Thread):
                         self.log.info("Connection.recv() - {0}.".format(self.peer_names.get(conn)))
 
                         # Create a Modbus TCP stream
-                        stream = ModbusTcpStream(sock=conn, frag_delay=self.frag_delay, frag_size=self.fragment_count)
+                        stream = ModbusTcpStream(sock=conn, frag_delay=self.frag_delay, frag_size=self.frag_size)
 
                         # Receive the data from the client
                         data = stream.receive()
@@ -431,7 +434,7 @@ class ModbusServerSimulator(threading.Thread):
             # Check for inactive connections, over a copy of the list: closing
             # one removes it from the list being walked, which skips the entry
             # after it.
-            for conn in list(self.readList):
+            for conn in list(self.read_list):
                 if conn is srv:
                     continue
 
@@ -443,19 +446,23 @@ class ModbusServerSimulator(threading.Thread):
                     continue
 
                 # Check if the connection is inactive for the specified timeout
-                if (last_seen + self.inactiveTimeout) < current_time:
+                if (last_seen + self.inactive_timeout) < current_time:
                     self.log.info(
-                        "{0} inactive for {1} seconds. Closing.".format(self.peer_names.get(conn), self.inactiveTimeout)
+                        "{0} inactive for {1} seconds. Closing.".format(
+                            self.peer_names.get(conn), self.inactive_timeout
+                        )
                     )
                     self.forget(conn, last_activity_time)
 
             # Print the connections status once in a while
             if (last_print_time + 1 < current_time) and self.process_connections:
-                self.log.info("{0}: Clients connected {1}".format(list(self.peer_names.values()), len(self.getPeers())))
+                self.log.info(
+                    "{0}: Clients connected {1}".format(list(self.peer_names.values()), len(self.get_peers()))
+                )
                 last_print_time = current_time
 
         # After the server is stopped, close all client connections
-        for conn in self.readList:
+        for conn in self.read_list:
             if conn is not srv:
                 self.log.info("Closing client socket {0}.".format(conn.getsockname()))
                 self.disconnect(conn)
@@ -464,7 +471,7 @@ class ModbusServerSimulator(threading.Thread):
         self.log.info("Closing server socket {0}.".format(srv.getsockname()))
         srv.close()
 
-        self.startedEvent.clear()
+        self.started_event.clear()
         self.log.info("Server stopped.")
 
     ############################################################################
@@ -582,7 +589,7 @@ class ModbusServerSimulator(threading.Thread):
 
     def stop(self):
         """Stop the Modbus server."""
-        self.quitEvent.set()
+        self.quit_event.set()
 
     ############################################################################
 
@@ -611,7 +618,7 @@ class ModbusServerSimulator(threading.Thread):
         self.log.info("Waiting for the server to start.")
         deadline = time.time() + timeout
 
-        while not self.startedEvent.is_set():
+        while not self.started_event.is_set():
             if not self.is_alive():
                 message = ("The server thread ended before the listener on port {0} came up").format(self.port)
                 raise ModbusNetworkError(message=message)
@@ -667,8 +674,8 @@ class ModbusServerSimulator(threading.Thread):
             # and only this method clears it, so a connection handed out
             # earlier left it set and the next wait returned at once, reporting
             # no client while one was still arriving.
-            self.newConnEvent.clear()
-            self.newConnEvent.wait(timeout)
+            self.new_connection_event.clear()
+            self.new_connection_event.wait(timeout)
 
         # If there are clients, return the first one
         for conn in list(self.clients):
@@ -1025,11 +1032,11 @@ def run_server():
     log = Logger("ModbusServerSimulator")
     server_thread = ModbusServerSimulator(
         log=log,
-        ipAddress=0,
-        connLimit=50,
-        inactiveTimeout=60,
+        host="",
+        connection_limit=50,
+        inactive_timeout=60,
         secure=False,
-        # frag_count=2,
+        # frag_size=2,
         frag_delay=0,
     )
     server_thread.start()

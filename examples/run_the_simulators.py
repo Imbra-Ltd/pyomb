@@ -28,7 +28,7 @@ def main() -> None:
     server.daemon = True
     server.start()
 
-    if not server.startedEvent.wait(TIMEOUT):
+    if not server.started_event.wait(TIMEOUT):
         raise SystemExit(NO_LISTENER)
 
     print(f"server listening on port {server.port}")
@@ -39,7 +39,7 @@ def main() -> None:
         client.connect()
 
         try:
-            header, pdu = client.request(fc=1, readAddress=0, readCount=10)
+            header, pdu = client.request(fc=1, read_address=0, read_count=10)
 
             print(header)
             print(pdu)
