@@ -6,6 +6,12 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-09-01
+
+No change to what the library does on the wire. This release carries a
+release-cadence decision, a gate over the package's own examples, and five
+corrections to statements the tree was making about itself.
+
 ### Added
 
 - The package's docstring examples are executed by the default test run. They
@@ -38,6 +44,8 @@ numbers follow [Semantic Versioning](https://semver.org/).
 - The mypy freeze comment states the count it actually hides, 597 rather than
   594, and says the figure is a dated measurement so the next reader
   re-measures instead of trusting it. See #248
+- ADR-032's upstream line names the filing it refers to rather than promising
+  one. See #241
 - The reason recorded for cutting the changelog entry before the tag names the
   tree the tag points at, which is what the generated source archives carry.
   It named the sdist, which has never carried `CHANGELOG.md`, so the reason was
@@ -385,7 +393,8 @@ no upgrade path to describe and no consumer to break.
   committed chain was rotated; it was self-signed and installed in no trust
   store
 
-[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.3...HEAD
+[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.4...HEAD
+[0.4.4]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.0...v0.4.1
