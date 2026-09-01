@@ -30,6 +30,13 @@ numbers follow [Semantic Versioning](https://semver.org/).
   finding type and is exported. `serialize()` calls neither method and gains
   no parameter, because emitting a frame a device rejects is what a
   simulator is for. See #196, ADR-031
+- `docs/audits/2026-09-01-360.md`, the third full audit of this repository and
+  the first produced under the gate that requires one. Field-range checking
+  was the previous report's one protocol failure and is closed, moving that
+  dimension from B+ to A-. The overall grade stays B+ on the two dimensions
+  that did not move: cognitive complexity is ungated for the third audit
+  running, and nothing enforces the release pull request merging first. One
+  new finding, #262. The two earlier reports are left as written. See #262
 
 ### Changed
 
