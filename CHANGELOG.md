@@ -22,6 +22,14 @@ numbers follow [Semantic Versioning](https://semver.org/).
 - A PDU payload may be given as bytes, which is documented and supported.
   Bytes carry any sequence, where the format string they replace describes
   only the layouts `struct` can write. See #229, ADR-036
+- Packet constraints are declared per class and queried. Every packet
+  component carries the bounds the specification puts on its own fields as
+  `LIMITS`, and two methods read them: `violations()` returns findings and
+  `validate()` raises. A component reports for the parts it holds, so asking
+  a TCP request covers its header and its PDU too. `ModbusViolation` is the
+  finding type and is exported. `serialize()` calls neither method and gains
+  no parameter, because emitting a frame a device rejects is what a
+  simulator is for. See #196, ADR-031
 
 ### Changed
 

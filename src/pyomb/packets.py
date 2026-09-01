@@ -26,12 +26,152 @@ from typing import ClassVar
 from .errors import ModbusPacketError
 
 ################################################################################
+# CONSTRAINTS
+################################################################################
+
+
+class ModbusViolation:
+    """A constraint a packet component does not satisfy.
+
+    A finding carries the rule's identity rather than only a message, so a
+    test grading a peer can assert which bound was crossed. Building a frame
+    that breaks a rule stays possible: this reports, it does not prevent.
+
+    Args:
+        source (str) : The component that declared the constraint
+        field (str)  : The field carrying the offending value
+        rule (str)   : The constraint, as the specification states it
+        value (int)  : The value that broke it
+
+    Example:
+        >>> pdu = ModbusRequestFC3(start_addr=0, quantity=126)
+        >>> finding = pdu.violations()[0]
+        >>> finding.field
+        'quantity'
+    """
+
+    def __init__(self, source, field, rule, value):
+        """Initialize the violation."""
+
+        self.source = source
+        self.field = field
+        self.rule = rule
+        self.value = value
+
+    def __eq__(self, other):
+        """Check if two violations report the same finding."""
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        """Check if two violations report different findings."""
+        return not self.__eq__(other)
+
+    def __str__(self):
+        """Return a string representation of the violation."""
+        msg = "{0}.{1} is {2}; the specification requires {3}"
+        return msg.format(self.source, self.field, self.value, self.rule)
+
+    def __repr__(self):
+        """Return the same text the string form carries."""
+        return "ModbusViolation({0})".format(self)
+
+
+################################################################################
 # ABSTRACT CLASSES
 ################################################################################
 
 
 class ModbusPacketAbc(metaclass=ABCMeta):
     """Abstract class for Modbus Packets."""
+
+    # The bounds the specification puts on this component's own fields, as
+    # field name to inclusive low and high. An empty mapping states that the
+    # specification bounds nothing here, which is what tells a reader an
+    # unbounded field from one nobody has read the specification for.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
+
+    # The attributes holding components this one carries. Asking a packet
+    # for its findings returns the parts' findings too, so a caller has one
+    # question to ask rather than three.
+    PARTS: ClassVar[tuple[str, ...]] = ()
+
+    def _finding(self, field, rule):
+        """Build a finding naming this component and one of its fields.
+
+        Args:
+            field (str) : The field carrying the offending value
+            rule (str)  : The constraint, as the specification states it
+
+        Returns:
+            ModbusViolation : The finding
+        """
+
+        return ModbusViolation(
+            source=type(self).__name__,
+            field=field,
+            rule=rule,
+            value=getattr(self, field),
+        )
+
+    def _fixed_count(self, field, expected, rule):
+        """Report a count that disagrees with what the other fields imply.
+
+        Args:
+            field (str)    : The counting field
+            expected (int) : What the other fields fix it at
+            rule (str)     : The constraint, as the specification states it
+
+        Returns:
+            tuple : One finding, or empty when the count agrees
+        """
+
+        if getattr(self, field) == expected:
+            return ()
+
+        return (self._finding(field, "{0}, which is {1}".format(rule, expected)),)
+
+    def violations(self):
+        """Report every constraint this packet and its parts break.
+
+        Returns:
+            tuple : The findings, empty when the packet is conforming
+        """
+
+        found = []
+
+        for field in sorted(self.LIMITS):
+            low, high = self.LIMITS[field]
+            value = getattr(self, field)
+
+            if not low <= value <= high:
+                # A field the specification fixes at one value reads as that
+                # value rather than as a range running from it to itself.
+                rule = "0x{0:04X}".format(low)
+
+                if low != high:
+                    rule = "{0} to 0x{1:04X}".format(rule, high)
+
+                found.append(self._finding(field, rule))
+
+        for part in self.PARTS:
+            component = getattr(self, part, None)
+
+            if component is not None:
+                found.extend(component.violations())
+
+        return tuple(found)
+
+    def validate(self):
+        """Raise unless the packet and its parts are conforming.
+
+        Raises:
+            ModbusPacketError : If any constraint is broken, naming each one
+        """
+
+        found = self.violations()
+
+        if found:
+            raise ModbusPacketError("; ".join(str(finding) for finding in found))
 
     def __eq__(self, other):
         """Check if two packets are equal"""
@@ -125,6 +265,12 @@ class ModbusHeader(ModbusPacketAbc):
 
     HEADER_FMT = ">HHHB"
     SIZE = struct.calcsize(HEADER_FMT)
+
+    # The protocol identifier names the protocol and is zero for every Modbus
+    # frame -- Modbus Messaging Implementation Guide v1.0b. The transaction
+    # identifier, the length and the unit identifier carry no stated bound,
+    # so the mapping names only the field the specification constrains.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"prot_id": (0x0000, 0x0000)}
 
     def __init__(self, trans_id=0, prot_id=0, length=0, unit_id=0):
         """Initialize the Modbus Header.
@@ -233,6 +379,11 @@ class ModbusPdu(ModbusPacketAbc):
 
     # Default PDU ID
     PDU_ID = 0x0000
+
+    # This class models no function code, so the specification states no
+    # bound on it. Declared rather than inherited, because an inherited empty
+    # mapping cannot be told apart from a specification nobody has read.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
 
     # The named fields the class carries, in wire order. None means the class
     # stores its payload rather than deriving one, which is what this class
@@ -647,6 +798,9 @@ class ModbusError(ModbusPdu):
 
     PDU_FORMAT = ">BB"
     PDU_ID = 0x8000
+
+    # The specification states no bound on this packet's fields.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("exc_code",)
     ERROR_MASK = 0x80
 
@@ -744,6 +898,9 @@ class ModbusRequestFC1(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x0001
+
+    # Modbus Application Protocol v1.1b3, Read Coils: 1 to 2000 coils.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x07D0)}
     PDU_FIELDS = ("start_addr", "quantity")
 
     def __init__(self, start_addr, quantity):
@@ -826,6 +983,10 @@ class ModbusResponseFC1(ModbusPdu):
 
     PDU_FORMAT = ">BB{0}B"
     PDU_ID = 0x8001
+
+    # The specification's rule here ties fields together or names a value
+    # set, so it lives in violations() below rather than in a range.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("byte_count",)
     PDU_TAIL = "output_status"
 
@@ -842,6 +1003,20 @@ class ModbusResponseFC1(ModbusPdu):
     def __len__(self):
         """Return the length of the PDU data"""
         return struct.calcsize(self.PDU_FORMAT.format(self.byte_count))
+
+    def violations(self):
+        """Report the bounds, and the rule the specification ties across fields.
+
+        Modbus Application Protocol v1.1b3, Read Coils: the byte count is the number of status bytes returned.
+
+        Returns:
+            tuple : The findings, empty when the packet is conforming
+        """
+
+        return tuple(
+            list(super().violations())
+            + list(self._fixed_count("byte_count", len(self.output_status), "the number of status bytes"))
+        )
 
     def serialize(self):
         """Serialize the response FC1 PDU to a stream of bytes.
@@ -921,6 +1096,9 @@ class ModbusRequestFC2(ModbusPdu):
     # Generic PDU format string of the FC2 request PDU
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x0002
+
+    # Modbus Application Protocol v1.1b3, Read Discrete Inputs: 1 to 2000 inputs.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x07D0)}
     PDU_FIELDS = ("start_addr", "quantity")
 
     def __init__(self, start_addr, quantity):
@@ -1004,6 +1182,10 @@ class ModbusResponseFC2(ModbusPdu):
     # Generic PDU format string of the FC2 response PDU
     PDU_FORMAT = ">BB{0}B"
     PDU_ID = 0x8002
+
+    # The specification's rule here ties fields together or names a value
+    # set, so it lives in violations() below rather than in a range.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("byte_count",)
     PDU_TAIL = "input_status"
 
@@ -1022,6 +1204,20 @@ class ModbusResponseFC2(ModbusPdu):
     def __len__(self):
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT.format(self.byte_count))
+
+    def violations(self):
+        """Report the bounds, and the rule the specification ties across fields.
+
+        Modbus Application Protocol v1.1b3, Read Discrete Inputs: the byte count is the number of status bytes returned.
+
+        Returns:
+            tuple : The findings, empty when the packet is conforming
+        """
+
+        return tuple(
+            list(super().violations())
+            + list(self._fixed_count("byte_count", len(self.input_status), "the number of status bytes"))
+        )
 
     def serialize(self):
         """Serialize the response FC2 PDU from a stream of bytes
@@ -1099,6 +1295,9 @@ class ModbusRequestFC3(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x0003
+
+    # Modbus Application Protocol v1.1b3, Read Holding Registers: 1 to 125 registers.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x007D)}
     PDU_FIELDS = ("start_addr", "quantity")
 
     def __init__(self, start_addr, quantity):
@@ -1182,6 +1381,10 @@ class ModbusResponseFC3(ModbusPdu):
 
     PDU_FORMAT = ">BB{0}H"
     PDU_ID = 0x8003
+
+    # The specification's rule here ties fields together or names a value
+    # set, so it lives in violations() below rather than in a range.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("byte_count",)
     PDU_TAIL = "values"
 
@@ -1200,6 +1403,20 @@ class ModbusResponseFC3(ModbusPdu):
     def __len__(self):
         """Return the length of the PDU data"""
         return struct.calcsize(self.PDU_FORMAT.format(len(self.values)))
+
+    def violations(self):
+        """Report the bounds, and the rule the specification ties across fields.
+
+        Modbus Application Protocol v1.1b3, Read Holding Registers: the byte count is twice the registers returned.
+
+        Returns:
+            tuple : The findings, empty when the packet is conforming
+        """
+
+        return tuple(
+            list(super().violations())
+            + list(self._fixed_count("byte_count", 2 * len(self.values), "twice the registers returned"))
+        )
 
     def serialize(self):
         """Serialize the response FC3 PDU to a stream of bytes.
@@ -1281,6 +1498,9 @@ class ModbusRequestFC4(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x0004
+
+    # Modbus Application Protocol v1.1b3, Read Input Registers: 1 to 125 registers.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x007D)}
     PDU_FIELDS = ("start_addr", "quantity")
 
     def __init__(self, start_addr, quantity):
@@ -1364,6 +1584,10 @@ class ModbusResponseFC4(ModbusPdu):
 
     PDU_FORMAT = ">BB{0}H"
     PDU_ID = 0x8004
+
+    # The specification's rule here ties fields together or names a value
+    # set, so it lives in violations() below rather than in a range.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("byte_count",)
     PDU_TAIL = "values"
 
@@ -1382,6 +1606,20 @@ class ModbusResponseFC4(ModbusPdu):
     def __len__(self):
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT.format(len(self.values)))
+
+    def violations(self):
+        """Report the bounds, and the rule the specification ties across fields.
+
+        Modbus Application Protocol v1.1b3, Read Input Registers: the byte count is twice the registers returned.
+
+        Returns:
+            tuple : The findings, empty when the packet is conforming
+        """
+
+        return tuple(
+            list(super().violations())
+            + list(self._fixed_count("byte_count", 2 * len(self.values), "twice the registers returned"))
+        )
 
     def serialize(self):
         """Serialize the response FC4 PDU to a stream of bytes
@@ -1463,6 +1701,10 @@ class ModbusRequestFC5(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x0005
+
+    # The specification's rule here ties fields together or names a value
+    # set, so it lives in violations() below rather than in a range.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("output_address", "output_value")
 
     def __init__(self, output_address, output_value):
@@ -1480,6 +1722,22 @@ class ModbusRequestFC5(ModbusPdu):
     def __len__(self):
         """Return the length of the PDU data"""
         return struct.calcsize(self.PDU_FORMAT)
+
+    def violations(self):
+        """Report the bounds, and the rule the specification ties across fields.
+
+        Modbus Application Protocol v1.1b3, Write Single Coil: the output value is 0x0000 or 0xFF00.
+
+        Returns:
+            tuple : The findings, empty when the packet is conforming
+        """
+
+        found = list(super().violations())
+
+        if self.output_value not in (0x0000, 0xFF00):
+            found.append(self._finding("output_value", "0x0000 or 0xFF00"))
+
+        return tuple(found)
 
     def serialize(self):
         """Serialize the request FC5 PDU from a stream of bytes.
@@ -1544,6 +1802,10 @@ class ModbusResponseFC5(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x8005
+
+    # The specification's rule here ties fields together or names a value
+    # set, so it lives in violations() below rather than in a range.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("output_address", "output_value")
 
     def __init__(self, output_address, output_value):
@@ -1561,6 +1823,22 @@ class ModbusResponseFC5(ModbusPdu):
     def __len__(self):
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
+
+    def violations(self):
+        """Report the bounds, and the rule the specification ties across fields.
+
+        Modbus Application Protocol v1.1b3, Write Single Coil echoes the request, so the same value rule holds.
+
+        Returns:
+            tuple : The findings, empty when the packet is conforming
+        """
+
+        found = list(super().violations())
+
+        if self.output_value not in (0x0000, 0xFF00):
+            found.append(self._finding("output_value", "0x0000 or 0xFF00"))
+
+        return tuple(found)
 
     def serialize(self):
         """Serialize the response FC5 PDU to a stream of bytes
@@ -1625,6 +1903,9 @@ class ModbusRequestFC6(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x0006
+
+    # The specification states no bound on this packet's fields.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("output_address", "output_value")
 
     def __init__(self, output_address, output_value):
@@ -1706,6 +1987,9 @@ class ModbusResponseFC6(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x8006
+
+    # The specification states no bound on this packet's fields.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("output_address", "output_value")
 
     def __init__(self, output_address, output_value):
@@ -1779,6 +2063,9 @@ class ModbusRequestFC7(ModbusPdu):
 
     PDU_FORMAT = ">B"
     PDU_ID = 0x0007
+
+    # The specification states no bound on this packet's fields.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ()
 
     def __init__(self):
@@ -1851,6 +2138,9 @@ class ModbusResponseFC7(ModbusPdu):
 
     PDU_FORMAT = ">BB"
     PDU_ID = 0x8007
+
+    # The specification states no bound on this packet's fields.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("status",)
 
     def __init__(self, status):
@@ -1934,6 +2224,9 @@ class ModbusRequestFC8(ModbusPdu):
 
     PDU_FORMAT = ">BH{0}H"
     PDU_ID = 0x0008
+
+    # The specification states no bound on this packet's fields.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("sub_func",)
     PDU_TAIL = "subfunc_data"
 
@@ -2033,6 +2326,9 @@ class ModbusResponseFC8(ModbusPdu):
 
     PDU_FORMAT = ">BH{0}H"
     PDU_ID = 0x8008
+
+    # The specification states no bound on this packet's fields.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("sub_func",)
     PDU_TAIL = "subfunc_data"
 
@@ -2138,6 +2434,9 @@ class ModbusRequestFC15(ModbusPdu):
 
     PDU_FORMAT = ">BHHB{0}B"
     PDU_ID = 0x000F
+
+    # Modbus Application Protocol v1.1b3, Write Multiple Coils: 1 to 1968 coils.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x07B0)}
     PDU_FIELDS = ("start_addr", "quantity", "byte_count")
     PDU_TAIL = "values"
 
@@ -2157,6 +2456,24 @@ class ModbusRequestFC15(ModbusPdu):
     def __len__(self):
         fmt = self.PDU_FORMAT.format(len(self.values))
         return struct.calcsize(fmt)
+
+    def violations(self):
+        """Report the bounds, and the rule the specification ties across fields.
+
+        Modbus Application Protocol v1.1b3, Write Multiple Coils: the byte count is the quantity in whole bytes.
+
+        Returns:
+            tuple : The findings, empty when the packet is conforming
+        """
+
+        # The specification writes this as N = quantity / 8, and N = N + 1
+        # where the remainder is not zero.
+        whole_bytes = -(-self.quantity // 8)
+
+        return tuple(
+            list(super().violations())
+            + list(self._fixed_count("byte_count", whole_bytes, "the quantity rounded up to whole bytes"))
+        )
 
     def serialize(self):
         """Serialize the request FC15 PDU to a stream of bytes.
@@ -2244,6 +2561,9 @@ class ModbusResponseFC15(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x800F
+
+    # Modbus Application Protocol v1.1b3, Write Multiple Coils echoes the quantity written.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x07B0)}
     PDU_FIELDS = ("start_addr", "quantity")
 
     def __init__(self, start_addr, quantity):
@@ -2339,6 +2659,9 @@ class ModbusRequestFC16(ModbusPdu):
 
     PDU_FORMAT = ">BHHB{0}H"
     PDU_ID = 0x0010
+
+    # Modbus Application Protocol v1.1b3, Write Multiple Registers: 1 to 123 registers.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x007B)}
     PDU_FIELDS = ("start_addr", "quantity", "byte_count")
     PDU_TAIL = "values"
 
@@ -2360,6 +2683,20 @@ class ModbusRequestFC16(ModbusPdu):
         """Return the length of the PDU data."""
         fmt = self.PDU_FORMAT.format(len(self.values))
         return struct.calcsize(fmt)
+
+    def violations(self):
+        """Report the bounds, and the rule the specification ties across fields.
+
+        Modbus Application Protocol v1.1b3, Write Multiple Registers: the byte count is twice the quantity.
+
+        Returns:
+            tuple : The findings, empty when the packet is conforming
+        """
+
+        return tuple(
+            list(super().violations())
+            + list(self._fixed_count("byte_count", 2 * self.quantity, "twice the quantity of registers"))
+        )
 
     def serialize(self):
         """Serialize the request FC16 PDU to a stream of bytes.
@@ -2448,6 +2785,9 @@ class ModbusResponseFC16(ModbusPdu):
 
     PDU_FORMAT = ">BHH"
     PDU_ID = 0x8010
+
+    # Modbus Application Protocol v1.1b3, Write Multiple Registers echoes the quantity written.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x007B)}
     PDU_FIELDS = ("start_addr", "quantity")
 
     def __init__(self, start_addr, quantity):
@@ -2538,6 +2878,9 @@ class ModbusRequestFC22(ModbusPdu):
 
     PDU_FORMAT = ">BHHH"
     PDU_ID = 0x0016
+
+    # The specification states no bound on this packet's fields.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("ref_addr", "and_mask", "or_mask")
 
     def __init__(self, ref_addr, and_mask, or_mask):
@@ -2623,6 +2966,9 @@ class ModbusResponseFC22(ModbusPdu):
 
     PDU_FORMAT = ">BHHH"
     PDU_ID = 0x8016
+
+    # The specification states no bound on this packet's fields.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("ref_addr", "and_mask", "or_mask")
 
     def __init__(self, ref_addr, and_mask, or_mask):
@@ -2725,6 +3071,12 @@ class ModbusRequestFC23(ModbusPdu):
 
     PDU_FORMAT = ">BHHHHB{0}H"
     PDU_ID = 0x0017
+
+    # Modbus Application Protocol v1.1b3, Read/Write Multiple Registers: 1 to 125 read, 1 to 121 written.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {
+        "read_quantity": (0x0001, 0x007D),
+        "write_quantity": (0x0001, 0x0079),
+    }
     PDU_FIELDS = ("read_start_addr", "read_quantity", "write_start_addr", "write_quantity", "write_byte_count")
     PDU_TAIL = "write_values"
 
@@ -2750,6 +3102,27 @@ class ModbusRequestFC23(ModbusPdu):
         """Return the length of the PDU data."""
         fmt = self.PDU_FORMAT.format(len(self.write_values))
         return struct.calcsize(fmt)
+
+    def violations(self):
+        """Report the bounds, and the rule the specification ties across fields.
+
+        Modbus Application Protocol v1.1b3, Read/Write Multiple Registers:
+        the write byte count is twice the quantity written.
+
+        Returns:
+            tuple : The findings, empty when the packet is conforming
+        """
+
+        return tuple(
+            list(super().violations())
+            + list(
+                self._fixed_count(
+                    "write_byte_count",
+                    2 * self.write_quantity,
+                    "twice the quantity of registers written",
+                )
+            )
+        )
 
     def serialize(self):
         """Serialize the request FC23 PDU to a stream of bytes.
@@ -2854,6 +3227,10 @@ class ModbusResponseFC23(ModbusPdu):
 
     PDU_FORMAT = ">BB{0}H"
     PDU_ID = 0x8017
+
+    # The specification's rule here ties fields together or names a value
+    # set, so it lives in violations() below rather than in a range.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("byte_count",)
     PDU_TAIL = "values"
 
@@ -2873,6 +3250,20 @@ class ModbusResponseFC23(ModbusPdu):
         """Return the length of the PDU data"""
         fmt = self.PDU_FORMAT.format(len(self.values))
         return struct.calcsize(fmt)
+
+    def violations(self):
+        """Report the bounds, and the rule the specification ties across fields.
+
+        Modbus Application Protocol v1.1b3, Read/Write Multiple Registers: the byte count is twice the registers read.
+
+        Returns:
+            tuple : The findings, empty when the packet is conforming
+        """
+
+        return tuple(
+            list(super().violations())
+            + list(self._fixed_count("byte_count", 2 * len(self.values), "twice the registers read"))
+        )
 
     def serialize(self):
         """Serialize the response FC23 PDU to a stream of bytes.
@@ -2957,6 +3348,9 @@ class ModbusRequestFC43(ModbusPdu):
 
     PDU_FORMAT = ">BB{0}B"
     PDU_ID = 0x002B
+
+    # Modbus Application Protocol v1.1b3, Read Device Identification is MEI type 14.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"mei_type": (0x0E, 0x0E)}
     PDU_FIELDS = ("mei_type",)
     PDU_TAIL = "mei_data"
 
@@ -3058,6 +3452,9 @@ class ModbusResponseFC43(ModbusPdu):
 
     PDU_FORMAT = ">BB{0}B"
     PDU_ID = 0x802B
+
+    # Modbus Application Protocol v1.1b3, Read Device Identification is MEI type 14.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"mei_type": (0x0E, 0x0E)}
     PDU_FIELDS = ("mei_type",)
     PDU_TAIL = "mei_data"
 
@@ -3231,6 +3628,14 @@ class ModbusRtuRequest(ModbusPacketAbc):
 
     _pdu_parser = ModbusPduParser
 
+    # Modicon Modbus Protocol Reference Guide PI-MBUS-300: a slave address
+    # runs 0 to 247. Address 0 is the broadcast every device recognises, and
+    # 1 to 247 address one device; 248 to 255 are not valid addresses.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"slave_id": (0x00, 0xF7)}
+
+    # The ADU carries a PDU, whose findings travel with its own.
+    PARTS: ClassVar[tuple[str, ...]] = ("pdu",)
+
     def __init__(self, slave_id, pdu):
         """Initialize the Modbus RTU Request Packet."""
 
@@ -3372,6 +3777,14 @@ class ModbusRtuResponse(ModbusPacketAbc):
     """
 
     _pdu_parser = ModbusPduParser
+
+    # Modicon Modbus Protocol Reference Guide PI-MBUS-300: a slave address
+    # runs 0 to 247. Address 0 is the broadcast every device recognises, and
+    # 1 to 247 address one device; 248 to 255 are not valid addresses.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"slave_id": (0x00, 0xF7)}
+
+    # The ADU carries a PDU, whose findings travel with its own.
+    PARTS: ClassVar[tuple[str, ...]] = ("pdu",)
 
     def __init__(self, slave_id, pdu):
         """Initialize the Modbus RTU Response Packet."""
@@ -3562,6 +3975,12 @@ class ModbusTcpPacket(ModbusPacketAbc):
         >>> assert packet2.serialize() == stream
     """
 
+    # The ADU carries a header and a PDU, whose findings travel with its own.
+    PARTS: ClassVar[tuple[str, ...]] = ("header", "pdu")
+
+    # The specification states no bound on this packet's fields.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
+
     def __init__(self, header, pdu):
         """Initialize the Modbus TCP Packet."""
 
@@ -3654,6 +4073,12 @@ class ModbusTcpRequest(ModbusPacketAbc):
     """
 
     _pdu_parser = ModbusPduParser
+
+    # The specification states no bound on this packet's fields.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
+
+    # The ADU carries a header and a PDU, whose findings travel with its own.
+    PARTS: ClassVar[tuple[str, ...]] = ("header", "pdu")
 
     def __init__(self, header, pdu):
         """Initialize the Modbus TCP Request Packet"""
@@ -3771,6 +4196,12 @@ class ModbusTcpResponse(ModbusPacketAbc):
     """
 
     _pdu_parser = ModbusPduParser
+
+    # The specification states no bound on this packet's fields.
+    LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
+
+    # The ADU carries a header and a PDU, whose findings travel with its own.
+    PARTS: ClassVar[tuple[str, ...]] = ("header", "pdu")
 
     def __init__(self, header, pdu):
         """Initialize the Modbus TCP Response Packet."""
