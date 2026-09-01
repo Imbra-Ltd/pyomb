@@ -9,10 +9,11 @@ superseded_by: []
 
 # ADR-033: The 360-degree audit is owed per minor release, not per release
 
-**Upstream:** candidate against `templates/base/core/git.md`, not yet filed.
-With the domain skin off: a periodic review attached to every release event
-decays into a formality, because most events change nothing the review reads.
-Scope it to the events that add what is reviewed.
+**Upstream:** filed as braboj/solid-ai-templates#1337 against
+`templates/base/core/git.md`. With the domain skin off: a periodic review
+attached to every release event decays into a formality, because most events
+change nothing the review reads. Scope it to the events that add what is
+reviewed.
 
 ## Context
 
