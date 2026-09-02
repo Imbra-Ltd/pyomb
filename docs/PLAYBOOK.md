@@ -896,8 +896,14 @@ looks like an exception: it builds a handler on `sys.stdout` and sets no
 encoding on it, for the reason its own docstring gives for not touching the
 root logger.
 
-A new script that prints fails this until it carries the call. A script that
-prints nothing is not asked for one.
+Three roots are read: the package, `scripts/` and `examples/`. The last was
+added once the argument was turned on it -- an example prints values formatted
+at run time, which the character-set rule reaches no further than it reaches
+the wire bytes in an exception message, and it lands on a stranger's console
+rather than a maintainer's.
+
+A new script or example that prints fails this until it carries the call. One
+that prints nothing is not asked for one.
 
 ### 3.20 Examples (CI job)
 
@@ -925,6 +931,19 @@ a connection itself. A port below 1024 needs privileges on Linux, so an
 example fixed at the registered Modbus port could not run here at all.
 `examples/README.md` states that beside the commands, and the project README
 keeps 502 because that is what a real device listens on.
+
+An example that verifies something raises when the verification fails, rather
+than printing the verdict. The job reads exit status, so a printed `False`
+exits zero and is indistinguishable from a pass -- which left one example's
+comparison against a specification vector unable to fail anything for as long
+as it existed. Print what was compared first, then raise: the file is
+documentation before it is a check, and a bare traceback teaches less than the
+value beside the one it failed against.
+
+Nothing enforces that. Detecting which examples make a claim is not
+mechanical, so it is a review question, and `examples/README.md` records which
+of them currently verify, which fail only on a startup or parse error, and
+which demonstrate without checking anything.
 
 An example is documentation that runs, so a failure here is usually the
 documentation going stale rather than a defect in the library. Read what the
@@ -1047,19 +1066,22 @@ example that stops holding fails a pull request. `testpaths` carries `src` and
 `addopts` carries `--doctest-modules`; neither is optional, and dropping either
 stops every example being collected while the suite reports the same green.
 
-Three examples are deselected by name. Each opens a socket to a Modbus server
-on localhost that nothing starts, so each raises a connection error wherever it
-runs. A bare `pytest` therefore reports deselected examples on a healthy tree —
-that is the freeze, not a fault.
+Nothing is deselected, so a bare `pytest` reporting a deselected example on a
+healthy tree means one was frozen rather than fixed. Three transport examples
+were exempt until they were removed: each opened a socket to a Modbus server
+that nothing starts, and the runnable demonstrations they were reaching for
+now live in `examples/`, where a peer can be started.
 
-They are frozen one docstring at a time rather than by excluding their module,
-because a fourth example in the same file needs no peer and stays gated.
-Excluding the file would drop a working example along with the broken ones,
-which is narrowing the gate rather than exempting what fails.
+The exemption machinery is kept for the next example that needs a peer. It
+freezes one docstring at a time rather than excluding a module, so a sibling
+example needing no peer keeps its gate — excluding the file would drop a
+working example along with the broken one, which is narrowing the check rather
+than exempting what fails.
 
 Never add a name to that list to make the gate pass. An example that cannot run
-is a defect in the example; the freeze records the three that were already
-broken. #254 carries them.
+is a defect in the example, and the only admissible reason for an exemption is
+a peer the project cannot start. Where that is the reason, the fix is to move
+the demonstration to `examples/` and retire the exemption with it.
 
 The second command is the control. It fails when the collect flag or the
 package path leaves the manifest, when a frozen name no longer matches an
