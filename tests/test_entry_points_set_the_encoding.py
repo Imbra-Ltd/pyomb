@@ -25,6 +25,14 @@ having, since the first only omits a line while the second corrupts a stream.
 builds a handler on `sys.stdout` and deliberately sets no encoding on it, for
 the same reason its docstring already gives for not touching the root logger: a
 library takes the stream it is handed.
+
+Three roots are read: the package, the operational scripts, and the examples.
+The last was added after the argument above was turned on it. Every example
+prints values formatted at run time -- a packet's repr, an exception the
+library raised -- so the character-set rule reaches them no further than it
+reaches the wire bytes in that exception message, while the console they land
+on is the least predictable of the three, being a stranger's rather than a
+maintainer's.
 """
 
 import ast
@@ -36,6 +44,13 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 PACKAGE = REPO / "src" / "pyomb"
 
 SCRIPTS = REPO / "scripts"
+
+# The third root, and the one with the weakest console guarantee: a maintainer
+# runs the other two, a stranger runs these. It was outside the rule until the
+# character-set argument above was read against it -- every example prints
+# values formatted at run time, so the source rule reaches them no further
+# than it reaches an exception message in the package.
+EXAMPLES = REPO / "examples"
 
 # The standard streams a program may reconfigure. stderr is included so the
 # import-scope rule cannot be satisfied by moving the call one stream over.
@@ -142,7 +157,7 @@ class EntryPointsSetTheEncoding(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.sources = sorted(PACKAGE.glob("*.py")) + sorted(SCRIPTS.glob("*.py"))
+        cls.sources = sorted(PACKAGE.glob("*.py")) + sorted(SCRIPTS.glob("*.py")) + sorted(EXAMPLES.glob("*.py"))
         cls.trees = {path: parsed(path) for path in cls.sources}
 
     def test_there_are_entry_points_to_check(self):

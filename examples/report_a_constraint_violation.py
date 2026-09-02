@@ -12,6 +12,8 @@ Protocol v1.1b3 caps Read Holding Registers at 125 registers per request, so
 Nothing here opens a socket: the codec does not import one.
 """
 
+import sys
+
 from pyomb.errors import ModbusPacketError
 from pyomb.packets import ModbusRequestFC3
 
@@ -43,4 +45,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # State the encoding rather than inheriting the console's, so what
+    # this prints is what the reader sees on any machine.
+    sys.stdout.reconfigure(encoding="utf-8")
+
     main()

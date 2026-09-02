@@ -13,6 +13,8 @@ This asks for a free port instead, which is what lets the file run without
 privileges on any machine.
 """
 
+import sys
+
 from pyomb import ModbusClientSimulator, ModbusServerSimulator
 
 # Seconds to wait for the listener. Bounded rather than blocking, so a startup
@@ -53,4 +55,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # State the encoding rather than inheriting the console's, so what
+    # this prints is what the reader sees on any machine.
+    sys.stdout.reconfigure(encoding="utf-8")
+
     main()

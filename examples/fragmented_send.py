@@ -15,6 +15,7 @@ which is what lets this file run without privileges on any machine.
 """
 
 import socket
+import sys
 
 from pyomb import ModbusServerSimulator
 from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest, ModbusTcpResponse
@@ -78,4 +79,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # State the encoding rather than inheriting the console's, so what
+    # this prints is what the reader sees on any machine.
+    sys.stdout.reconfigure(encoding="utf-8")
+
     main()

@@ -12,6 +12,8 @@ status rather than output -- so the check a reader can see would be one CI
 could not fail.
 """
 
+import sys
+
 from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest
 
 # Function code 1, one coil from address 0, unit 1, transaction 0. Written out
@@ -58,4 +60,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # State the encoding rather than inheriting the console's, so what
+    # this prints is what the reader sees on any machine.
+    sys.stdout.reconfigure(encoding="utf-8")
+
     main()

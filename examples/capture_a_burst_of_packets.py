@@ -19,6 +19,7 @@ would sit waiting for a fourth message that is never coming.
 """
 
 import socket
+import sys
 
 from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusRequestFC3, ModbusTcpRequest
 from pyomb.stream import ModbusTcpReceiver, ModbusTcpSender
@@ -104,4 +105,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # State the encoding rather than inheriting the console's, so what
+    # this prints is what the reader sees on any machine.
+    sys.stdout.reconfigure(encoding="utf-8")
+
     main()
