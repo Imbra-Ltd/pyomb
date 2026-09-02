@@ -91,9 +91,9 @@ Expect every test to pass and none to be skipped. A skip means the TLS
 chain is missing — rerun step 2's certificate command; the mutual-TLS tests
 skip silently without it, and a suite reporting skips still exits zero.
 
-A few deselected examples are normal and are not skips. The suite runs the
-package's docstring examples, and three of them need a Modbus server that
-nothing starts. PLAYBOOK 3.24 covers why they are frozen.
+Expect no deselected examples either. The suite runs the package's docstring
+examples and none of them is exempt; a deselect appearing in the output means
+one was frozen rather than fixed, which PLAYBOOK 3.24 covers.
 
 The count is deliberately not written down here. It changes with every branch,
 and a number in a setup document is wrong more often than it is right.
