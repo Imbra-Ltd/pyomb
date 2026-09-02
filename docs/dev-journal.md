@@ -3509,3 +3509,49 @@ package, per ADR-002. See `README.md` for usage and
   stays at `v2.61.0` against `v2.72.0` and #268 needs the owner's approval on
   the pointer. Five upstream filings are open across the two sessions, none
   landed.
+
+## 2026-09-02 -- Align the guides with the gates (wrap)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Corrected three guide passages the example work had left stale (PR
+    #290).** ONBOARDING told a new contributor that deselected examples are
+    normal, which now means something is wrong rather than nothing. PLAYBOOK
+    3.24 described three exemptions that no longer exist and cited the issue
+    that removed them. PLAYBOOK 3.19 said a new *script* that prints fails the
+    encoding gate, one root short of what the gate now reads.
+  - **Gave PLAYBOOK 3.20 the rule the session established**, that an example
+    which verifies something raises rather than printing the verdict, together
+    with the statement that nothing enforces it. Detecting which examples make
+    a claim is not mechanical, and an unenforced step sitting beside enforced
+    ones reads as enforced.
+  - **Left the 2026-09-01 audit untouched** where it names the three
+    deselected tests. That is a dated observation carrying a grade, which a
+    later report re-derives rather than an instruction that has gone stale.
+- **PRs merged:** #290.
+- **Issues closed/created:** none either way.
+- **Lesson:** writing the journal before the audit runs costs a second entry.
+  The previous entry was written when the work looked finished, and the audit
+  then produced a pull request, two upstream filings and three document fixes
+  -- every one of them a line that entry should have carried. The end-of-
+  session order puts the journal last for exactly this reason, and an entry's
+  account is fixed once merged, so the correction is another entry rather than
+  an edit. Cheap here, and only because the audit was run at all.
+- **Lesson:** the stale-document defect this session fixed twice is the same
+  one it then committed. Yesterday's finding was that a count in prose rots
+  from a direction no diff shows; today's was three passages describing gates
+  that had changed underneath them. Both were found by sweeping deliberately
+  rather than by any check, and the second sweep only happened because the
+  audit's items name the documents one at a time.
+- **Upstream:** two filings, both from the previous entry's work rather than
+  this one. braboj/solid-ai-templates#1415 against `quality-gates.md`, that a
+  negative control must reach the check rather than merely be behavioural --
+  a plant rejected by a layer in front of the check exits non-zero and looks
+  identical to one that fired. And braboj/solid-ai-templates#1416 against the
+  same file, that a gate scoped by a list of directories omits the one nobody
+  on the team runs, which is the one with the weakest guarantee. A third
+  candidate was dropped: reading the target file for recorded prior reasoning
+  is already `ai-workflow-read-edit-site`.
+- **Pending:** unchanged from the previous entry. #194 is the last of v0.6.0
+  and unstarted, the pin stays at `v2.61.0` against `v2.72.0` under #268, and
+  seven upstream filings are now open across the three entries, none landed.
