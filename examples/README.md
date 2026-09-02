@@ -2,7 +2,15 @@
 
 Runnable usage patterns, one per journey rather than one per API surface. CI
 executes every file in this directory against an install of the project with no
-extras, so nothing here can rot quietly.
+extras, so an example that stops working fails a pull request.
+
+What that catches is an example that raises, so it is worth saying which ones
+can. Three compare a result and exit non-zero when it disagrees: the round
+trip, the checksum and the capture. Two more fail if the server never reaches
+its accept loop or the reply will not parse, but do not compare the values
+they print: the fragmented send and the simulator run. The last two
+demonstrate rather than verify -- they build a thing and print it, and a
+change in what they print is caught by review rather than by the job.
 
 Install the project first. From a checkout:
 

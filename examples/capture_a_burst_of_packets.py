@@ -87,6 +87,14 @@ def main() -> None:
             for packet in captured:
                 print(packet)
 
+            # Printed first, so a short capture still shows what did arrive.
+            # The raise is what the examples job reads: it checks exit status,
+            # and printing a count that does not match exits zero like any
+            # other run.
+            if len(captured) != len(packets):
+                dropped = f"sent {len(packets)} packet(s), captured {len(captured)}"
+                raise ValueError(dropped)
+
         finally:
             receiving.close()
 
