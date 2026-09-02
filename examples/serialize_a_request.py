@@ -9,6 +9,8 @@ it in order: transaction identifier, protocol identifier, length, unit
 identifier, then the PDU.
 """
 
+import sys
+
 from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest
 
 
@@ -29,4 +31,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # State the encoding rather than inheriting the console's, so what
+    # this prints is what the reader sees on any machine.
+    sys.stdout.reconfigure(encoding="utf-8")
+
     main()
