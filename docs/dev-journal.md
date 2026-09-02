@@ -3455,3 +3455,57 @@ package, per ADR-002. See `README.md` for usage and
   and #282 are open from this session. All five upstream filings, the three
   from the previous session and the two from this one, are open rather than
   landed.
+
+## 2026-09-02 -- Give the example gates teeth
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Made a failed check fail the job that runs it (#281, PR #287).**
+    `round_trip_a_packet.py` reported both comparisons by printing them, so a
+    run producing `frame matches the written-out vector: False` was a green
+    examples job and a merged regression -- the job reads exit status. That
+    silenced the one comparison a self-consistent encoder and decoder cannot
+    satisfy. Both are now printed and then enforced, in that order.
+    `capture_a_burst_of_packets.py` carried the same defect from the previous
+    session and was fixed with it.
+  - **Brought the examples under the output-encoding gate (#282, PR #288).**
+    The gate read `src/pyomb/` and `scripts/`, the two directories a
+    maintainer runs, and not `examples/`, the one a stranger runs. All seven
+    gained the call inside their `__main__` guard.
+  - **Restated the examples index claim.** It said nothing there can rot
+    quietly, which is stronger than the directory delivers: three examples
+    compare a result and exit non-zero, two fail only on a startup or parse
+    error, and two demonstrate without verifying. It now says which is which.
+- **PRs merged:** #287 and #288.
+- **Issues closed/created:** two closed -- #281 and #282, both filed in the
+  previous session. None created.
+- **Lesson:** a control that exits non-zero for the wrong reason is not a
+  control. The first plant against the round-trip example lengthened the MBAP
+  length field, which raised inside `deserialize` before either comparison
+  ran. It failed loudly and convincingly and said nothing about whether the
+  check works. The replacement changed a quantity, producing a frame that
+  parses and simply is not the vector, which is the break the check exists to
+  catch.
+- **Lesson:** the authority on a decision can be inside the file about to be
+  edited. #282 was filed arguing to widen the gate; checking its premise found
+  that the character-set rule already holds every example to ASCII, and the
+  decline started to look better supported than the filing. The gate's own
+  module docstring had answered that argument already, for the package -- the
+  ASCII rule is a property of the strings and not of the boundary, and a
+  message formatted at run time escapes it. Twenty lines above the roots being
+  edited, and it reversed the conclusion back.
+- **Lesson:** an acceptance criterion asking what a claim now means is worth
+  more than it reads. #281's last criterion asked whether the index claim
+  needed rewording or simply held. Answering it meant surveying all seven
+  examples, which is what turned up the second file with the same defect and
+  the fact that the claim had never held for four of them.
+- **Upstream:** nothing new filed. The rule #281 demonstrates went up in the
+  previous session as braboj/solid-ai-templates#1410. The second lesson above
+  looked like a candidate and is not: `ai-workflow-read-edit-site` already
+  requires reading the target file for recorded prior reasoning before
+  changing it, and a module docstring carrying a settled argument is exactly
+  what that rule describes.
+- **Pending:** #194 is still the last of v0.6.0 and still unstarted. The pin
+  stays at `v2.61.0` against `v2.72.0` and #268 needs the owner's approval on
+  the pointer. Five upstream filings are open across the two sessions, none
+  landed.
