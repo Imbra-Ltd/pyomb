@@ -3555,3 +3555,68 @@ package, per ADR-002. See `README.md` for usage and
 - **Pending:** unchanged from the previous entry. #194 is the last of v0.6.0
   and unstarted, the pin stays at `v2.61.0` against `v2.72.0` under #268, and
   seven upstream filings are now open across the three entries, none landed.
+
+## 2026-09-03 -- Group the TLS settings, ship v0.6.0
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Grouped the eight TLS keyword arguments into one `TlsSettings` record
+    (PR #294, ADR-041).** Both simulators take `tls`; `secure` is gone, so
+    certificates can no longer be handed over and silently ignored. Every
+    option defaults to `UNSET` rather than a value, which is load-bearing
+    rather than tidy: the protocol constant and hostname checking differ by
+    side, so no stored value is right for both. `relaxations(role)` names each
+    weakening and both simulators log the list at construction, which is what
+    turns a relaxation from explicit into inspectable. The cipher string stays
+    OpenSSL format, decided rather than assumed.
+  - **Ran the 360-degree audit rather than skipping it (PR #297).** Overall B,
+    down from B+, nothing critical. Security and Documentation both reach A,
+    closing findings three consecutive reports carried. The bottleneck moved to
+    Dependencies and viability, where the update-mechanism row is new.
+  - **Cut v0.6.0 (PR #298).** Version literal, changelog entry with its compare
+    link, README install command. The release pipeline ran green through every
+    step and attached the wheel, sdist and SBOM.
+  - **Corrected ADR-041's upstream citation.** It shipped naming an issue
+    number written before the filing existed, which turned out to belong to an
+    unrelated changelog issue by another author.
+- **PRs merged:** #294, #297, #298, and the wrap.
+- **Issues closed/created:** #194 closed by #294, which was the last of the
+  v0.6.0 milestone; the milestone is now closed. Created #295, that split
+  CodeQL action bumps deadlock each other, and #296, that the `TlsSettings`
+  sentinel cannot be named from the public API. Commented on #210 correcting
+  its mechanism, and on #170 recording that the freeze denominator moved.
+- **Lesson:** a negative control has to be planted in the artifact the check
+  reads, not the one on disk. Two audit reports were moved out of
+  `docs/audits/` to make the newest one stale, the move was confirmed by
+  re-reading the directory the way the rule asks, the gate passed, and the
+  conclusion drawn -- that the gate was blind -- was wrong. It reads git's
+  index, so the plant never reached it. Staging the deletions made it fail with
+  the exact message it exists to produce. The comfortable answer and the wrong
+  one were the same answer, and nothing in the output separated them.
+- **Lesson:** two claims were made in this session that were not checked before
+  they were made. The session-start report said there were no open pull
+  requests when two Dependabot ones had been open since the day before, and
+  ADR-041 shipped citing an upstream issue that had not been filed. Neither
+  changed what was built. Both are the same failure -- writing a fact in the
+  shape it was expected to take rather than the shape it had -- and the second
+  is worse, because a merged decision record is the surface a later reader
+  trusts most and the one nothing rereads.
+- **Lesson:** the audit found a defect in the release it was auditing rather
+  than only in the tree behind it. #296 is a gap in the object shipped hours
+  earlier: the settings record defaults every field to a sentinel the public
+  surface does not name. An audit run on the release branch is the only pass
+  positioned to catch that, and it is the argument for running it there rather
+  than after the tag.
+- **Upstream:** two filings, both from this session's work.
+  braboj/solid-ai-templates#1424 against `config.md`, that a sentinel is also
+  required where a setting has no single default because the right value
+  depends on which consumer is asking -- the template argues only from the
+  default also being a legal value, so the correct design fails its own test.
+  And braboj/solid-ai-templates#1425 against `quality-gates.md`, the
+  planted-in-the-wrong-artifact lesson above, which is distinct from #1415:
+  there something rejects the plant before the check runs, here the check runs
+  to completion over a corpus that still holds what the operator removed.
+- **Pending:** nine upstream filings are open across four entries, none landed.
+  #295 blocks the CodeQL action pins from moving at all and is the audit's
+  named bottleneck. The pin stays at `v2.61.0` against `v2.73.0` under #268.
+  Cognitive complexity is ungated for the fourth consecutive audit, #149.
