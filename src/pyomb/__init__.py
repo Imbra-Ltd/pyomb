@@ -91,7 +91,7 @@ _RENAMED_IN_0_6_0 = {
 # the removal cannot disagree.
 _ALIAS_REMOVAL = "0.7.0"
 
-__version__ = "0.5.1"
+__version__ = "0.6.0"
 
 __all__ = [
     "__version__",

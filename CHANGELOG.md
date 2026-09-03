@@ -6,6 +6,17 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-03
+
+Every caller of the two simulators breaks, and no alias is offered. The
+modules and classes are renamed for what they hold, the public API takes PEP 8
+names, and the TLS configuration becomes one object rather than eight keyword
+arguments. Each change was taken whole rather than half-deprecated, because a
+call that resolves and then raises on its own keyword names a method the caller
+never wrote. Nothing the library puts on the wire changes: the codec is
+untouched, and every per-function-code suite still asserts its frames against
+the published vectors.
+
 ### Added
 
 - `TlsSettings` and `TlsRole`, exported from `pyomb`. The settings record
@@ -571,7 +582,8 @@ no upgrade path to describe and no consumer to break.
   committed chain was rotated; it was self-signed and installed in no trust
   store
 
-[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.4...v0.5.0
 [0.4.4]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.3...v0.4.4
