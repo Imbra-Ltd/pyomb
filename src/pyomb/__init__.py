@@ -10,7 +10,9 @@ The names re-exported here are the supported public API, alongside one
 submodule that is equally public: pyomb.packets for the function-code packet
 classes (ModbusRequestFC1, ModbusResponseFC3, ...). The two simulators and
 the TLS settings they take are re-exported as well, bound on first use rather
-than on import.
+than on import. UNSET travels with them: it is the value every optional TLS
+setting carries until a caller chooses one, and comparing against it is how a
+caller tells a choice from a default.
 
 The spellings the simulators carried before 0.6.0, OmbClientSim and
 OmbServerSim, still resolve from here and warn. They are removed in 0.7.0.
@@ -63,6 +65,7 @@ from .stream import ModbusTcpStream
 if TYPE_CHECKING:
     from .client_simulator import ModbusClientSimulator
     from .server_simulator import ModbusServerSimulator
+    from .tls import UNSET
     from .tls import TlsRole
     from .tls import TlsSettings
 
@@ -75,6 +78,7 @@ _DEFERRED = {
     "ModbusServerSimulator": "server_simulator",
     "TlsSettings": "tls",
     "TlsRole": "tls",
+    "UNSET": "tls",
 }
 
 # The spelling each class carried before 0.6.0, against the one it carries
@@ -134,6 +138,7 @@ __all__ = [
     # TLS
     "TlsSettings",
     "TlsRole",
+    "UNSET",
 ]
 
 

@@ -10,6 +10,7 @@ import unittest
 import warnings
 from unittest import mock
 
+import pyomb
 from pyomb import tls
 from pyomb.tls import UNSET, TlsRole, TlsSettings
 
@@ -179,6 +180,48 @@ class TestUnsetIsNotTheDefaultValue(unittest.TestCase):
 
         self.assertIsNone(explicit.ciphers)
         self.assertIsNot(explicit.ciphers, UNSET)
+
+
+class TestUnsetIsPublic(unittest.TestCase):
+    """The sentinel a caller compares against is reachable and stable.
+
+    Grouping the settings was justified on inspectability, and relaxations()
+    answers for the object as a whole. What it does not answer is whether one
+    named field carries a choice, which a caller handed an object they did not
+    build has to ask. That reads as `settings.protocol is UNSET` and needs the
+    name on the supported surface rather than reached for inside pyomb.tls,
+    which the package docstring does not list as public.
+    """
+
+    def test_the_sentinel_is_reachable_from_the_package_root(self):
+        self.assertIs(pyomb.UNSET, UNSET)
+
+    def test_the_root_and_the_submodule_hand_back_one_object(self):
+        # Identity is the entire mechanism. Two spellings returning equal but
+        # distinct objects would make `is` answer False for a caller who
+        # imported from the root, and no assertion on value would catch it.
+        self.assertIs(pyomb.UNSET, tls.UNSET)
+
+    def test_the_sentinel_is_advertised_and_not_merely_reachable(self):
+        # hasattr alone passes for a name the package binds incidentally. The
+        # export list is what makes it supported.
+        self.assertIn("UNSET", pyomb.__all__)
+
+    def test_a_caller_can_tell_a_choice_from_a_default_per_field(self):
+        # One object carrying both states: nothing but the sentinel separates
+        # the field the caller set from the one they left alone.
+        settings = TlsSettings(cert=CERT, key=KEY, ca_chain=CA, verify_hostname=False)
+
+        self.assertIs(settings.protocol, pyomb.UNSET)
+        self.assertIsNot(settings.verify_hostname, pyomb.UNSET)
+
+    def test_both_spellings_render_as_the_name_a_caller_writes(self):
+        # An enum defines its own __str__, where the plain class this replaced
+        # fell back to __repr__. Letting the two disagree leaks the private
+        # type name into any message that formats the value.
+        self.assertEqual(repr(pyomb.UNSET), "UNSET")
+        self.assertEqual(str(pyomb.UNSET), "UNSET")
+        self.assertEqual(f"{pyomb.UNSET}", "UNSET")
 
 
 class TestTheFloorIsNotRelaxable(unittest.TestCase):
