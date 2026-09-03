@@ -131,7 +131,7 @@ convention = "google"
 "src/pyomb/client_simulator.py" = ["D100", "D103", "D107", "D202", "D415", "SIM108", "TRY201", "TRY203", "UP004", "UP009", "UP010", "UP024", "UP030", "UP032"]
 "src/pyomb/server_simulator.py" = ["B904", "BLE001", "D100", "D102", "D107", "D202", "D415", "N806", "RUF059", "SIM105", "SIM300", "TRY003", "UP004", "UP008", "UP009", "UP010", "UP018", "UP024", "UP030", "UP032"]
 "src/pyomb/packets.py" = ["B904", "BLE001", "D105", "D107", "D202", "D214", "D415", "RUF005", "RUF012", "UP008", "UP009", "UP010", "UP030", "UP032"]
-"src/pyomb/stream.py" = ["B008", "B904", "BLE001", "D107", "D202", "D415", "I001", "TRY300", "TRY301", "UP009", "UP010", "UP030", "UP032"]
+"src/pyomb/stream.py" = ["B008", "BLE001", "D107", "D202", "D415", "I001", "TRY300", "TRY301", "UP009", "UP010", "UP030", "UP032"]
 
 [tool.mypy]
 

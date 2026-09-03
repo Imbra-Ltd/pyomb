@@ -18,6 +18,7 @@ Features:
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import logging
 import threading
 import time
 import socket
@@ -30,6 +31,15 @@ from .errors import ModbusNetworkError, ModbusPacketError, ModbusBaseError
 
 # Modbus MBAP header size
 HEADER_SIZE = ModbusHeader.SIZE
+
+# The transport's own logger, with a null handler so importing this module
+# writes nothing. A library that installs a real handler decides where its
+# host's output goes, which is the host's decision to make. The simulators
+# construct a stdout logger instead, because an application is what they are.
+# Each class below takes a logger, so this is the fallback rather than the
+# only route.
+_LOG = logging.getLogger(__name__)
+_LOG.addHandler(logging.NullHandler())
 
 
 ################################################################################
@@ -208,7 +218,7 @@ class ModbusFragmenter(ModbusFragmenterAbc):
 
         except Exception as e:
             message = "Error fragmenting the Modbus packet: {0}".format(str(e))
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
     @staticmethod
     def assemble(fragments):
@@ -257,7 +267,11 @@ class ModbusTcpStream(ModbusStreamAbc):
         length its header declares. CI runs it on every pull request.
     """
 
-    def __init__(self, sock, fragmenter=ModbusFragmenter(), frag_delay=0, frag_size=0, burst=False):
+    def __init__(self, sock, fragmenter=ModbusFragmenter(), frag_delay=0, frag_size=0, burst=False, log=None):
+
+        # Injected so a caller keeps control of where the transport's output
+        # goes; the fallback is silent.
+        self.log = log or _LOG
 
         # If no TCP socket is provided, create a new one
         self.sock = sock or socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -292,11 +306,13 @@ class ModbusTcpStream(ModbusStreamAbc):
             # Iterate through the fragments and sends them one by one
             for fragment in fragments:
                 self.sock.send(fragment)
+                self.log.debug("sent a fragment of %d byte(s)", len(fragment))
                 time.sleep(self.frag_delay)
 
         except Exception as e:
+            self.log.warning("send failed: %s", e)
             message = "Error sending Modbus message: {0}".format(str(e))
-            raise ModbusNetworkError(message=message)
+            raise ModbusNetworkError(message=message) from e
 
     def _recv_exactly(self, count):
         """Reads a fixed number of bytes from the socket.
@@ -408,8 +424,9 @@ class ModbusTcpStream(ModbusStreamAbc):
             raise
 
         except Exception as e:
+            self.log.warning("receive failed: %s", e)
             message = "Error receiving Modbus message: {0}".format(str(e))
-            raise ModbusNetworkError(message=message)
+            raise ModbusNetworkError(message=message) from e
 
 
 class ModbusTcpSender(ModbusSenderAbc):
@@ -445,7 +462,11 @@ class ModbusTcpSender(ModbusSenderAbc):
         care which, and the example uses the first.
     """
 
-    def __init__(self, sock, packets=(), frag_size=0, frag_delay=0, burst_mode=False):
+    def __init__(self, sock, packets=(), frag_size=0, frag_delay=0, burst_mode=False, log=None):
+
+        # Injected so a caller keeps control of where the transport's output
+        # goes; the fallback is silent.
+        self.log = log or _LOG
 
         # Set the sender attributes
         self.sock = sock
@@ -523,8 +544,9 @@ class ModbusTcpSender(ModbusSenderAbc):
                     self.stream.send(message)
 
             except Exception as e:
+                self.log.warning("buffered send failed: %s", e)
                 message = "Error sending Modbus message: {0}".format(str(e))
-                raise ModbusNetworkError(message=message)
+                raise ModbusNetworkError(message=message) from e
 
     def stop(self):
         """Stops sending messages and closes the socket."""
@@ -563,7 +585,11 @@ class ModbusTcpReceiver(ModbusReceiverAbc):
         route and closes the sending end.
     """
 
-    def __init__(self, sock, frag_size=0):
+    def __init__(self, sock, frag_size=0, log=None):
+
+        # Injected so a caller keeps control of where the transport's output
+        # goes; the fallback is silent.
+        self.log = log or _LOG
 
         # If no socket is provided, create a new one
         self.sock = sock
@@ -628,7 +654,8 @@ class ModbusTcpReceiver(ModbusReceiverAbc):
                     self.packets.append(packet)
 
         except Exception as e:
-            raise ModbusBaseError(message=str(e))
+            self.log.warning("buffered receive failed: %s", e)
+            raise ModbusBaseError(message=str(e)) from e
 
         # Return the received messages
         return self.packets
