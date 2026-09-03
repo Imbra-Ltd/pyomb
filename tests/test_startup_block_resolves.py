@@ -58,13 +58,17 @@ MANIFEST = "templates/manifest.yaml"
 # either. These two are the whole hand-written input to the resolution.
 AXES = ("stack-python-lib", "platform-github")
 
-# The session protocol needs these two and no stack declares them, so the
-# chain never reaches them. The decision record covering the startup block
-# carries why they are added rather than resolved.
+# No stack declares these, so the chain never reaches them and each is added
+# deliberately. The decision record covering the startup block carries why
+# they are added rather than resolved. The first two are what the session
+# protocol needs; communication states how the agent answers, which binds
+# every turn and so is worthless unresolved -- it went unread for the whole
+# life of the block because nothing listed it.
 UNDECLARED = frozenset(
     {
         "templates/base/workflow/scope.md",
         "templates/base/workflow/ai-workflow.md",
+        "templates/base/workflow/communication.md",
     }
 )
 
