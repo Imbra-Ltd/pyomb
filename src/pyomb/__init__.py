@@ -8,8 +8,9 @@ implementations.
 
 The names re-exported here are the supported public API, alongside one
 submodule that is equally public: pyomb.packets for the function-code packet
-classes (ModbusRequestFC1, ModbusResponseFC3, ...). The two simulators are
-re-exported as well, bound on first use rather than on import.
+classes (ModbusRequestFC1, ModbusResponseFC3, ...). The two simulators and
+the TLS settings they take are re-exported as well, bound on first use rather
+than on import.
 
 The spellings the simulators carried before 0.6.0, OmbClientSim and
 OmbServerSim, still resolve from here and warn. They are removed in 0.7.0.
@@ -62,11 +63,18 @@ from .stream import ModbusTcpStream
 if TYPE_CHECKING:
     from .client_simulator import ModbusClientSimulator
     from .server_simulator import ModbusServerSimulator
+    from .tls import TlsRole
+    from .tls import TlsSettings
 
-# Each deferred name against the submodule that defines it.
+# Each deferred name against the submodule that defines it. The TLS settings
+# join the simulators here for the same reason: pyomb.tls imports ssl, so
+# binding it eagerly would put back the cost the deferral removes, and it is
+# the only thing a caller needs before constructing a secure simulator.
 _DEFERRED = {
     "ModbusClientSimulator": "client_simulator",
     "ModbusServerSimulator": "server_simulator",
+    "TlsSettings": "tls",
+    "TlsRole": "tls",
 }
 
 # The spelling each class carried before 0.6.0, against the one it carries
@@ -123,11 +131,14 @@ __all__ = [
     # Simulators
     "ModbusClientSimulator",
     "ModbusServerSimulator",
+    # TLS
+    "TlsSettings",
+    "TlsRole",
 ]
 
 
 def __getattr__(name: str) -> object:
-    """Bind a simulator class on the first access that names it.
+    """Bind a deferred name on the first access that names it.
 
     A name retired in 0.6.0 resolves to its replacement and warns. Those two
     are deliberately absent from __all__: they are supported until the

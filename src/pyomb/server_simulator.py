@@ -32,6 +32,7 @@ from .packets import (
     ModbusTcpResponse,
 )
 from .stream import ModbusTcpStream
+from .tls import TlsRole
 
 
 class ModbusServerSimulator(threading.Thread):
@@ -64,44 +65,15 @@ class ModbusServerSimulator(threading.Thread):
                                    connect.
         inactive_timeout (float) : The inactivity timeout for a client.
         daemon (bool)            : Kill the server after the caller exits.
-        secure (bool)            : Security (SSL context).
-        protocol (int)           : Secure protocol.
-        cert (str)               : Certificate in DER/PEM format.
-        key (str)                : Private key in DER/PEM format.
-        ca_chain (str)           : Certificate file in DER/PEM format.
-        ciphers (str)            : Supported ciphers as string in OpenSSL
-                                   format. Defaults to None, meaning the
-                                   interpreter's secure default suite.
-        verify_mode (int)        : Verify client's certificate. Defaults to
-                                   ssl.CERT_REQUIRED, as MB-TCP-Security is
-                                   built on mutual TLS.
-        verify_hostname (bool)   : Verify client's hostname. Server contexts do
-                                   not check hostnames; defaults to False.
-        ssl_options (int)        : SSL options OR-ed into the context. They can
-                                   only add a restriction, so a session may be
-                                   pinned above MINIMUM_TLS_VERSION but never
-                                   below it.
+        tls (TlsSettings)        : The certificate material and TLS options.
+                                   Defaults to None, which is plaintext;
+                                   passing an instance is what turns TLS on.
+                                   Every weakening it carries is logged at
+                                   construction.
     """
-
-    # None means "inherit the interpreter's secure default suite". The previous
-    # default, 'ALL:COMPLEMENTOFALL:', enabled 158 suites against the stdlib
-    # default of 17: COMPLEMENTOFALL is exactly the eNULL set that ALL excludes,
-    # so it added 18 null-encryption suites (cleartext under a TLS handshake) on
-    # top of 13 anonymous key-exchange suites. Callers testing weak-cipher
-    # interoperability pass an explicit OpenSSL cipher string instead.
-    DEFAULT_CIPHERS = None
 
     PLAINTEXT_PORT = 502
     ENCRYPTED_PORT = 802
-
-    # The lowest protocol version the transport will negotiate. MB-TCP-Security
-    # v21 requires TLS 1.2 or better (R-32) and forbids negotiating down to TLS
-    # 1.1, TLS 1.0 or SSL 3.0 (R-34), so the floor is the specification's
-    # rather than a preference. Declaring it matters even where OpenSSL already
-    # defaults here: that default is a property of the linked library and its
-    # security level, so an older or differently configured build answers
-    # differently and nothing in this library would notice.
-    MINIMUM_TLS_VERSION = ssl.TLSVersion.TLSv1_2
 
     # Seconds start() waits for the listener before giving up on it.
     STARTUP_TIMEOUT = 10.0
@@ -117,15 +89,7 @@ class ModbusServerSimulator(threading.Thread):
         connection_limit=10,
         inactive_timeout=1.0,
         daemon=False,
-        secure=False,
-        protocol=ssl.PROTOCOL_TLS_SERVER,
-        cert=None,
-        key=None,
-        ca_chain=None,
-        ciphers=DEFAULT_CIPHERS,
-        verify_mode=ssl.CERT_REQUIRED,
-        verify_hostname=False,
-        ssl_options=ssl.OP_ALL,
+        tls=None,
     ):
 
         # Initialize the thread
@@ -160,45 +124,28 @@ class ModbusServerSimulator(threading.Thread):
         # a caller outside the thread.
         self.peer_names = {}
 
-        # Security related parameters
-        self.secure = secure
-        self.ciphers = ciphers
-        self.verify_mode = verify_mode
-        self.verify_hostname = verify_hostname
-        self.ssl_options = ssl_options
         self.process_connections = True  # Process connected clients by default
         self.data_handler = None
 
-        # Initialize the certificates and keys
-        self.cert = cert
-        self.key = key
-        self.ca_chain = ca_chain
+        # The TLS settings, or None for plaintext. One object rather than a
+        # flag beside the material it guards, so a caller cannot hand over
+        # certificates that are then silently unused.
+        self.tls = tls
 
-        # SSL configuration
-        if secure:
+        if tls is not None:
+            # A secure listener does not run on the plaintext port, so a caller
+            # who named no port binds the encrypted one rather than the port a
+            # plaintext peer expects to find unencrypted.
             if port == ModbusServerSimulator.PLAINTEXT_PORT:
                 self.port = ModbusServerSimulator.ENCRYPTED_PORT
-            self.ssl_context = ssl.SSLContext(protocol)
-            self.ssl_context.load_cert_chain(self.cert, self.key)
-            self.ssl_context.load_verify_locations(self.ca_chain)
 
-            if ciphers is not None:
-                self.ssl_context.set_ciphers(str(ciphers))
+            self.ssl_context = tls.context(TlsRole.SERVER)
 
-            # A server context never checks hostnames, so this is cleared before
-            # verify_mode is assigned; the ssl module refuses CERT_NONE while
-            # hostname checking is on.
-            self.ssl_context.check_hostname = False
-            self.ssl_context.verify_mode = verify_mode
-            self.ssl_context.check_hostname = verify_hostname
-
-            self.ssl_context.options |= ssl_options
-
-            # Applied after the caller's options, which are OR-ed in and so can
-            # only add a restriction. ssl_options therefore still pins a session
-            # higher than the floor, and neither passing a mask that omits the
-            # protocol switches nor passing none at all can drop below it.
-            self.ssl_context.minimum_version = self.MINIMUM_TLS_VERSION
+            # Said out loud because the arguments cannot say it. A caller who
+            # weakened one setting believing they weakened another sees the
+            # list of what the session will actually carry.
+            for relaxation in tls.relaxations(TlsRole.SERVER):
+                self.log.warning("TLS relaxed: %s", relaxation)
 
     ############################################################################
 
@@ -375,7 +322,7 @@ class ModbusServerSimulator(threading.Thread):
                     # conn.setblocking(False)
 
                     # If the server is secure, wrap the connection in an SSL context
-                    if self.secure:
+                    if self.tls is not None:
                         try:
                             conn = self.ssl_context.wrap_socket(conn, server_side=True)
                             self.peercerts[conn] = conn.getpeercert()
@@ -1035,7 +982,6 @@ def run_server():
         host="",
         connection_limit=50,
         inactive_timeout=60,
-        secure=False,
         # frag_size=2,
         frag_delay=0,
     )

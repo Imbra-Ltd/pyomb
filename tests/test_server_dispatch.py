@@ -254,7 +254,7 @@ class TestServerConfiguration(unittest.TestCase):
         self.assertEqual(ModbusServerSimulator.ENCRYPTED_PORT, 802)
 
     def test_plaintext_server_builds_no_ssl_context(self):
-        server = ModbusServerSimulator(secure=False)
+        server = ModbusServerSimulator()
 
         self.assertFalse(hasattr(server, "ssl_context"))
         self.assertEqual(server.port, 502)

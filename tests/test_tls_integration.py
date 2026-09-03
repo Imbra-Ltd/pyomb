@@ -12,13 +12,11 @@ import contextlib
 import os
 import ssl
 import unittest
-import warnings
-from unittest import mock
 
-from pyomb import client_simulator, server_simulator
 from pyomb.client_simulator import ModbusClientSimulator
 from pyomb.packets import ModbusPduParser, ModbusRequestFC1, ModbusResponseFC1
 from pyomb.server_simulator import ModbusServerSimulator
+from pyomb.tls import TlsSettings
 
 CERTS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "certificates")
 
@@ -38,115 +36,6 @@ SKIP_REASON = "run 'py scripts/gen_test_certs.py' to generate the test chain"
 SHUTDOWN_TIMEOUT = 5.0
 
 
-class WeakPlatformContext(ssl.SSLContext):
-    """An SSLContext that starts at the TLS 1.0 floor, with cert loading stubbed.
-
-    Stands in for an OpenSSL build, or a security level, whose default floor
-    sits below what the Modbus security specification requires. The platform
-    this suite normally runs on already defaults to TLS 1.2, so a context that
-    declares no floor of its own still reads as 1.2 there and an assertion
-    against it would pass on the unfixed code. Injecting the permissive default
-    is what makes the assertion a statement about this library rather than
-    about whichever OpenSSL happens to be linked.
-    """
-
-    def __init__(self, *args, **kwargs):
-        # TLSVersion.TLSv1 is deprecated, which is the point of using it here:
-        # this is the permissive platform the library has to override.
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            self.minimum_version = ssl.TLSVersion.TLSv1
-
-    def load_cert_chain(self, *args, **kwargs):
-        """Accept the certificate and key paths without reading them."""
-
-    def load_verify_locations(self, *args, **kwargs):
-        """Accept the CA chain path without reading it."""
-
-
-class WeakPlatformSsl:
-    """A stand-in for the ssl module whose SSLContext is the permissive double.
-
-    Replacing ssl.SSLContext on the module itself is not an option: the
-    standard library's own minimum_version setter looks that name up on the
-    module, so a double installed there makes the setter recurse into itself.
-    Redirecting only the name the module under test reads leaves the real class
-    where the standard library expects to find it, and every other attribute
-    falls through untouched.
-    """
-
-    SSLContext = WeakPlatformContext
-
-    def __getattr__(self, name):
-        return getattr(ssl, name)
-
-
-class TestSecureDefaults(unittest.TestCase):
-    """The hardened defaults are the regression this guards; no certs needed."""
-
-    def test_client_requires_and_verifies_peer(self):
-        import inspect
-
-        defaults = inspect.signature(ModbusClientSimulator.__init__).parameters
-
-        self.assertIs(defaults["verify_hostname"].default, True)
-        self.assertEqual(defaults["verify_mode"].default, ssl.CERT_REQUIRED)
-        self.assertEqual(defaults["protocol"].default, ssl.PROTOCOL_TLS_CLIENT)
-
-    def test_server_requires_client_certificate(self):
-        import inspect
-
-        defaults = inspect.signature(ModbusServerSimulator.__init__).parameters
-
-        self.assertEqual(defaults["verify_mode"].default, ssl.CERT_REQUIRED)
-        self.assertEqual(defaults["protocol"].default, ssl.PROTOCOL_TLS_SERVER)
-
-    def test_no_custom_cipher_string_is_imposed(self):
-        # None means the interpreter's secure default suite. The previous
-        # values enabled null encryption and anonymous key exchange.
-        self.assertIsNone(ModbusClientSimulator.DEFAULT_CIPHERS)
-        self.assertIsNone(ModbusServerSimulator.DEFAULT_CIPHERS)
-
-    def _secure_client(self, **kwargs):
-        """Build a secure client whose context came from the permissive double."""
-        with mock.patch.object(client_simulator, "ssl", WeakPlatformSsl()):
-            client = ModbusClientSimulator(secure=True, **kwargs)
-
-        self.addCleanup(client.sock.close)
-        return client
-
-    def _secure_server(self, **kwargs):
-        """Build a secure server whose context came from the permissive double."""
-        with mock.patch.object(server_simulator, "ssl", WeakPlatformSsl()):
-            return ModbusServerSimulator(secure=True, **kwargs)
-
-    def test_client_declares_the_tls_floor_rather_than_inheriting_it(self):
-        # MB-TCP-Security v21, R-32 and R-34: an mbaps device provides TLS 1.2
-        # or better and never negotiates down to 1.1, 1.0 or SSL 3.0.
-        self.assertEqual(self._secure_client().crypto.minimum_version, ssl.TLSVersion.TLSv1_2)
-
-    def test_server_declares_the_tls_floor_rather_than_inheriting_it(self):
-        self.assertEqual(self._secure_server().ssl_context.minimum_version, ssl.TLSVersion.TLSv1_2)
-
-    def test_ssl_options_cannot_lower_the_floor_by_omission(self):
-        # The parameter is a bitmask the caller ORs in, so it can add a
-        # restriction and never remove one. Passing none at all must still
-        # leave the declared floor standing.
-        self.assertEqual(self._secure_client(ssl_options=0).crypto.minimum_version, ssl.TLSVersion.TLSv1_2)
-
-    def test_ssl_options_still_restricts_above_the_floor(self):
-        # A caller pinning the session to TLS 1.3 passes the 1.2 switch. The
-        # declared floor must not quietly clear the bit they set, or the
-        # parameter would stop working for what it is for.
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            no_tls12 = ssl.OP_NO_TLSv1_2
-
-        client = self._secure_client(ssl_options=ssl.OP_ALL | no_tls12)
-
-        self.assertTrue(client.crypto.options & no_tls12)
-
-
 @unittest.skipUnless(HAVE_CERTS, SKIP_REASON)
 class TestMutualTls(unittest.TestCase):
     """The transport defaults must produce an authenticated, strong session."""
@@ -162,7 +51,8 @@ class TestMutualTls(unittest.TestCase):
         # named port that has just carried a connection can still refuse the
         # next bind while that connection sits in TIME_WAIT. Letting the
         # operating system choose sidesteps that rather than timing it.
-        self.server = ModbusServerSimulator(port=0, secure=True, cert=SERVER_CRT, key=SERVER_KEY, ca_chain=CA)
+        settings = TlsSettings(cert=SERVER_CRT, key=SERVER_KEY, ca_chain=CA)
+        self.server = ModbusServerSimulator(port=0, tls=settings)
 
         # start() returns only once the listener is accepting: it waits on the
         # server's own started event, bounded by STARTUP_TIMEOUT, and raises
@@ -197,10 +87,7 @@ class TestMutualTls(unittest.TestCase):
         options = {
             "host": "localhost",
             "port": self.PORT,
-            "secure": True,
-            "cert": CLIENT_CRT,
-            "key": CLIENT_KEY,
-            "ca_chain": CA,
+            "tls": TlsSettings(cert=CLIENT_CRT, key=CLIENT_KEY, ca_chain=CA),
         }
         options.update(kwargs)
         self.client = ModbusClientSimulator(**options)
