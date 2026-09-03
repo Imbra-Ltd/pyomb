@@ -25,7 +25,6 @@ submodules for other reasons, so asking here would always say yes.
 import subprocess  # nosec B404
 import sys
 import unittest
-import warnings
 
 import pyomb
 
@@ -59,6 +58,30 @@ def imported_names(statement):
     return set(completed.stdout.split())
 
 
+def import_failure(statement):
+    """Report what a fresh interpreter writes to stderr running an import.
+
+    Args:
+        statement (str) : The import statement the interpreter runs
+
+    Returns:
+        str : Everything written to stderr, empty when the import succeeded
+    """
+
+    # Same call shape as the helper above, and safe for the same reasons: a
+    # list argument vector that reaches the operating system without a shell,
+    # this process's own interpreter, and a program the caller composed from
+    # literals. check is off because a failing import is the subject here.
+    completed = subprocess.run(  # nosec B603
+        [sys.executable, "-c", statement],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    return "" if completed.returncode == 0 else completed.stderr
+
+
 class PackageExportsWhatItNames(unittest.TestCase):
     """Pins every advertised name to something the package actually binds."""
 
@@ -89,55 +112,37 @@ class PackageExportsWhatItNames(unittest.TestCase):
         self.assertRaises(AttributeError, getattr, pyomb, "NoSuchName")
 
 
-class TheRetiredSpellingsStillResolve(unittest.TestCase):
-    """Pins the aliases the rename left behind, which __all__ cannot reach.
+class TheRetiredSpellingsAreGone(unittest.TestCase):
+    """Pins the removal of the two names the rename left resolving.
 
-    The check above walks `__all__`, and these two names are deliberately not
-    in it: they are supported until the removal release and are not what a new
-    caller should write. That is exactly why they need a test of their own --
-    dropping the alias branch from the resolver would break `from pyomb import
-    OmbServerSim` for every existing caller, and every other assertion in this
-    module would stay green.
+    The check above walks `__all__`, and these two names were never in it, so
+    nothing there can see them go. This class replaces the one that pinned them
+    while they still resolved: restoring the alias branch turns both assertions
+    below red, which is what stops the removal being quietly reverted.
 
-    Deleting this class is part of the removal, not a way to make a red run
-    green. Until then an alias that stops resolving is a defect.
+    The first test asks in a fresh interpreter because `from pyomb import X` is
+    what a consumer wrote, and the failure it raises is not the one the
+    resolver raises -- the import system turns the resolver's AttributeError
+    into ImportError on the way out. Both are pinned, since only the second
+    says the name is gone rather than merely unimportable.
     """
 
-    def test_each_retired_name_returns_the_class_that_replaced_it(self):
-        """An alias that returns something else is worse than one that raises."""
+    def test_importing_a_retired_name_fails(self):
+        """The consumer-facing form is `from pyomb import X`, so pin that."""
 
-        from pyomb.client_simulator import ModbusClientSimulator
-        from pyomb.server_simulator import ModbusServerSimulator
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-
-            self.assertIs(pyomb.OmbClientSim, ModbusClientSimulator)
-            self.assertIs(pyomb.OmbServerSim, ModbusServerSimulator)
-
-    def test_reading_a_retired_name_warns_and_names_its_replacement(self):
-        """A warning that does not say what to write instead costs a search."""
-
-        for retired, replacement in (
-            ("OmbClientSim", "ModbusClientSimulator"),
-            ("OmbServerSim", "ModbusServerSimulator"),
-        ):
+        for retired in ("OmbClientSim", "OmbServerSim"):
             with self.subTest(retired=retired):
-                with warnings.catch_warnings(record=True) as raised:
-                    warnings.simplefilter("always")
-                    getattr(pyomb, retired)
+                stderr = import_failure("from pyomb import " + retired)
 
-                self.assertEqual(len(raised), 1)
-                self.assertTrue(issubclass(raised[0].category, DeprecationWarning))
-                self.assertIn(replacement, str(raised[0].message))
-                self.assertIn("0.7.0", str(raised[0].message))
+                self.assertIn("ImportError", stderr)
+                self.assertIn(retired, stderr)
 
-    def test_the_retired_names_are_not_advertised(self):
-        """A deprecated spelling in __all__ reads as one of two equal options."""
+    def test_reading_a_retired_name_off_the_package_raises(self):
+        """Underneath the import, the resolver no longer answers for the name."""
 
-        advertised = [name for name in pyomb.__all__ if name.startswith("Omb")]
-
-        self.assertEqual(advertised, [])
+        for retired in ("OmbClientSim", "OmbServerSim"):
+            with self.subTest(retired=retired):
+                self.assertRaises(AttributeError, getattr, pyomb, retired)
 
 
 class ImportingThePackageDoesNotOpenTheTransport(unittest.TestCase):

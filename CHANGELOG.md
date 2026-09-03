@@ -6,6 +6,12 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+
+- `OmbClientSim` and `OmbServerSim` no longer resolve from the package root.
+  Write `ModbusClientSimulator` and `ModbusServerSimulator` instead, the
+  spellings carried since 0.6.0. See #275, ADR-038
+
 ## [0.6.0] - 2026-09-03
 
 Every caller of the two simulators breaks, and no alias is offered. The
