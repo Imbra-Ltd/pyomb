@@ -1,4 +1,4 @@
-"""The package exports what it names, and names the simulators without loading them.
+"""The package exports what it names, and names the deferred ones without loading them.
 
 `__all__` is the project's statement of its public API, and nothing checked it.
 A name can sit in that list with nothing bound to it -- the list is a literal,
@@ -9,7 +9,8 @@ name in the list is resolved against the package.
 The simulators make the gap live rather than theoretical. They are bound
 through the module's `__getattr__` rather than imported at the top, because
 importing them costs every caller the ssl import for a transport most callers
-never open. That keeps them in the flat public API at no cost to a codec-only
+never open. The TLS settings they take are deferred on the same terms and for
+the same reason. That keeps them in the flat public API at no cost to a codec-only
 caller, and it means their entries in `__all__` are backed by a function rather
 than by an import statement -- exactly the shape whose failure the first check
 would otherwise miss.
@@ -39,7 +40,7 @@ def imported_names(statement):
         set[str] : The watched module names present after it runs
     """
 
-    watched = ("ssl", "pyomb.client_simulator", "pyomb.server_simulator")
+    watched = ("ssl", "pyomb.client_simulator", "pyomb.server_simulator", "pyomb.tls")
 
     program = "import sys\n" + statement + f"\nprint(' '.join(name for name in {watched!r} if name in sys.modules))"
 
@@ -146,6 +147,14 @@ class ImportingThePackageDoesNotOpenTheTransport(unittest.TestCase):
         """A codec-only caller pays nothing for a transport it never opens."""
 
         self.assertEqual(imported_names("import pyomb"), set())
+
+    def test_naming_the_tls_settings_loads_them(self):
+        """The settings reach ssl too, so they are deferred on the same terms."""
+
+        loaded = imported_names("import pyomb; pyomb.TlsSettings")
+
+        self.assertIn("pyomb.tls", loaded)
+        self.assertIn("ssl", loaded)
 
     def test_naming_a_simulator_loads_it(self):
         """The deferral has to end when someone asks, or the name is useless."""

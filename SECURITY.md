@@ -34,9 +34,10 @@ report that they *are* the defaults is in scope.
 ## Using this library securely
 
 The client and server default to the interpreter's secure cipher suite,
-require peer certificates, and verify hostnames on the client side. If you
-pass `ciphers=`, `verify_mode=`, or `verify_hostname=` to weaken any of that,
-confine it to a test network.
+require peer certificates, and verify hostnames on the client side. Those
+settings live on the `TlsSettings` object a simulator takes, and each one you
+set to weaken the defaults is logged at construction and listed by that
+object's `relaxations` method. Confine a weakened session to a test network.
 
 Both endpoints are simulators intended for testing Modbus implementations.
 They are not hardened for production control networks and should not be

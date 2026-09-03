@@ -6,6 +6,14 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `TlsSettings` and `TlsRole`, exported from `pyomb`. The settings record
+  carries one simulator's certificate material and TLS options, builds the
+  context for either side, and reports which of its settings weaken the
+  secure baseline. Like the simulators it is bound on first access rather
+  than on import, because it reaches `ssl`. See #194, ADR-041
+
 ### Changed
 
 - The two simulator modules and their classes are renamed for what they hold.
@@ -53,6 +61,38 @@ numbers follow [Semantic Versioning](https://semver.org/).
   attribute, which was a third name for the same value. The transport already
   called it `frag_size` and sliced it as a byte width, so the transport's
   spelling is the correct one
+
+- The TLS configuration is one object. Both simulators take `tls`, a
+  `TlsSettings` record carrying the certificate material and every option;
+  `secure`, `protocol`, `cert`, `key`, `ca_chain`, `ciphers`, `verify_mode`,
+  `verify_hostname` and `ssl_options` are gone from both signatures. Passing
+  an instance is what turns TLS on, so certificates can no longer be handed
+  over and silently ignored. See #194, ADR-041
+
+  ```python
+  # before
+  ModbusClientSimulator(secure=True, cert=CERT, key=KEY, ca_chain=CA)
+
+  # after
+  ModbusClientSimulator(tls=TlsSettings(cert=CERT, key=KEY, ca_chain=CA))
+  ```
+
+- Every option on `TlsSettings` defaults to `UNSET` rather than to a value.
+  Unset means the baseline for the side the context is built for, which is
+  what lets one object serve both: a client verifies the hostname and a server
+  does not, and neither is a value the other could carry. `None` stays a legal
+  value for `ciphers`, meaning the interpreter's own suite, which is why the
+  sentinel is not `None`
+- A weakened setting is reported rather than only permitted.
+  `TlsSettings.relaxations(role)` names each one, and both simulators log the
+  list at construction, so a caller who weakened one setting believing they
+  weakened another sees what the session will actually carry
+- The cipher string stays in OpenSSL format and is passed through verbatim.
+  A friendlier vocabulary would be a mapping this project owns against a
+  suite list OpenSSL changes between versions
+- `DEFAULT_CIPHERS` and `MINIMUM_TLS_VERSION` are gone from both simulators.
+  The floor is `TlsSettings.MINIMUM_VERSION`, in one place rather than two,
+  and is still applied after the caller's options
 
 ### Deprecated
 

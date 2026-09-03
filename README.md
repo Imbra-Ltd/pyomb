@@ -256,13 +256,16 @@ documented in [docs/PLAYBOOK.md](docs/PLAYBOOK.md).
 ## Configuration reference
 
 pyomb reads no environment variables and no configuration file. Every setting
-is a constructor argument on the object it affects — the port and TLS material
-on the simulators, the fragment size on the stream.
+is a constructor argument on the object it affects — the port on the
+simulators, the fragment size on the stream. The TLS material and its options
+travel together as a `TlsSettings` record, which a simulator takes as `tls`;
+passing one is what selects TLS, and passing nothing is plaintext.
 
 The transport defaults are secure: the interpreter's default cipher suite, peer
 certificates required, and hostname verification on the client. Weakening any
-of them is an explicit argument, intended for interoperability testing on a
-test network.
+of them is an explicit field on that record, intended for interoperability
+testing on a test network. Each weakening is logged when the simulator is
+built, so a session says what it gave up.
 
 Both endpoints are simulators for testing Modbus implementations. They are not
 hardened for production control networks.
