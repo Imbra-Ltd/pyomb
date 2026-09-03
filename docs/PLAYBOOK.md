@@ -1069,6 +1069,17 @@ example that stops holding fails a pull request. `testpaths` carries `src` and
 `addopts` carries `--doctest-modules`; neither is optional, and dropping either
 stops every example being collected while the suite reports the same green.
 
+A third way is the invocation rather than the configuration, and it is the one
+that was live. `testpaths` applies only when pytest is given no path of its
+own, so a runner naming one replaces the list instead of adding to it. The
+pipeline named `tests` for as long as the doctest configuration existed, which
+kept all 37 examples out of every run that gated a merge while a local `pytest`
+collected them. `tests/test_ci_collects_the_doctests.py` reads the paths out of
+the pipeline's test step, runs a collection with exactly those, and asserts the
+examples come back -- asserting on a collection rather than on the text of the
+step, because the configuration gate above reads the configuration and the
+configuration was correct throughout.
+
 Nothing is deselected, so a bare `pytest` reporting a deselected example on a
 healthy tree means one was frozen rather than fixed. Three transport examples
 were exempt until they were removed: each opened a socket to a Modbus server
