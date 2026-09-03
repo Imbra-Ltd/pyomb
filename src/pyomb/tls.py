@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import ClassVar, Final, TypeVar
 
 
-class _Unset:
+class _UnsetType(enum.Enum):
     """The absence of a caller's choice.
 
     A distinct type rather than None, because None is a legal value for
@@ -21,7 +21,15 @@ class _Unset:
     "said nothing" and "asked for the default" would make a caller who
     weakened nothing indistinguishable from one who set a value back to where
     it already was.
+
+    An enum carrying one member rather than a plain class, because a type
+    checker narrows a union on identity against an enum member and not against
+    an arbitrary instance. Without that a caller who guards on `is UNSET`
+    still holds the union afterwards and has to cast it, which makes the
+    check observable but not usable.
     """
+
+    UNSET = "UNSET"
 
     def __repr__(self) -> str:
         """Render as the name a caller writes.
@@ -31,23 +39,28 @@ class _Unset:
         """
         return "UNSET"
 
+    # An enum defines its own __str__, where a plain class falls back to
+    # __repr__. Without this the two spellings disagree and an f-string leaks
+    # the private type name into whatever a caller is formatting.
+    __str__ = __repr__
 
-UNSET: Final = _Unset()
+
+UNSET: Final = _UnsetType.UNSET
 
 _T = TypeVar("_T")
 
 
-def _resolved(chosen: "_T | _Unset", fallback: _T) -> _T:
+def _resolved(chosen: "_T | _UnsetType", fallback: _T) -> _T:
     """The caller's value, or the fallback where the caller said nothing.
 
     Args:
-        chosen (_T | _Unset) : What the caller passed, or UNSET
+        chosen (_T | _UnsetType) : What the caller passed, or UNSET
         fallback (_T) : The value to apply when the caller said nothing
 
     Returns:
         _T : The value to apply
     """
-    if isinstance(chosen, _Unset):
+    if chosen is UNSET:
         return fallback
 
     return chosen
@@ -95,6 +108,11 @@ class TlsSettings:
     separate flag. Every field beyond the certificate material defaults to
     UNSET, meaning the secure baseline for the role the context is built for.
 
+    UNSET is importable from the package root, so a caller handed a settings
+    object can ask which fields carry a choice rather than a default. Guarding
+    on `settings.protocol is UNSET` narrows the field to its value type, which
+    is why the sentinel is an enum member and not a bare instance.
+
     Attributes:
         cert (str) : Path to the certificate in DER/PEM format.
         key (str) : Path to the private key in DER/PEM format.
@@ -116,11 +134,11 @@ class TlsSettings:
     cert: str
     key: str
     ca_chain: str
-    protocol: "int | _Unset" = UNSET
-    ciphers: "str | _Unset | None" = UNSET
-    verify_mode: "ssl.VerifyMode | _Unset" = UNSET
-    verify_hostname: "bool | _Unset" = UNSET
-    options: "ssl.Options | _Unset" = UNSET
+    protocol: "int | _UnsetType" = UNSET
+    ciphers: "str | _UnsetType | None" = UNSET
+    verify_mode: "ssl.VerifyMode | _UnsetType" = UNSET
+    verify_hostname: "bool | _UnsetType" = UNSET
+    options: "ssl.Options | _UnsetType" = UNSET
 
     # The lowest protocol version the transport will negotiate. MB-TCP-Security
     # v21 requires TLS 1.2 or better (R-32) and forbids negotiating down to TLS
