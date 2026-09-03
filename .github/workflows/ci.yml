@@ -67,9 +67,15 @@ jobs:
       - name: Generate test certificates
         run: uv run --no-sync python scripts/gen_test_certs.py
 
+      # No path argument, for the reason the type-check step gives: testpaths
+      # in pyproject.toml names tests/ and src/, and pytest honours that list
+      # only when it is given no path of its own. Naming one here replaces the
+      # list rather than adding to it, which dropped every docstring example
+      # from this gate while a local run still collected them. See
+      # tests/test_ci_collects_the_doctests.py.
       - name: Test
         run: >
-          uv run --no-sync python -m pytest tests
+          uv run --no-sync python -m pytest
           --cov=pyomb
           --cov-report=term-missing
           --cov-fail-under=80
