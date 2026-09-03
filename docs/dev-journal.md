@@ -3620,3 +3620,76 @@ package, per ADR-002. See `README.md` for usage and
   #295 blocks the CodeQL action pins from moving at all and is the audit's
   named bottleneck. The pin stays at `v2.61.0` against `v2.73.0` under #268.
   Cognitive complexity is ungated for the fourth consecutive audit, #149.
+
+## 2026-09-03 -- Unblock the pins, read the range (afternoon)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Broke the CodeQL bump deadlock (PR #300).** The action ships as `init`
+    and `analyze`, each refusing to run against the other's version, and
+    Dependabot bumped them as separate pull requests. Neither could merge in
+    any order. One `groups` entry fixes it; a new gate reads the workflows for
+    actions referenced under more than one name and fails when no single group
+    covers them, so the next release cannot deadlock the same way. Confirmed
+    rather than assumed: Dependabot closed #292 and #293 itself and opened a
+    grouped #301, which merged on its own checks.
+  - **Made the unset sentinel public, as an enum (PR #302, ADR-042).** A probe
+    changed the fix. Exporting it as the plain class it was would have shipped
+    a guard a caller can write and cannot act on, because mypy narrows a union
+    on identity against an enum member and not against an arbitrary instance.
+    The switch introduced a regression it also caught: an enum brings its own
+    `__str__`, so `f"{UNSET}"` leaked the private type name until the override
+    covered both spellings.
+  - **Bumped the templates pin from v2.61.0 to v2.75.0 and read the range
+    (PR #303).** Fourteen releases, 108 commits, 12 of the 16 bound files
+    changed. Twenty-four distinct rules: five adopted, nineteen declined per
+    ADR-034. Four of the range's rules were written from this repository's own
+    incidents, which is why so many decline as already implemented.
+  - **Gave the transport a logger and chained its causes (PR #305, ADR-043).**
+    The three I/O classes take one; the module's own carries a null handler and
+    writes nothing, which is the opposite default from the simulators and
+    deliberate. Five raises inside excepts now carry `from e`, which took
+    `B904` off `stream.py`'s ruff freeze.
+- **PRs merged:** #300, #301, #302, #303, #305.
+- **Issues closed/created:** #295, #296, #268 and #195 closed, each against
+  evidence rather than on a green suite. Created #304, that two bound templates
+  now disagree on whether moving content between documents needs a decision
+  record. Commented on #170 recording the freeze shrink.
+- **Lesson:** two tests in this session were blind when written, and only
+  planting the control found them. `test_the_default_logger_writes_nothing`
+  asserted that nothing reached stderr in-process, which passes whether or not
+  the null handler exists, because the test runner installs a root handler and
+  logging's last-resort path never fires. The fragment-boundary test asserted
+  `x == x[:1]`, true of any list of one or fewer, over a list that was empty
+  because the failing socket raises before the line under test is reached. Both
+  would have shipped. Running the controls is what separated them from the
+  tests that work, and neither was distinguishable from a passing test.
+- **Lesson:** an issue's premise decays like any other claim. #195 said the
+  transport holds eight blind excepts that swallow failures; the tree holds
+  five and every one re-raises, so nothing was swallowed. It also named two
+  modules the 0.6.0 rename retired. What was true -- no logging, every cause
+  discarded -- is narrower than what was filed, and reading the five sites
+  before building is the only thing that would have caught it.
+- **Lesson:** a bound template nothing lists is a template nobody reads.
+  `communication.md` states how this agent answers and has been in the chain
+  the whole time, absent from the startup block, which is a hand-maintained
+  copy of what the manifest resolves. Nothing reported the gap because the gate
+  checks the block names nothing the chain fails to resolve, not the reverse.
+  The session ran verbose until the owner named the file.
+- **Lesson:** the working directory persists across shell calls, and a `cd`
+  into the submodule survived into a later call, where `git add` reported a
+  path that did not match. The rule says to check the working directory first
+  on an unexpected negative, and doing so turned a puzzling result into one
+  line. Absolute paths for the rest of the session cost nothing.
+- **Upstream:** two filings, both open. braboj/solid-ai-templates#1435 against
+  `python-lib.md`, that a sentinel a caller compares against is public API and
+  that its type decides whether the guard narrows -- the templates say when a
+  sentinel is required and nothing about what it then has to be. And
+  braboj/solid-ai-templates#1445 against `python.md`, that a library attaches a
+  null handler and the application tier is what constructs a writing one, with
+  the note that a test runner's root handler hides the difference.
+- **Pending:** #304 is unresolved and needs a call on which template governs.
+  Upstream moved again during the session, so the pin is at `v2.75.0` against
+  `v2.76.0`. Cognitive complexity is ungated for the fifth consecutive audit,
+  #149. The previous entry counted nine open upstream filings across four
+  entries; this session's two are additional and neither has landed.
