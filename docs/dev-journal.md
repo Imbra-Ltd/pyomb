@@ -3693,3 +3693,69 @@ package, per ADR-002. See `README.md` for usage and
   `v2.76.0`. Cognitive complexity is ungated for the fifth consecutive audit,
   #149. The previous entry counted nine open upstream filings across four
   entries; this session's two are additional and neither has landed.
+
+## 2026-09-03 -- Retire the aliases, decide the test layout (evening)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Removed the deprecated simulator aliases (PR #307).** `OmbClientSim` and
+    `OmbServerSim` had one minor release to reach consumers, and v0.6.0 shipped
+    that morning, firing the trigger #275 was deferred behind. The alias map,
+    the removal-release constant, the resolver branch and the `warnings` import
+    it was the only consumer of are gone. The alias test class was replaced
+    rather than deleted: it pinned behaviour that no longer exists, and its
+    replacement asserts the removal from the consumer form and the resolver
+    underneath, so restoring the branch turns the suite red.
+  - **Recorded the tiered test layout (PR #308, ADR-044).** The epic's first
+    task, which asks for the record before any file moves. Tiers come from the
+    directory, `tests/` becomes a package so helpers resolve from any depth,
+    and the repository gates leave `tests/` for `checks/`.
+  - **Made the pipeline collect the docstring examples (PR #312, issue #309).**
+    A one-word change to an off-limits path, proposed on the issue and approved
+    before it was made. The regression coverage reads the paths out of the test
+    step, runs a collection with exactly those, and asserts the examples come
+    back.
+  - **Named the invocation in PLAYBOOK 3.24 (PR #313).** The section claimed a
+    failing example fails a pull request, which was false for as long as it
+    existed, and listed two ways the gate goes blind -- both properties of the
+    configuration, which was correct throughout.
+- **PRs merged:** #307, #308, #310, #312, #313.
+- **Issues closed/created:** #275 and #309 closed, both by auto-close and both
+  verified. Created #309 and #311. Refined #172 with the split it had deferred
+  three times, and ticked its first task.
+- **Lesson:** the split #172 deferred three times could not be derived by
+  pattern, which is why the earlier attempts disagreed. Two classifiers written
+  this session disagreed with each other on seven modules in both directions. A
+  module naming a simulator mostly opens no socket, `connect(` matches the
+  `disconnect(` in a method name, and a gate pattern matched `pyproject.toml`
+  where the file is named in a docstring rather than read. Classify on what a
+  module does, never on what it imports.
+- **Lesson:** a gate can go blind at its invocation while every check aimed at
+  its configuration stays green. The doctest gate had a purpose-built test to
+  stop it going blind, whose own docstring enumerated three failure modes, all
+  of them properties of the configuration. The configuration was correct
+  throughout and 37 examples never ran in CI. What separated the two was
+  comparing a collected count against the count a local run produces, which
+  nothing had reason to do.
+- **Lesson:** the reached-nothing assertion earned its place on its first run.
+  The new test's parser ran off the end of the job -- `Test` is the last step,
+  so scanning for the next step swallowed the job below -- and collected
+  nothing. Without the assertion that the collection reached something, a
+  parser returning garbage and a pipeline with no doctests would have printed
+  the same failure.
+- **Upstream:** two filings, both open. braboj/solid-ai-templates#1486 against
+  `testing.md`, that the tier-by-directory rule states neither of the two import
+  constraints that decide whether the layout is reachable. And
+  braboj/solid-ai-templates#1497 against `quality-gates.md`, that a correctly
+  configured scope can be replaced by the invocation, which the existing scope
+  rule cannot see because every case it lists is a configuration parameter
+  collapsing. The previous entry's two filings, #1435 and #1445, have both
+  landed in the range the pin does not carry.
+- **Pending:** the epic's remaining four tasks are blocked on a proposal for
+  the pipeline definition, which no session has written. `CLAUDE.md` 1.2 still
+  claims tests mirror the source tree one file per module, which ADR-044
+  records as never having held and defers correcting to the change that moves
+  the files. #304 is still unresolved. Cognitive complexity is ungated for the
+  sixth consecutive audit, #149. Upstream moved twice more during the session,
+  so the pin is at `v2.75.0` against `v2.78.0`, held by ADR-034 rather than
+  overlooked.
