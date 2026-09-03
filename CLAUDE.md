@@ -272,6 +272,10 @@ follow the referenced templates. Project-specific additions only:
   to every one of them and `git add` is the fix. Enforced by
   `tests/test_document_gates_are_not_blind.py`, which discovers each gate and
   fails one that passes on an empty corpus; see ADR-022
+- The same fact defeats the control that would test such a gate, so plant a
+  negative control in the artifact the check reads rather than on disk: an
+  unstaged edit leaves an index-reading gate green and reads as proof it is
+  blind, which is the comfortable conclusion and the wrong one
 - Adding a test or tightening an assertion needs no explanation. Deleting,
   loosening or rewriting one changes what correct means, so it states why in
   the pull request and never merges on a green suite alone — the suite cannot
