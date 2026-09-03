@@ -6,6 +6,13 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The source archive no longer carries this project's own convention gates.
+  Running `pytest` against an unpacked sdist previously ran the Markdown width
+  rule, the decision-record schema and the changelog rules over the consumer's
+  own checkout. See #172, ADR-044
+
 ### Removed
 
 - `OmbClientSim` and `OmbServerSim` no longer resolve from the package root.

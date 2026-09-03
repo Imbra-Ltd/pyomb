@@ -56,7 +56,7 @@ MAX_SENTENCE_WORDS = 40
 # is re-measured.
 MAX_PARAGRAPH_WORDS = 2 * MAX_SENTENCE_WORDS
 
-# The gate itself is `pytest tests/test_decisions_are_readable.py`, and it
+# The gate itself is `pytest checks/test_decisions_are_readable.py`, and it
 # passes when both lists below come back empty. Re-calibrating is the separate
 # job: it needs the word-length distribution of the current corpus against the
 # pinned templates, and the run that set these two numbers is recorded in the

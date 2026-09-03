@@ -67,7 +67,7 @@ MARKDOWN_SUBSTITUTES = (
     "text of its escape was meant, and deleting it is the fix. A NUL is the "
     "one that reaches past its own line: it makes git classify the file as "
     "binary, which stops line-ending normalisation and leaves "
-    "tests/test_line_endings.py reading a clean tree over a file full of CRLF."
+    "checks/test_line_endings.py reading a clean tree over a file full of CRLF."
 )
 
 

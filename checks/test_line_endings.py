@@ -9,7 +9,7 @@ The rule was documented and unenforced. The playbook carried both commands
 that verify it and their pass conditions, and nothing ran either one, so the
 check fired only when a person opened the section and typed it. Its sibling
 governs which characters may appear in a line and has run as
-`tests/test_source_is_ascii.py` on every pull request since it was written. The
+`checks/test_source_is_ascii.py` on every pull request since it was written. The
 two rules are the same shape, and a violating tree looks identical to a clean
 one until someone looks.
 
@@ -80,7 +80,7 @@ DECLARE_OR_CLEAN = (
     "Either the file is genuinely binary, in which case it wants its own entry "
     "in `.gitattributes` beside the specifications, or it is text carrying a "
     "byte that should not be there -- one NUL is enough -- in which case "
-    "`tests/test_source_is_ascii.py` names the character and its line. Until "
+    "`checks/test_source_is_ascii.py` names the character and its line. Until "
     "one of the two happens, git stores the file without normalising it and "
     "any carriage return in it is invisible to the rule above."
 )

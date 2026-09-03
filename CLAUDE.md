@@ -80,10 +80,15 @@ duplicate it here. Create that section if it is missing.
   nothing depends on them
 - Tests mirror the source tree one file per module; regression tests for a
   fixed defect get their own module named for the behaviour, not the issue
+- A test of the library goes in `tests/`; a gate over this repository's own
+  conventions goes in `checks/`. The two are told apart by subject, never by
+  what a module imports: a gate exercises no source module and never will.
+  `checks/` is absent from the sdist include list, which is what stops a
+  consumer's `pytest` scanning their own checkout; see ADR-044
 - Source lives under `src/` — check `pip uninstall -y pyomb && pytest
   --collect-only`, which MUST fail with `ModuleNotFoundError`
-- No `sys.path` manipulation in tests — check `grep -rn "sys.path" tests/`,
-  which MUST print nothing
+- No `sys.path` manipulation in the suite — check
+  `grep -rn "sys.path" tests checks`, which MUST print nothing
 
 ### 1.3 Commands
 
@@ -236,22 +241,22 @@ follow the referenced templates. Project-specific additions only:
 - Every pattern in the sdist `include` list carries a leading slash. An
   unanchored pattern matches at any depth, so it also selects the templates
   submodule's file of that name and republishes it. Enforced by
-  `tests/test_sdist_includes_are_anchored.py`
+  `checks/test_sdist_includes_are_anchored.py`
 - Markdown carries any character a reader can see; every other tracked file is
   printable ASCII, where `--` substitutes for a dash. A control character is a
   defect in both — it renders as nothing, and one NUL makes git call the file
   binary and blinds the line-ending gate. Enforced by
-  `tests/test_source_is_ascii.py`; see ADR-029
+  `checks/test_source_is_ascii.py`; see ADR-029
 - A decision record holds every sentence to 40 words and every paragraph to 80.
   A sentence that runs long is almost always carrying a list — render it as
-  one. Enforced by `tests/test_decisions_are_readable.py`; see ADR-017
+  one. Enforced by `checks/test_decisions_are_readable.py`; see ADR-017
 - A readability edit to a merged decision record that changes no claim is a
   format migration, not a new decision; say so in the commit and show it with a
   word-level diff. An edit that changes a claim needs a new record; see ADR-017
 - Markdown wraps at the width `.editorconfig` declares under its Markdown
   section, which is the only place that number is written down. Table rows,
   fenced blocks and lines carrying a URL are exempt because none of them can be
-  wrapped. Enforced by `tests/test_markdown_line_width.py`, which reads the
+  wrapped. Enforced by `checks/test_markdown_line_width.py`, which reads the
   declaration rather than restating it; see ADR-018
 - An issue or pull request body is written for a reader who has not seen the
   code: symptom before mechanism, every borrowed term expanded on first use,
@@ -261,7 +266,7 @@ follow the referenced templates. Project-specific additions only:
 - A decision record opens with YAML front matter — `id`, `status`, `date`,
   `category`, `supersedes`, `superseded_by` — which is the source of truth for
   status and supersession. Copy `docs/decisions/TEMPLATE.md`; a new category
-  takes its own record. Enforced by `tests/test_decision_frontmatter.py`; see
+  takes its own record. Enforced by `checks/test_decision_frontmatter.py`; see
   ADR-019
 - Superseding a record updates both sides in the same change: `supersedes` on
   the new one, `status` and `superseded_by` on the old. That metadata edit is
@@ -270,12 +275,12 @@ follow the referenced templates. Project-specific additions only:
   a supersession goes in the front matter and a context-only pointer goes in a
   closing `## Related` section. Records below that number keep the prose
   citations they merged with and are not to be rewritten. Enforced by
-  `tests/test_decision_citations.py`, which skips fenced blocks; see ADR-020
+  `checks/test_decision_citations.py`, which skips fenced blocks; see ADR-020
 - A check asserting that a set of violations is empty asserts, in a test of its
   own, that its enumeration reached a floor the corpus is known to hold. Those
   listings read git's index, so a document written but not staged is invisible
   to every one of them and `git add` is the fix. Enforced by
-  `tests/test_document_gates_are_not_blind.py`, which discovers each gate and
+  `checks/test_document_gates_are_not_blind.py`, which discovers each gate and
   fails one that passes on an empty corpus; see ADR-022
 - The same fact defeats the control that would test such a gate, so plant a
   negative control in the artifact the check reads rather than on disk: an

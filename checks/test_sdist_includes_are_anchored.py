@@ -57,6 +57,11 @@ MANIFEST = REPO / "pyproject.toml"
 # way git reads a `.gitignore` line, so a leading slash is the whole of it.
 ANCHOR = "/"
 
+# The directory holding the repository gates. It is absent from the include
+# list rather than excluded from it, which is what keeps this module's reading
+# sufficient -- an exclude pattern would sit somewhere nothing here looks.
+GATES = "checks"
+
 REMEDY = (
     "Give the pattern a leading slash so it selects from the repository root "
     "only. A bare name matches every directory of that name at any depth, "
@@ -104,6 +109,25 @@ class SdistIncludesAreAnchored(unittest.TestCase):
             [],
             "sdist include patterns that match at any depth, so each also "
             "selects the same name inside the templates submodule:\n  " + "\n  ".join(offenders) + "\n" + REMEDY,
+        )
+
+    def test_the_repository_gates_are_not_named_by_the_include_list(self):
+        """The gates stop shipping by living outside every included path."""
+
+        offenders = [pattern for pattern in sdist_includes() if pattern.strip(ANCHOR).split(ANCHOR)[0] == GATES]
+
+        self.assertEqual(
+            offenders,
+            [],
+            f"the include list names {GATES}, so the source archive carries "
+            "the repository gates again. A consumer running pytest against "
+            "that archive then runs this project's Markdown width rule, its "
+            "decision-record schema and its changelog rules over their own "
+            f"checkout. The gates stop shipping by sitting outside every "
+            f"included path, which is what moving them to {GATES}/ bought -- "
+            f"restore that rather than adding an exclude, because this module "
+            "reads the include list only and an exclude is covered by nothing:"
+            "\n  " + "\n  ".join(offenders),
         )
 
 

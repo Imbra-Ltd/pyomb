@@ -1,6 +1,6 @@
 """No document gate reports a clean tree when it has read nothing.
 
-Six modules here assert that a list of violations is empty. Each reads its
+Seven modules here assert that a list of violations is empty. Each reads its
 corpus from a tracked-file listing, and an assertion that nothing was found
 passes identically when nothing was examined -- so a gate whose enumeration
 breaks goes on reporting success while measuring an empty set.
@@ -33,7 +33,7 @@ from unittest import mock
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
-TESTS = "tests/"
+CHECKS = "checks/"
 
 # What makes a module a document gate: it reads its corpus from git's index
 # rather than from the filesystem. Every one of them spells it this way, and
@@ -66,8 +66,8 @@ REMEDY = (
 )
 
 
-def tracked_test_modules():
-    """Every test module git tracks, as importable names.
+def tracked_gate_modules():
+    """Every gate module git tracks, as importable names.
 
     Returns:
         list[str] : The module names, in git's own order
@@ -78,7 +78,7 @@ def tracked_test_modules():
     # become a second command. The checks match on call shape and cannot see
     # that.
     listing = subprocess.run(  # nosec B603 B607
-        ["git", "ls-files", "-z", TESTS + "test_*.py"],
+        ["git", "ls-files", "-z", CHECKS + "test_*.py"],
         cwd=REPO,
         capture_output=True,
         text=True,
@@ -92,7 +92,7 @@ def document_gates(modules):
     """Select the modules that read their corpus from a tracked-file listing.
 
     Args:
-        modules (list[str]) : Candidate test module names
+        modules (list[str]) : Candidate gate module names
 
     Returns:
         list[str] : The gate module names, this module excluded
@@ -104,7 +104,7 @@ def document_gates(modules):
         if name == SELF:
             continue
 
-        source = (REPO / TESTS / f"{name}.py").read_text(encoding="utf-8")
+        source = (REPO / CHECKS / f"{name}.py").read_text(encoding="utf-8")
 
         if MARKER in source:
             found.append(name)
@@ -147,7 +147,7 @@ class DocumentGatesAreNotBlind(unittest.TestCase):
         if not (REPO / ".git").exists():
             raise unittest.SkipTest(NOT_A_CHECKOUT)
 
-        cls.gates = document_gates(tracked_test_modules())
+        cls.gates = document_gates(tracked_gate_modules())
 
     def test_the_discovery_reached_the_gates_in_the_tree(self):
         """A pass below means the gates were run, not that none were found."""

@@ -108,8 +108,8 @@ explanation. Deleting, loosening or rewriting one changes what correct means,
 and a green run cannot report that it has:
 
 ```bash
-git diff --name-status origin/main...HEAD -- 'tests/*' | wc -l
-git diff --name-status origin/main...HEAD -- 'tests/*' | grep -vE '^A'
+git diff --name-status origin/main...HEAD -- 'tests/*' 'checks/*' | wc -l
+git diff --name-status origin/main...HEAD -- 'tests/*' 'checks/*' | grep -vE '^A'
 ```
 
 Pass condition: the first line counts the test-file changes inspected; the
@@ -124,7 +124,7 @@ module prints as loudly as a deleted case. Narrow it before writing the
 explanation:
 
 ```bash
-git diff -U0 origin/main...HEAD -- 'tests/*' | grep -E '^[-+].*(assert|self\.fail)'
+git diff -U0 origin/main...HEAD -- 'tests/*' 'checks/*' | grep -E '^[-+].*(assert|self\.fail)'
 ```
 
 Pass condition: every line it prints is accounted for in the body. This is the
@@ -556,7 +556,7 @@ a secret at the client before it reaches CI.
 The job downloads the gitleaks binary from a release asset before it can scan
 anything, and that download retries. A connection reset there once failed the
 job with `curl: (35) Recv failure` and took the required gate with it, having
-scanned nothing. `tests/test_workflow_downloads_retry.py` pins the retry and
+scanned nothing. `checks/test_workflow_downloads_retry.py` pins the retry and
 the fail-fast flags on every download a workflow makes, so the next one added
 cannot omit them. A red run here still wants the log read before it is called
 transient: a download that failed and a scan that found a secret look the same
@@ -707,7 +707,7 @@ different one, in `release.yml` on a tag; see 5.
 ### 3.12 Line endings (pytest)
 
 ```bash
-pytest tests/test_line_endings.py
+pytest checks/test_line_endings.py
 ```
 
 Every text file is stored LF in the index. `.gitattributes` normalises on the
@@ -730,7 +730,7 @@ trigger that classification, which is how this journal came to be stored with
 are declared binary in `.gitattributes` and the test reads that declaration
 rather than naming them, so a new binary file is one line there. Anything else
 reporting `-text` is a text file with a byte in it that does not belong, and
-`tests/test_source_is_ascii.py` names the character and its line.
+`checks/test_source_is_ascii.py` names the character and its line.
 
 `git ls-files --eol` is the raw view the test reads, one record per tracked
 path.
@@ -738,7 +738,7 @@ path.
 ### 3.13 Character set (pytest)
 
 ```bash
-pytest tests/test_source_is_ascii.py
+pytest checks/test_source_is_ascii.py
 ```
 
 The sibling of the rule above: line endings govern how a file ends its lines,
@@ -758,7 +758,7 @@ above reads a clean tree over a file full of CRLF.
 ### 3.14 Decision-record readability (pytest)
 
 ```bash
-pytest tests/test_decisions_are_readable.py
+pytest checks/test_decisions_are_readable.py
 ```
 
 Every sentence in `docs/decisions/` is held to 40 words and every prose
@@ -774,7 +774,7 @@ the limit usually holds two subjects, so give the second its own paragraph.
 ### 3.15 Markdown line width (pytest)
 
 ```bash
-pytest tests/test_markdown_line_width.py
+pytest checks/test_markdown_line_width.py
 ```
 
 Every tracked Markdown line is held to the width `.editorconfig` declares under
@@ -795,7 +795,7 @@ falling back to a default, because a width nothing states is the defect itself.
 ### 3.16 Decision-record schema (pytest)
 
 ```bash
-pytest tests/test_decision_frontmatter.py
+pytest checks/test_decision_frontmatter.py
 ```
 
 Every record opens with the YAML front matter the upstream governance record
@@ -811,7 +811,7 @@ lint and type freezes forbid.
 ### 3.17 Sdist include anchors (pytest)
 
 ```bash
-pytest tests/test_sdist_includes_are_anchored.py
+pytest checks/test_sdist_includes_are_anchored.py
 ```
 
 Every pattern in the sdist `include` list carries a leading slash. Hatchling
@@ -883,7 +883,7 @@ Read the cumulative column on the `pyomb` line and on the two that follow it.
 ### 3.19 Entry-point output encoding (pytest)
 
 ```bash
-pytest tests/test_entry_points_set_the_encoding.py
+pytest checks/test_entry_points_set_the_encoding.py
 ```
 
 A program that writes text states its encoding rather than inheriting the
@@ -955,7 +955,7 @@ example claims before changing what it does.
 ### 3.21 Decision-record citations (pytest)
 
 ```bash
-pytest tests/test_decision_citations.py
+pytest checks/test_decision_citations.py
 ```
 
 A record numbered 020 or above names no other record in its prose. A
@@ -983,7 +983,7 @@ record written under the rule.
 ### 3.22 Gate coverage (pytest)
 
 ```bash
-pytest tests/test_document_gates_are_not_blind.py
+pytest checks/test_document_gates_are_not_blind.py
 ```
 
 Every check in this section that reads a tracked-file listing — the line
@@ -1011,7 +1011,7 @@ gap is stated rather than closed.
 ### 3.23 Release audit currency (pytest)
 
 ```bash
-pytest tests/test_release_audit_is_current.py
+pytest checks/test_release_audit_is_current.py
 ```
 
 The gate applies to a minor or major release. A patch release owes no audit,
@@ -1061,7 +1061,7 @@ gate refuses is passing over it in silence, which is what four releases did.
 
 ```bash
 pytest --doctest-modules src/
-pytest tests/test_doctests_are_gated.py
+pytest checks/test_doctests_are_gated.py
 ```
 
 The package's docstring examples run as part of the default suite, so an
@@ -1074,7 +1074,7 @@ that was live. `testpaths` applies only when pytest is given no path of its
 own, so a runner naming one replaces the list instead of adding to it. The
 pipeline named `tests` for as long as the doctest configuration existed, which
 kept all 37 examples out of every run that gated a merge while a local `pytest`
-collected them. `tests/test_ci_collects_the_doctests.py` reads the paths out of
+collected them. `checks/test_ci_collects_the_doctests.py` reads the paths out of
 the pipeline's test step, runs a collection with exactly those, and asserts the
 examples come back -- asserting on a collection rather than on the text of the
 step, because the configuration gate above reads the configuration and the
@@ -1134,7 +1134,7 @@ Both directions are checked by the suite, so reconciling needs no separate
 step and cannot be forgotten:
 
 ```bash
-pytest tests/test_startup_block_resolves.py
+pytest checks/test_startup_block_resolves.py
 ```
 
 It resolves the manifest's core set and dependency edges over the two axes this
@@ -1403,14 +1403,14 @@ To cut a release:
 4. Cut the `Unreleased` block of `CHANGELOG.md` into a dated `[X.Y.Z]` entry,
    add its compare link beside the others at the foot of the file, and move
    the `Unreleased` link to compare from the version just cut.
-   `tests/test_changelog_release_entry.py` fails until all three are done.
+   `checks/test_changelog_release_entry.py` fails until all three are done.
    Doing it on this branch is what puts the entry in the tree the tag names,
    which is what every source archive GitHub generates from that tag carries —
    done afterwards it corrects `main` and leaves the tagged tree describing the
    release before this one, which no later edit reaches. The artifact is the
    tag's tree rather than the sdist; the sdist carries no changelog
 5. Point the README quick start install command at the wheel the new tag will
-   carry. `tests/test_readme_install_command.py` fails until it matches. Doing
+   carry. `checks/test_readme_install_command.py` fails until it matches. Doing
    it on this branch is what keeps the README inside the tagged sdist naming
    its own release rather than the one before it
 6. Open the pull request, merge it, and wait for CI to pass on `main`
