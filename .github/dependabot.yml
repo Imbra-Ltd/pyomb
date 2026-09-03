@@ -11,6 +11,20 @@ updates:
     schedule:
       interval: weekly
 
+    # The CodeQL action ships as several sub-actions, init and analyze
+    # here, and each refuses to run against a different version of the
+    # other -- the analysis stops on a configuration-version mismatch.
+    # Ungrouped, Dependabot raises one pull request per sub-action, so
+    # each moves half the pair and fails the analysis it is updating. No
+    # merge order fixes that, because whichever goes first is red on its
+    # own, and the pins then stop moving at all -- the stale pin the
+    # comment above says the security case rules out. Grouping ships the
+    # halves as one pull request.
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
+
   # The pip ecosystem is enrolled because uv.lock now exists to be refreshed.
   # An unrefreshed lock pins an ageing toolchain with no signal that it has
   # aged, which is the failure mode ADR-010 trades the floating versions for.
