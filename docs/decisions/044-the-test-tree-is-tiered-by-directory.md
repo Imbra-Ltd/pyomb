@@ -1,6 +1,6 @@
 ---
 id: "044"
-status: Proposed
+status: Accepted
 date: 2026-09-03
 category: repository
 supersedes: []
@@ -9,7 +9,7 @@ superseded_by: []
 
 # ADR-044: The test tree is tiered by directory
 
-**Upstream:** candidate, not yet filed, against
+**Upstream:** filed as braboj/solid-ai-templates#1486 against
 `templates/base/core/testing.md`. With the domain skin off: a suite tiered by
 directory needs its helpers reachable from every tier, and the import mode
 that resolves a bare helper import is the one that refuses two modules sharing
