@@ -28,12 +28,14 @@ working tree after a bare fetch:
 - `templates/base/workflow/scope.md`
 - `templates/base/workflow/ai-workflow.md`
 - `templates/base/workflow/issues.md`
+- `templates/base/workflow/communication.md`
 - `templates/platform/github.md`
 - `templates/stack/python-lib.md`
 
 The list resolves both axes of `templates/manifest.yaml` — the stack chain and
-the platform for the code host — plus the two workflow templates the session
-protocol needs and no stack declares; see ADR-008.
+the platform for the code host — plus the three workflow templates no stack
+declares: the session protocol needs scope and ai-workflow, and
+communication states how this agent answers; see ADR-008.
 
 Precedence when authorities disagree, highest first: an explicit instruction
 in the current session, then this file, then `docs/decisions/`, then the
@@ -116,8 +118,11 @@ python scripts/gen_test_certs.py # mint the throwaway TLS chain
   environment blocks it, so hand the command to the owner instead
 - Read every workflow run for a push before describing the change as good — a
   local run is evidence about one platform only, and `--limit 1` reports
-  whichever workflow finished last while hiding the other. Check:
-  `gh run list --commit $(git rev-parse HEAD)`
+  whichever workflow finished last while hiding the other. Take the check from
+  `platform/github.md` rather than copying it here: it names the commit and
+  counts the runs before listing the failures, because a count of zero and a
+  clean tree print the same nothing. The copy that used to sit here went stale
+  when the template's grew a count, which is the argument against a second copy
 - Never commit `.venv/`, `__pycache__/`, `*.egg-info/`, `dist/`,
   `.mypy_cache/`, or `assets/certificates/`
 - Always commit `uv.lock`, and run `uv lock` in the same change as any
