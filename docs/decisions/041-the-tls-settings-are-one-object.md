@@ -9,7 +9,7 @@ superseded_by: []
 
 # ADR-041: The TLS settings are one object, and unset is not a value
 
-**Upstream:** filed as braboj/solid-ai-templates#1421 against
+**Upstream:** filed as braboj/solid-ai-templates#1424 against
 `templates/base/core/config.md`. With the domain skin off: a sentinel earns its
 place where a setting has no single default, not merely where the default is
 also a legal value. The template argues for unset-means-default from the second
