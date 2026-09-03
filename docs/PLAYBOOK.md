@@ -863,10 +863,10 @@ and binding it eagerly would put the cost straight back. A plain
 `import pyomb` must therefore load neither simulator, nor the settings, nor
 ssl.
 
-The same resolver answers the two spellings retired in 0.6.0, `OmbClientSim`
-and `OmbServerSim`, returning the renamed class and raising
-`DeprecationWarning`. Those two are absent from `__all__`, so the check above
-cannot reach them and they carry their own test. Both go in 0.7.0.
+The two spellings retired in 0.6.0, `OmbClientSim` and `OmbServerSim`, no
+longer resolve from the package root. They were never in `__all__`, so the
+check above cannot see them go and the test module asserts their absence
+directly — restoring the alias branch turns that assertion red.
 
 That half runs a fresh interpreter and reads `sys.modules` in it. In-process
 the suite has already imported both submodules for other reasons, so asking

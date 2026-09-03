@@ -13,12 +13,8 @@ the TLS settings they take are re-exported as well, bound on first use rather
 than on import. UNSET travels with them: it is the value every optional TLS
 setting carries until a caller chooses one, and comparing against it is how a
 caller tells a choice from a default.
-
-The spellings the simulators carried before 0.6.0, OmbClientSim and
-OmbServerSim, still resolve from here and warn. They are removed in 0.7.0.
 """
 
-import warnings
 from importlib import import_module
 from typing import TYPE_CHECKING
 
@@ -81,20 +77,6 @@ _DEFERRED = {
     "UNSET": "tls",
 }
 
-# The spelling each class carried before 0.6.0, against the one it carries
-# now. The map is the whole alias mechanism: the resolver below already looks
-# a name up to find its submodule, so an alias is one more lookup rather than
-# a module that re-imports under the old name. Removing these is deleting the
-# two entries and the branch that reads them.
-_RENAMED_IN_0_6_0 = {
-    "OmbClientSim": "ModbusClientSimulator",
-    "OmbServerSim": "ModbusServerSimulator",
-}
-
-# The release that drops the names above. Named once, so the warning text and
-# the removal cannot disagree.
-_ALIAS_REMOVAL = "0.7.0"
-
 __version__ = "0.6.0"
 
 __all__ = [
@@ -145,11 +127,6 @@ __all__ = [
 def __getattr__(name: str) -> object:
     """Bind a deferred name on the first access that names it.
 
-    A name retired in 0.6.0 resolves to its replacement and warns. Those two
-    are deliberately absent from __all__: they are supported until the
-    removal release and are not what a new caller should write, so the export
-    list advertises the current spelling alone.
-
     Args:
         name (str) : The attribute being read from this module
 
@@ -159,16 +136,6 @@ def __getattr__(name: str) -> object:
     Raises:
         AttributeError : The name is not one this module exports
     """
-    renamed = _RENAMED_IN_0_6_0.get(name)
-
-    if renamed is not None:
-        warnings.warn(
-            f"{name} is renamed to {renamed} and is removed in {_ALIAS_REMOVAL}",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        name = renamed
-
     submodule = _DEFERRED.get(name)
 
     if submodule is None:
