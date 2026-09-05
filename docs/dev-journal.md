@@ -3759,3 +3759,60 @@ package, per ADR-002. See `README.md` for usage and
   sixth consecutive audit, #149. Upstream moved twice more during the session,
   so the pin is at `v2.75.0` against `v2.78.0`, held by ADR-034 rather than
   overlooked.
+
+## 2026-09-05 -- Move the repository gates out of the library suite
+
+- **Tool:** Claude Code (Opus 5, 1M context). This entry is reconstructed from
+  the pull request record after the fact. The session that shipped the move
+  ended without writing one, and the gap surfaced at the next session's
+  startup check.
+- **Key changes:**
+  - **Moved the 17 repository gates from `tests/` to `checks/` (PR #315).**
+    ADR-044's fifth rule, and the first file move the epic asks for. They
+    exercise no source module, and the sdist include list carries `/tests`
+    whole, so until now a consumer running `pytest` against an unpacked
+    archive ran this project's Markdown width rule, decision-record schema and
+    changelog rules over their own checkout. They stop shipping by sitting
+    outside every included path, with no exclude pattern to anchor. Verified
+    by building: the archive carries 0 files under `checks/` against 59 under
+    `tests/`, where before it carried all 77. `changelog.py` moved with the
+    two gates that import it.
+  - **Added `checks` to three pipeline path lists (PR #315).** An off-limits
+    path, proposed with a rollback strategy and approved before the change was
+    made. Lint, format and static analysis each name their directories and
+    gain one word. The Test step is deliberately unchanged: it passes no
+    positional path, so it honours `testpaths`, which gains the entry instead
+    -- naming a path there would replace the declared list rather than add to
+    it, which is how 37 docstring examples silently stopped running once
+    before.
+  - **Added three checks over the move itself (PR #315).** Each was
+    negative-controlled by planting the break, confirming the plant landed and
+    reading the run: the pipeline names `checks` in all three path-listing
+    steps, the collection reaches `checks/`, and the include list does not name
+    it. Dropping the `testpaths` entry took the collection from 632 items to
+    562.
+- **PRs merged:** #315.
+- **Issues closed/created:** none. #315 is part of #172 and closes nothing; the
+  epic's second task is ticked.
+- **Lesson:** dropping a directory from a path list is silent. The step runs,
+  exits zero and reports on what it was given, so every signal a reviewer has
+  says the gate is working. That is why the move shipped with three checks over
+  its own wiring rather than on the strength of a green run.
+- **Lesson:** a derived count in a merged record ages, and the record was right
+  when written. ADR-044 derived 16 gates; there are 17, because
+  `test_ci_collects_the_doctests.py` landed two commits after the record
+  merged. That changes the count, not the decision, and #172 has now recorded
+  the same drift a fourth time.
+- **Lesson:** a per-file lint exemption follows its files. Leaving the `D`
+  exemption behind on `tests/**` surfaced 142 docstring findings -- 126 `D202`,
+  15 `D102`, one `D403` -- on files whose content never moved. The `src/`
+  freeze below it is untouched.
+- **Upstream:** no new filings. braboj/solid-ai-templates#1486 and #1497 are
+  both still open.
+- **Pending:** the epic's three remaining tasks -- the socket-and-thread move,
+  the collection hook, and the unittest question. `CLAUDE.md` 1.2 still claims
+  tests mirror the source tree one file per module, which ADR-044 records as
+  never having held; correcting it belongs with the tiering change rather than
+  with this one, since ADR-044's fourth rule is what replaces it. #304 is still
+  unresolved. Cognitive complexity is ungated, #149. The templates pin is at
+  `v2.75.0` against `v2.78.0`, held by ADR-034.
