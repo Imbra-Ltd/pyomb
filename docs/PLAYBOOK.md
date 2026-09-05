@@ -403,6 +403,31 @@ python scripts/gen_test_certs.py
 Certificates last 365 days. When the mutual-TLS tests start failing on expiry
 rather than on behaviour, rerun this.
 
+### 2.3 How the RTU checksum works
+
+An RTU frame is a slave id, then the protocol data unit (PDU), then two
+checksum bytes. The checksum is a CRC-16 — a cyclic redundancy check producing
+a 16-bit value — over everything ahead of it.
+
+The polynomial is `x^16 + x^15 + x^2 + 1`, applied in its reversed form
+`0xA001` because the algorithm shifts right rather than left. The running value
+starts at `0xFFFF`. Each byte is XORed into its low byte, and then, eight
+times: shift right one bit, and XOR with the polynomial if the bit that fell
+off was a 1. [Wikipedia's Modbus
+article](https://en.wikipedia.org/wiki/Modbus#CRC16-CCITT) covers the same
+algorithm.
+
+**The result goes onto the wire low byte first.** It is the one place in Modbus
+where a multi-byte field is not big-endian, and getting it wrong is the defect
+this project has already shipped once: the frames round-trip perfectly against
+this library's own decoder and every real device rejects them.
+
+That is also why anything checking the checksum compares **bytes**, never the
+16-bit number. A number matches whichever order it is later packed in, so a
+comparison on the value agrees with the byte-swapped frame a device refuses.
+`examples/checksum_an_rtu_frame.py` runs the walkthrough against frames written
+out from published sources.
+
 ## 3. Quality
 
 Run all of these before pushing.
@@ -611,6 +636,15 @@ everywhere rather than here, which is the distinction ADR-005 draws and
 [ADR-012](decisions/012-adopt-codeql-as-the-platform-sast.md) applies to this
 gate. ADR-007 wrote these rules and ADR-012 supersedes it, carrying them
 forward unchanged, so the live record is the later one.
+
+One suppression is live, in `scripts/gen_test_certs.py`: `B404` on importing
+`subprocess`, and `B603` on the one call site that reaches `openssl`. Both rest
+on the same property — the command is always built as a list, so the argument
+vector reaches the operating system directly rather than through a shell, and
+an argument cannot break out and become a second command however a caller
+spells a path. Bandit matches on call shape and cannot see that the shell is
+absent. If that call ever takes a string, or gains `shell=True`, the
+suppression stops being true and both must go.
 
 CodeQL is the other half of this gate, in `.github/workflows/codeql.yml` and
 recorded in [ADR-012](decisions/012-adopt-codeql-as-the-platform-sast.md). The
@@ -1508,3 +1542,34 @@ The fourth test reads `ci.yml` for a step selecting the tier. That step is the
 only thing that runs those tests where a merge is decided — a contributor's
 suite was never going to, by design — so deleting it is otherwise silent.
 Restoring it needs the proposal an off-limits path requires.
+
+### 3.22 Comment and docstring length (pytest)
+
+```bash
+pytest checks/test_comment_length.py
+```
+
+A comment block is at most 2 lines and a docstring at most 10 lines of prose.
+`Args:`, `Returns:`, `Raises:` and `Example:` sections are the contract rather
+than explanation and do not count, so annotating a wide signature costs
+nothing here.
+
+Two things are deliberately not blocks. A licence header opens a file and is a
+legal notice, not an explanation. A comment trailing code is one label on one
+line however many stack up — the hex vector in
+`examples/round_trip_a_packet.py` labels each field that way, and the seven
+labels are seven comments rather than a seven-line block.
+
+Length is a proxy for placement. A comment needing a paragraph is usually
+explaining something that belongs in this document or in a decision record,
+where a reader finds it without opening the source. So the fix is to read the
+block and choose: delete it if it restates the code, move it here if it is
+operational, move it to a record if it is design reasoning that has to stay
+fixed. Compressing it in place satisfies the count and fails the reader.
+
+Whether a comment was needed at all is a judgement this cannot reach, and
+review keeps it.
+
+`ROOTS` in the check names the directories the bound covers. The migration
+adds one per slice, cleaning the directory and widening the list in the same
+change, so no slice merges unverified.

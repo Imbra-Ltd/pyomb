@@ -1,21 +1,15 @@
 """Send several Modbus messages in one shot and capture them at the far end.
 
-`ModbusTcpSender` drives a list of packets down a socket; `ModbusTcpReceiver`
-reads whatever arrives on the other one and keeps it. Between them they are
-how this library stress-tests a peer and how it records what a peer sent, and
-neither is visible from the packet classes -- framing a request is arithmetic
-you can read, driving a socket is not.
+`ModbusTcpSender` drives a list of packets down a socket and
+`ModbusTcpReceiver` keeps whatever arrives on the other. Framing a request is
+arithmetic you can read; driving a socket is not.
 
-Both ends are held here rather than pointed at a device, so the file runs with
-nothing installed but the project. A listener is opened on a port the
-operating system picks, a second socket connects to it, and the accepted
-connection is the receiving end. The README shows port 502, the registered
-Modbus port a real device listens on; 0 asks for a free one instead, which is
-what lets this file run without privileges on any machine.
+Both ends are local, so nothing but the project need be installed. Port 0 asks
+the operating system for a free port; a real device listens on 502.
 
-The sender closes its socket when it is done. That is what ends the capture:
-`run_once` reads messages until the peer goes away, so without the close it
-would sit waiting for a fourth message that is never coming.
+The sender closes its socket when done, and that is what ends the capture --
+`run_once` reads until the peer goes away. A real monitor keeps the connection
+open and calls `stop()` instead.
 """
 
 import socket
@@ -42,9 +36,8 @@ def burst():
         ModbusRequestFC1(start_addr=8, quantity=16),
         ModbusRequestFC3(start_addr=0, quantity=2),
     ):
-        # The length field counts the unit identifier plus the PDU. The sender
-        # recomputes it before serializing, so this is what it will arrive as
-        # rather than a value the example has to keep in step by hand.
+        # The length field counts the unit identifier plus the PDU, and the
+        # sender recomputes it before serializing.
         packets.append(ModbusTcpRequest(header=ModbusHeader(unit_id=1, length=len(pdu) + 1), pdu=pdu))
 
     return packets
@@ -76,8 +69,7 @@ def main() -> None:
             sender.run_once()
 
             # Closing before the capture starts, so the reader reaches the end
-            # of the stream rather than the end of the timeout. A real monitor
-            # keeps the connection open and calls stop() instead.
+            # of the stream rather than the end of the timeout.
             sending.close()
 
             receiver = ModbusTcpReceiver(sock=receiving)
@@ -88,10 +80,8 @@ def main() -> None:
             for packet in captured:
                 print(packet)
 
-            # Printed first, so a short capture still shows what did arrive.
-            # The raise is what the examples job reads: it checks exit status,
-            # and printing a count that does not match exits zero like any
-            # other run.
+            # Printed first, so a short capture still shows what arrived. The
+            # raise is what the examples job reads -- it checks exit status.
             if len(captured) != len(packets):
                 dropped = f"sent {len(packets)} packet(s), captured {len(captured)}"
                 raise ValueError(dropped)

@@ -19,8 +19,7 @@ def main() -> None:
     pdu = ModbusRequestFC1(start_addr=0, quantity=1)
 
     # The length field counts the unit identifier plus the PDU, not the whole
-    # frame. Getting this wrong produces a frame a real device rejects while
-    # this library reads it back happily, so it is worth stating once.
+    # frame. Wrong here means a frame this library reads and a device rejects.
     header = ModbusHeader(unit_id=1, length=len(pdu) + 1)
 
     packet = ModbusTcpRequest(header=header, pdu=pdu)

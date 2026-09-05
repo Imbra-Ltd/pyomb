@@ -25,9 +25,8 @@ def main() -> None:
 
     over_the_bound = ModbusRequestFC3(start_addr=0, quantity=126)
 
-    # A finding carries the rule's identity rather than only a message, so a
-    # harness grading a peer asserts which bound was crossed instead of
-    # matching on prose that may be reworded.
+    # A finding carries the rule's identity, so a harness asserts which bound
+    # was crossed rather than matching prose that may be reworded.
     for finding in over_the_bound.violations():
         print(finding)
         print(f"  field={finding.field} value={finding.value}")
