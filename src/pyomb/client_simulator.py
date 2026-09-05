@@ -67,16 +67,12 @@ class ModbusClientSimulator(object):
     # The transaction identifier is a 16-bit field, so the counter wraps here.
     TRANS_ID_MODULO = 0x10000
 
-    # A response carrying an unexpected transaction identifier is dropped and
-    # the read repeated, which is how a late reply to an abandoned request is
-    # skipped over. The count is bounded so that a peer emitting a steady
-    # stream of mismatches ends the exchange instead of holding the caller.
+    # A mismatched transaction identifier is dropped and the read repeated,
+    # bounded so a peer emitting a steady stream of them ends the exchange.
     MAX_STALE_RESPONSES = 8
 
-    # Seconds applied to connect and to every subsequent read. A finite default
-    # matters because a server that accepts a connection and then never replies
-    # would otherwise block the caller forever with no way to recover. Pass
-    # None to restore unbounded blocking.
+    # Seconds, applied to connect and every read. Finite by default so a peer
+    # that accepts and never replies cannot block the caller forever.
     DEFAULT_TIMEOUT = 10.0
 
     # The plaintext port, and the one a secure client dials when the caller
@@ -109,35 +105,30 @@ class ModbusClientSimulator(object):
         self.frag_delay = frag_delay
         self.header_size = 8
 
-        # The identifier the next request will carry, and the one the pending
-        # request carried. They differ once a request is in flight, which is
-        # what lets a response be matched to it.
+        # The identifier the next request will carry, and the one in flight.
+        # They differ while a request is outstanding, which is what matches it.
         self._next_trans_id = 0
         self._pending_trans_id = None
 
         # The TLS settings, or None for plaintext. One object rather than a
-        # flag beside the material it guards, so a caller cannot hand over
-        # certificates that are then silently unused.
+        # flag, so certificates cannot be handed over and silently unused.
         self.tls = tls
 
         if tls is not None:
-            # A secure session does not run on the plaintext port, so a caller
-            # who named no port gets the encrypted one rather than a connection
-            # to a listener that will not speak TLS.
+            # A secure session does not run on the plaintext port, so naming
+            # no port gets the encrypted one.
             if port == self.PLAINTEXT_PORT:
                 self.port = self.ENCRYPTED_PORT
 
             self.crypto = tls.context(TlsRole.CLIENT)
 
-            # Said out loud because the arguments cannot say it. A caller who
-            # weakened one setting believing they weakened another sees the
-            # list of what the session will actually carry.
+            # Said out loud because the arguments cannot: a caller sees what
+            # the session will actually carry, not what they thought they set.
             for relaxation in tls.relaxations(TlsRole.CLIENT):
                 self.log.warning("TLS relaxed: %s", relaxation)
 
-        # Optional because disconnect() clears it. Inferring the type from
-        # this first assignment alone claims the attribute is always a socket,
-        # which is a claim the teardown path contradicts.
+        # Optional because disconnect() clears it. Inferred from this line
+        # alone the type would claim a socket the teardown path contradicts.
         self.sock: socket.socket | None = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(self.timeout)
 
@@ -225,10 +216,8 @@ class ModbusClientSimulator(object):
 
         self.log.info("Disconnecting client...")
 
-        # A caller that cannot tell whether it already disconnected should be
-        # able to ask again, so a client holding no socket is done rather than
-        # in error. The local is also what carries the narrowing: an attribute
-        # stays narrowed only until the next call that could reassign it.
+        # Asking twice is not an error: a client holding no socket is done.
+        # The local carries the narrowing, which an attribute would lose.
         sock = self.sock
 
         if sock is None:
@@ -241,19 +230,16 @@ class ModbusClientSimulator(object):
                 # If so unwrap the socket from the SSL context
                 sock = sock.unwrap()
 
-            # Send the FIN now and unconditionally. The close below only does
-            # so once no other reference to the socket remains, so this is not
-            # redundant -- dropping it changes what the peer observes.
+            # Send the FIN now. The close below only does so once no other
+            # reference remains, so dropping this changes what the peer sees.
             sock.shutdown(socket.SHUT_RDWR)
 
         except socket.error:
             pass
 
         finally:
-            # A close fails on the same peer a shutdown does: gone away is the
-            # ordinary case here, not a fault. Letting it escape would leave
-            # the attribute set on a socket already given up on, so the clear
-            # runs on every path including this one.
+            # A peer gone away is the ordinary case here, not a fault, and
+            # the clear below has to run on this path too.
             with contextlib.suppress(socket.error):
                 sock.close()
 
@@ -341,12 +327,8 @@ class ModbusClientSimulator(object):
 
             # For FC5 and FC6, take the first value only (single value)
             if fc in (5, 6):
-                # Taken through a list rather than by subscript, so that an
-                # empty sequence is a value this code decides about instead of
-                # an IndexError from the subscript, and so that the length is
-                # never asked of something that cannot answer -- len() raises
-                # TypeError on a generator, which the handler below would
-                # quietly treat as a bare scalar.
+                # A list rather than a subscript: an empty sequence becomes a
+                # value to decide about, and len() is never asked of a generator.
                 selected = list(values)[:1]
 
                 # A write of nothing has no correct reading, so it is refused
@@ -822,14 +804,8 @@ def run_client():
 
 
 if __name__ == "__main__":
-    # Inside the guard, never at import. Reconfiguring stdout mutates a stream
-    # the importing application owns, and this is a library module first; run
-    # as a script it is the entry point and the choice is its own to make.
-    #
-    # The attribute is checked rather than assumed. Only a text stream over a
-    # buffer carries reconfigure, and sys.stdout is whatever the host put
-    # there -- a capture object under a test runner, and None under a
-    # windowed interpreter with no console attached.
+    # Inside the guard, never at import: stdout belongs to the application.
+    # Checked rather than assumed -- see PLAYBOOK, entry-point output encoding.
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
 

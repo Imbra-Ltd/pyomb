@@ -1,19 +1,14 @@
 # encoding: utf-8
 """Modbus Packet Classes.
 
-This module contains the classes for the Modbus Packets following the original
-Modbus Application Protocol Specification. The module supports both Modbus TCP
-TCP and Modbus RTU messages.
+Packet classes for Modbus TCP and Modbus RTU, following the Modbus Application
+Protocol Specification. The banners below divide the module into constraints,
+the abstract and base classes, the parser, and the function-code classes.
 
-The user is free to create custom Modbus PDU classes by subclassing the
-ModbusPdu class and registering the new class with the ModbusPduParser class.
-The user must provide the format string for the PDU, the function code and
-the PDU-ID.
-
-The PDU-Identifier (PDU ID) is used to register the PDU class with the PDU
-parser. Requests have a PDU-ID in the range 0x0001 to 0x7FFF, while responses
-have a PDU ID in the range 0x8001 to 0xFFFF. The error PDU has the PDU-ID
-0x8000.
+A custom PDU subclasses ModbusPdu and registers with ModbusPduParser, giving
+its format string, function code and PDU identifier. That identifier runs
+0x0001 to 0x7FFF for a request and 0x8001 to 0xFFFF for a response, with
+0x8000 reserved for the error PDU.
 """
 
 from __future__ import division, print_function
@@ -84,15 +79,12 @@ class ModbusViolation:
 class ModbusPacketAbc(metaclass=ABCMeta):
     """Abstract class for Modbus Packets."""
 
-    # The bounds the specification puts on this component's own fields, as
-    # field name to inclusive low and high. An empty mapping states that the
-    # specification bounds nothing here, which is what tells a reader an
-    # unbounded field from one nobody has read the specification for.
+    # Field name to inclusive low and high, from the specification. Empty
+    # states that it bounds nothing here, which is not the same as unread.
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
 
-    # The attributes holding components this one carries. Asking a packet
-    # for its findings returns the parts' findings too, so a caller has one
-    # question to ask rather than three.
+    # The attributes holding components this one carries, so asking a packet
+    # for its findings returns the parts' findings too.
     PARTS: ClassVar[tuple[str, ...]] = ()
 
     def _finding(self, field, rule):
@@ -181,12 +173,8 @@ class ModbusPacketAbc(metaclass=ABCMeta):
         """Check if two packets are not equal"""
         return not self.__eq__(other)
 
-    # This operation and the one below it carry no tuning parameters. A packet
-    # knows its own wire layout, so a caller that could hand one in could also
-    # ask a concrete packet for a frame its specification does not allow. Where
-    # a layout genuinely varies per call, the class offering that freedom
-    # exposes it under its own name rather than widening these; see
-    # ModbusPdu.pack.
+    # No tuning parameters here or below: a packet knows its own wire layout,
+    # and a caller handing one in could ask for a frame the spec disallows.
     @abstractmethod
     def serialize(self):
         """Serialize the packet and return a stream of bytes
@@ -266,10 +254,8 @@ class ModbusHeader(ModbusPacketAbc):
     HEADER_FMT = ">HHHB"
     SIZE = struct.calcsize(HEADER_FMT)
 
-    # The protocol identifier names the protocol and is zero for every Modbus
-    # frame -- Modbus Messaging Implementation Guide v1.0b. The transaction
-    # identifier, the length and the unit identifier carry no stated bound,
-    # so the mapping names only the field the specification constrains.
+    # Zero for every Modbus frame, per the Messaging Implementation Guide
+    # v1.0b. The other three header fields carry no stated bound.
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"prot_id": (0x0000, 0x0000)}
 
     def __init__(self, trans_id=0, prot_id=0, length=0, unit_id=0):
@@ -380,14 +366,12 @@ class ModbusPdu(ModbusPacketAbc):
     # Default PDU ID
     PDU_ID = 0x0000
 
-    # This class models no function code, so the specification states no
-    # bound on it. Declared rather than inherited, because an inherited empty
-    # mapping cannot be told apart from a specification nobody has read.
+    # Models no function code, so the specification bounds nothing. Declared
+    # rather than inherited, which would not be tellable from unread.
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
 
-    # The named fields the class carries, in wire order. None means the class
-    # stores its payload rather than deriving one, which is what this class
-    # does: it models no function code, so it has no named fields to read.
+    # The named fields in wire order. None means the class stores its payload
+    # rather than deriving one, which is what a class with no function code does.
     PDU_FIELDS: ClassVar[tuple[str, ...] | None] = None
 
     # The trailing field holding a sequence that flattens into the payload,
@@ -399,9 +383,8 @@ class ModbusPdu(ModbusPacketAbc):
 
         self.fc = fc
 
-        # A class declaring named fields reads its payload back from them, so
-        # storing the argument here would restore the second copy the property
-        # below exists to remove. Only a storing class takes the argument.
+        # A class with named fields reads its payload back from them, so
+        # storing the argument would restore the copy the property removes.
         if self.PDU_FIELDS is None:
             self.data = data
 
@@ -461,10 +444,8 @@ class ModbusPdu(ModbusPacketAbc):
             )
             raise ModbusPacketError(message)
 
-        # A payload given as bytes is held as the tuple of its byte values,
-        # which is the form deserialize() produces. Holding the two apart
-        # would make a packet built from bytes unequal to the packet read
-        # back from its own output, though both carry the same frame.
+        # Held as the tuple of byte values, the form deserialize() produces,
+        # so a packet built from bytes equals one read back from its output.
         if isinstance(value, (bytes, bytearray)):
             value = tuple(value)
 
@@ -595,10 +576,8 @@ class ModbusPdu(ModbusPacketAbc):
             ModbusPacketError : If the data field carries no length
         """
 
-        # pack() guards what it packs, but the format it is handed is built
-        # here, so a data field that is not a sequence fails before pack() is
-        # entered. Guarding only the call would let a TypeError out of an
-        # operation whose callers catch ModbusPacketError.
+        # The format is built here, so a non-sequence fails before pack() is
+        # entered, where a TypeError would escape callers catching ModbusPacketError.
         try:
             pdu_format = self.PDU_FORMAT.format(len(self.data))
 
@@ -622,9 +601,8 @@ class ModbusPdu(ModbusPacketAbc):
             ModbusPacketError : If the stream carries no length
         """
 
-        # The first byte is the function code, the rest is the data. The
-        # length is measured here rather than inside unpack(), so a stream
-        # that cannot be measured is converted here too.
+        # First byte the function code, the rest data. Measured here, so a
+        # stream that cannot be measured is converted here too.
         try:
             pdu_format = cls.PDU_FORMAT.format(len(stream) - 1)
 
@@ -755,9 +733,8 @@ class ModbusPduParser(ModbusPduParserAbc):
                 pdu = ModbusError.deserialize(stream)
 
             else:
-                # Parse the PDU based on the function code, return default if
-                # not found. Responses have the function code in the range
-                # 0x8000 to 0x807F, with 0x8000 being the error PDU.
+                # Dispatch on the function code. An exception response
+                # carries 0x8000 to 0x807F, 0x8000 being the error PDU.
                 pdu = cls._registry.get(func_code + 0x8000, ModbusPdu)
 
         except Exception as e:
@@ -1046,9 +1023,7 @@ class ModbusResponseFC1(ModbusPdu):
         """
 
         try:
-            # Calculate the pdu data length to generate the format string
-            #   The pdu has 1 byte for the FC and 1 byte for the byte count
-            #   The rest of the bytes are the output status bytes
+            # Layout: FC(1) + byte count(1) + output status bytes.
             pdu_data_length = len(stream) - 2
 
             # Generate the format string
@@ -1247,9 +1222,7 @@ class ModbusResponseFC2(ModbusPdu):
         """
 
         try:
-            # Calculate the pdu data length to generate the format string
-            #   The pdu has 1 byte for the FC and 1 byte for the byte count
-            #   The rest of the bytes are the input status bytes
+            # Layout: FC(1) + byte count(1) + input status bytes.
             pdu_data_length = len(stream) - 2
 
             # Generate the format string
@@ -1446,11 +1419,7 @@ class ModbusResponseFC3(ModbusPdu):
         """
 
         try:
-            # Calculate the pdu data length to generate the format string
-            # -----------------------------------------------------------
-            # The pdu has 1 byte for the FC and 1 byte for the byte count
-            # The rest of the bytes are the register values, each register
-            # is 2 bytes long.
+            # Layout: FC(1) + byte count(1) + register values(2 each).
 
             reg_count = (len(stream) - 2) // 2
 
@@ -1649,11 +1618,7 @@ class ModbusResponseFC4(ModbusPdu):
         """
 
         try:
-            # Calculate the pdu data length to generate the format string
-            # -----------------------------------------------------------
-            # The pdu has 1 byte for the FC and 1 byte for the byte count
-            # The rest of the bytes are the register values, each register
-            # is 2 bytes long.
+            # Layout: FC(1) + byte count(1) + register values(2 each).
 
             reg_count = (len(stream) - 2) // 2
 
@@ -2274,10 +2239,7 @@ class ModbusRequestFC8(ModbusPdu):
         """
 
         try:
-            # Create the format string
-            # ----------------------------------------------------------------------
-            # The pdu has 1 byte for the FC, 2 bytes for the sub-function
-            # and the rest of the bytes are the data bytes.
+            # Layout: FC(1) + sub-function(2) + data bytes.
             data_count = (len(stream) - 3) // 2
 
             pdu_format = cls.PDU_FORMAT.format(data_count)
@@ -2376,10 +2338,7 @@ class ModbusResponseFC8(ModbusPdu):
         """
 
         try:
-            # Create the format string
-            # ----------------------------------------------------------------------
-            # The pdu has 1 byte for the FC, 2 bytes for the sub-function
-            # and the rest of the bytes are the data bytes.
+            # Layout: FC(1) + sub-function(2) + data bytes.
 
             # Calculate the pdu data length to generate the format string
             data_count = (len(stream) - 3) // 2
@@ -2503,11 +2462,7 @@ class ModbusRequestFC15(ModbusPdu):
         """
 
         try:
-            # Calculate the pdu data length to generate the format string
-            # -----------------------------------------------------------
-            # The pdu has 1 byte for the FC, 2 bytes for the starting address
-            # 2 bytes for the quantity of outputs, 1 byte for the byte count.
-            # The rest of the bytes are the output status bytes.
+            # Layout: FC(1) + start address(2) + quantity(2) + byte count(1) + output status bytes.
 
             pdu_data_length = len(stream) - 6
 
@@ -2726,12 +2681,7 @@ class ModbusRequestFC16(ModbusPdu):
         """
 
         try:
-            # Calculate the pdu data length to generate the format string
-            # -----------------------------------------------------------
-            # The pdu has 1 byte for the FC, 2 bytes for the starting address
-            # 2 bytes for the quantity of outputs, 1 byte for the byte count.
-            # The rest of the bytes are the register values, each register
-            # is 2 bytes long.
+            # Layout: FC(1) + start address(2) + quantity(2) + byte count(1) + register values(2 each).
 
             reg_count = (len(stream) - 6) // 2
 
@@ -3152,13 +3102,8 @@ class ModbusRequestFC23(ModbusPdu):
         """
 
         try:
-            # Calculate the pdu data length to generate the format string
-            # -----------------------------------------------------------
-            # The pdu has 1 byte for the FC, 2 bytes for the read starting address
-            # 2 bytes for the read quantity, 2 bytes for the write starting address
-            # 2 bytes for the write quantity, 1 byte for the write byte count.
-            # The rest of the bytes are the register values, each register
-            # is 2 bytes long.
+            # Layout: FC(1) + read start(2) + read quantity(2) + write start(2) + write quantity(2) + write byte
+            # count(1) + register values(2 each).
 
             reg_count = (len(stream) - 10) // 2
 
@@ -3293,11 +3238,7 @@ class ModbusResponseFC23(ModbusPdu):
         """
 
         try:
-            # Calculate the pdu data length to generate the format string
-            # -----------------------------------------------------------
-            # The pdu has 1 byte for the FC and 1 byte for the byte count
-            # The rest of the bytes are the register values, each register
-            # is 2 bytes long.
+            # Layout: FC(1) + byte count(1) + register values(2 each).
 
             reg_count = (len(stream) - 2) // 2
 
@@ -3399,10 +3340,7 @@ class ModbusRequestFC43(ModbusPdu):
         """
 
         try:
-            # Create the format string
-            # ----------------------------------------------------------------------
-            # The pdu has 1 byte for the FC, 1 byte for the MEI type
-            # and the rest of the bytes are the MEI data bytes.
+            # Layout: FC(1) + MEI type(1) + MEI data bytes.
 
             data_count = len(stream) - 2
 
@@ -3503,10 +3441,7 @@ class ModbusResponseFC43(ModbusPdu):
         """
 
         try:
-            # Create the format string
-            # ----------------------------------------------------------------------
-            # The pdu has 1 byte for the FC, 1 byte for the MEI type
-            # and the rest of the bytes are the MEI data bytes.
+            # Layout: FC(1) + MEI type(1) + MEI data bytes.
             data_count = len(stream) - 2
 
             pdu_format = cls.PDU_FORMAT.format(data_count)
@@ -3532,10 +3467,8 @@ class ModbusResponseFC43(ModbusPdu):
 # MODBUS RTU PACKETS
 ################################################################################
 
-# Modbus RTU appends the checksum low byte first, unlike every other multi-byte
-# field in the protocol, which is big-endian. Packing it with '>H' produces a
-# frame that round-trips against this library and is rejected by every other
-# implementation, so the order is named here rather than spelled inline.
+# Low byte first, unlike every other multi-byte field in Modbus. See
+# PLAYBOOK, how the RTU checksum works.
 CRC_FMT = "<H"
 
 # Width of the checksum on the wire, in bytes.
@@ -3588,9 +3521,8 @@ def validate_crc(stream, packet_name):
         ModbusPacketError : If the frame contradicts its own checksum
     """
 
-    # The shortest ADU any function code can produce is a slave id, a function
-    # code and the checksum. Anything shorter has no checksum to check, and
-    # slicing one out of it would fail on the unpack instead.
+    # The shortest ADU is a slave id, a function code and the checksum.
+    # Anything shorter has no checksum to slice out.
     if len(stream) < 2 + CRC_SIZE:
         message = ("The {0} is {1} byte(s) long, too short to carry a slave id, a function code and a CRC").format(
             packet_name, len(stream)
@@ -3628,9 +3560,8 @@ class ModbusRtuRequest(ModbusPacketAbc):
 
     _pdu_parser = ModbusPduParser
 
-    # Modicon Modbus Protocol Reference Guide PI-MBUS-300: a slave address
-    # runs 0 to 247. Address 0 is the broadcast every device recognises, and
-    # 1 to 247 address one device; 248 to 255 are not valid addresses.
+    # Modicon Modbus Protocol Reference Guide PI-MBUS-300: 0 is the broadcast
+    # every device recognises, 1 to 247 address one, and 248 to 255 are invalid.
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"slave_id": (0x00, 0xF7)}
 
     # The ADU carries a PDU, whose findings travel with its own.
@@ -3778,9 +3709,8 @@ class ModbusRtuResponse(ModbusPacketAbc):
 
     _pdu_parser = ModbusPduParser
 
-    # Modicon Modbus Protocol Reference Guide PI-MBUS-300: a slave address
-    # runs 0 to 247. Address 0 is the broadcast every device recognises, and
-    # 1 to 247 address one device; 248 to 255 are not valid addresses.
+    # Modicon Modbus Protocol Reference Guide PI-MBUS-300: 0 is the broadcast
+    # every device recognises, 1 to 247 address one, and 248 to 255 are invalid.
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"slave_id": (0x00, 0xF7)}
 
     # The ADU carries a PDU, whose findings travel with its own.
