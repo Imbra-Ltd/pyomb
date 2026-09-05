@@ -67,16 +67,43 @@ jobs:
       - name: Generate test certificates
         run: uv run --no-sync python scripts/gen_test_certs.py
 
+      # The suite is tiered by directory, and this step runs the fast tier --
+      # everything except tests/integration/, which the manifest deselects. The
+      # step below runs the other one. Two steps rather than one selecting
+      # everything, because a tier the pipeline does not name is a tier that
+      # can stop existing without anything going red.
+      #
       # No path argument, for the reason the type-check step gives: testpaths
       # in pyproject.toml names tests/, checks/ and src/, and pytest honours that
       # list only when it is given no path of its own. Naming one here replaces
       # the list rather than adding to it, which dropped every docstring example
       # from this gate while a local run still collected them. See
-      # checks/test_ci_collects_the_doctests.py.
+      # checks/test_ci_collects_the_doctests.py, which reads this step by name.
+      #
+      # The coverage floor is not asserted here. It belongs on the last step to
+      # measure, so it is read against both tiers rather than against the
+      # fraction of the library the fast tier reaches on its own.
       - name: Test
         run: >
           uv run --no-sync python -m pytest
           --cov=pyomb
+          --cov-report=term-missing
+
+      # The heavy tier: real sockets and worker threads. A bare pytest never
+      # collects these, so this step is the only place they run and deleting it
+      # is silent everywhere else -- checks/test_default_run_is_the_fast_tier.py
+      # is what fails when it goes.
+      #
+      # --cov-append rather than a fresh measurement: without it this run
+      # replaces the fast tier's data and the floor below is asserted against
+      # the integration tier alone. pytest exits 5 on an empty selection, so a
+      # marker that stopped matching fails this step rather than passing it.
+      - name: Test the integration tier
+        run: >
+          uv run --no-sync python -m pytest
+          -m integration
+          --cov=pyomb
+          --cov-append
           --cov-report=term-missing
           --cov-fail-under=80
 

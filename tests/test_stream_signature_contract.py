@@ -20,9 +20,8 @@ mypy freeze in `pyproject.toml` now that the freeze no longer carries it.
 import inspect
 import unittest
 
-from signatures import caller_parameters
-
 from pyomb import stream
+from tests.helpers.signatures import caller_parameters
 
 VARIADIC = (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
 

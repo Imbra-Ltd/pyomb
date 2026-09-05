@@ -11,8 +11,6 @@ TypeError from iter().
 
 import unittest
 
-from stub_socket import LoopbackSocket
-
 from pyomb.client_simulator import ModbusClientSimulator
 from pyomb.errors import ModbusIllegalFunction
 from pyomb.packets import (
@@ -31,6 +29,7 @@ from pyomb.packets import (
     ModbusRequestFC43,
     ModbusTcpRequest,
 )
+from tests.helpers.stub_socket import LoopbackSocket
 
 # One call per supported function code, paired with the PDU class it must
 # build. The keyword arguments are the ones that function code actually reads.

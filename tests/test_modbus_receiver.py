@@ -1,9 +1,8 @@
 import unittest
 
-from stub_socket import StubSocket
-
 from pyomb.packets import ModbusHeader, ModbusPdu, ModbusTcpPacket
 from pyomb.stream import ModbusTcpReceiver
+from tests.helpers.stub_socket import StubSocket
 
 
 class TestModbusReceiver(unittest.TestCase):

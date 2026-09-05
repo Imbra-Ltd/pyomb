@@ -202,24 +202,46 @@ skips = ["*test_*.py"]
 # asserting something its class does not provide, on main, unnoticed.
 testpaths = ["tests", "checks", "src"]
 
-# Neither tests/ nor checks/ has an __init__.py, deliberately: the default
-# prepend import mode puts each module's own directory on sys.path, which is
-# what resolves `from stub_socket import ...` in tests/ and
-# `from changelog import ...` in checks/. Making either a package breaks those
-# imports.
+# The two directories are packaged differently, and both are deliberate. The
+# prepend import mode puts a module's own directory on sys.path, which is what
+# resolves `from changelog import ...` in the flat checks/ tree. tests/ is
+# tiered, so a module in tests/integration/ would get that directory and not
+# the one holding the helpers -- an __init__.py in tests/ and in each
+# subdirectory puts the repository root on the path instead, which is what
+# makes `from tests.helpers.stub_socket import ...` resolve from any depth.
 #
-# Nothing is deselected. Three transport examples were, because each opened a
-# socket to a server nothing starts; they are gone rather than exempt, and the
-# runnable demonstrations they were reaching for live in examples/, which CI
-# executes against a plain install. Never add a name here to make the gate
-# pass: an example that cannot run is a defect in the example, and an exemption
-# records one that was already broken rather than one that may be.
+# -m is the tier filter. tests/conftest.py marks every item under
+# tests/integration/, and this deselects them, so a bare pytest runs the fast
+# tier and opens no socket. `pytest -m integration` runs the heavy tier -- a
+# -m on the command line replaces this one rather than combining with it, and
+# `-m ""` selects everything. Naming a path instead does not work: a path
+# argument replaces testpaths above, which is a different defect with its own
+# gate.
+#
+# Nothing is deselected by name. Three transport examples were, because each
+# opened a socket to a server nothing starts; they are gone rather than exempt,
+# and the runnable demonstrations they were reaching for live in examples/,
+# which CI executes against a plain install. Never add a name here to make the
+# gate pass: an example that cannot run is a defect in the example, and an
+# exemption records one that was already broken rather than one that may be.
 #
 # checks/test_doctests_are_gated.py asserts that this list and the list recorded
 # there agree, and that the gate still reaches the examples in the package.
+# checks/test_default_run_is_the_fast_tier.py asserts that the -m below both
+# excludes the heavy tier and leaves the rest of the suite collected.
 addopts = [
     "--import-mode=prepend",
     "--doctest-modules",
+    "-m",
+    "not integration",
+]
+
+# The one marker, applied by the hook rather than written on a test. Registering
+# it is what makes the filter above a filter: an unregistered name raises
+# PytestUnknownMarkWarning and the deselection still happens, so the warning is
+# the only thing separating a live filter from a typo in one.
+markers = [
+    "integration: opens a real socket or starts a worker thread; derived from tests/integration/",
 ]
 
 [tool.coverage.run]

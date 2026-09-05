@@ -20,9 +20,8 @@ matches on, and a guard matching on the wrong key is the defect.
 
 import unittest
 
-import conftest
-
 from pyomb.server_simulator import ModbusServerSimulator
+from tests import conftest
 
 
 class TheGuardWatchesTheNameTheServerSets(unittest.TestCase):
