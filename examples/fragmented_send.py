@@ -8,10 +8,8 @@ and calling it a frame works on a quiet link and fails on a busy one.
 `frag_size` forces the failure into the open. The request leaves in 8-byte
 pieces, and the response is reassembled from however many pieces come back.
 
-The server here is this project's own simulator, started in-process on a port
-the operating system picks. The README shows port 502, which is the registered
-Modbus port and what a real device listens on; 0 asks for a free one instead,
-which is what lets this file run without privileges on any machine.
+The server is this project's own simulator, started in-process on a port the
+operating system picks. A real device listens on 502.
 """
 
 import socket

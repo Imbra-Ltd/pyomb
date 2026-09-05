@@ -63,9 +63,8 @@ extendedKeyUsage = critical, serverAuth
 subjectAltName = DNS:localhost, IP:127.0.0.1
 """
 
-# The role extension is what makes this a Modbus Security client certificate
-# rather than a generic one. subjectAltName is absent by design: clients are
-# authenticated by role, not by name.
+# The role extension makes this a Modbus Security client certificate.
+# subjectAltName is absent by design: clients authenticate by role, not name.
 CLIENT_EXT = """
 basicConstraints = critical, CA:FALSE
 keyUsage = critical, digitalSignature, keyEncipherment
@@ -76,13 +75,8 @@ extendedKeyUsage = critical, clientAuth
 
 def run(command):
     """Run a command, raising with captured output if it fails."""
-    # This is the one place the script reaches openssl, and the two suppressed
-    # checks -- the advisory on importing subprocess, and this call site --
-    # both rest on the same property. command is always a list, which hands
-    # the argument vector to the operating system directly rather than to a
-    # shell, so an argument cannot break out and become a second command
-    # however the caller spells a path. The checks match on call shape and
-    # cannot see that the shell is absent.
+    # command is always a list, so the argument vector reaches the operating
+    # system without a shell. See PLAYBOOK, static analysis.
     result = subprocess.run(command, capture_output=True, text=True)  # nosec B603
 
     if result.returncode != 0:

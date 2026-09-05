@@ -1,41 +1,15 @@
 """Checksum a Modbus RTU frame, and show why the result goes out backwards.
 
-The Modbus RTU frame consists of:
+An RTU frame ends with a two-byte checksum, and it is the one multi-byte field
+in Modbus sent low byte first. Get that order wrong and the frames still
+round-trip against this library's own decoder while every device rejects them.
 
-    - Slave ID (1 byte)
-    - PDU (Protocol Data Unit) (variable length)
-    - CRC (2 bytes)
+Each frame below is compared against a complete frame written out from a
+published source, checksum bytes included, so this walkthrough disagrees when
+the codec changes rather than following it. The comparison is on bytes and not
+on the 16-bit value, which matches whichever order it is later packed in.
 
-The CRC is calculated using the following polynomial:
-
-    x^16 + x^15 + x^2 + 1
-
-which is applied in its reversed form, 0xA001, because the algorithm shifts
-right. The CRC is initialized to 0xFFFF and covers the slave id and the PDU,
-everything ahead of the checksum itself.
-
-Each byte is XORed into the low byte of the running value, and then for each
-of its eight bits:
-
-    - If the least significant bit is 1, the CRC is shifted to the right by 1
-        bit and XORed with the polynomial.
-    - If the least significant bit is 0, the CRC is shifted to the right by 1
-        bit.
-
-The result is a 16-bit integer, and it goes onto the wire low byte first --
-the one place in Modbus where a multi-byte field is not big-endian. Getting
-that order wrong produces frames that round-trip against your own decoder and
-are rejected by every device. For more information on the CRC calculation,
-refer to the wikipedia page:
-
-    - https://en.wikipedia.org/wiki/Modbus#CRC16-CCITT
-
-Each frame below is compared against a complete frame written out from
-outside this library, checksum bytes included, so the walkthrough disagrees
-when the codec changes rather than following it. The comparison is against
-the bytes rather than the 16-bit value on purpose: a value matches whichever
-order it is later packed in, so checking only the number would agree with the
-byte-swapped frame every device rejects.
+The algorithm is in the RTU checksum section of docs/PLAYBOOK.md.
 """
 
 import struct
@@ -43,11 +17,8 @@ import sys
 
 from pyomb.packets import CRC_FMT, calc_crc16
 
-# Complete RTU frames, as printed by crccalc.com and by the reference
-# implementation in the Modbus over Serial Line specification. Each is the
-# slave id, the PDU, and the two checksum bytes in the order they are sent.
-# Written out here rather than computed, so a change to the codec breaks the
-# comparison instead of moving it with it.
+# Complete frames from crccalc.com and the Modbus over Serial Line reference
+# implementation, written out rather than computed. See the module docstring.
 PUBLISHED = (
     # Read holding registers, slave 17, two registers from address 0.
     "11 03 00 00 00 02 c6 9b",
@@ -76,9 +47,8 @@ def walk_through(published: str) -> None:
 
     crc = calc_crc16(payload)
 
-    # Packed through the same format string the serializer uses, so what
-    # prints here is the byte order that reaches a device rather than a
-    # second opinion about it.
+    # The serializer's own format string, so this prints the byte order that
+    # reaches a device rather than a second opinion about it.
     on_the_wire = struct.pack(CRC_FMT, crc)
     built = payload + on_the_wire
 

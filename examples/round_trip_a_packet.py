@@ -17,8 +17,7 @@ import sys
 from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest
 
 # Function code 1, one coil from address 0, unit 1, transaction 0. Written out
-# field by field rather than captured from this library's own output, so it
-# disagrees when the codec changes rather than following it.
+# rather than captured, so it disagrees when the codec changes.
 EXPECTED = bytes.fromhex(
     "0000"  # transaction identifier
     "0000"  # protocol identifier
@@ -47,9 +46,8 @@ def main() -> None:
     print("round trip reproduces the frame:", round_trips)
     print("frame matches the written-out vector:", matches_vector)
 
-    # Printed first, so a failing run still shows the reader what was compared
-    # rather than only a traceback. The raise is what the examples job reads:
-    # it checks exit status, and a printed False exits zero like anything else.
+    # Printed first, so a failing run shows what was compared. The raise is
+    # what the examples job reads -- it checks exit status.
     if not round_trips:
         reread = f"deserialize then serialize gave {restored.serialize().hex()}, not {frame.hex()}"
         raise ValueError(reread)

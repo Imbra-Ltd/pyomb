@@ -149,6 +149,15 @@ python scripts/gen_test_certs.py # mint the throwaway TLS chain
 
 - PEP 8 names throughout; no camelCase on any public symbol
 - Every public symbol carries a Google-style docstring stating its contract
+- A comment block is at most 2 lines, and only where the intent cannot be
+  expressed in code. A licence header is exempt, and a label trailing code is
+  not a block
+- A docstring carries at most 10 lines of prose. `Args:`, `Returns:`,
+  `Raises:` and an `Example:` are the contract and do not count
+- Both are for a junior reader, so prose that will not fit moves to
+  `docs/PLAYBOOK.md` or a decision record rather than being compressed in
+  place. Enforced by `checks/test_comment_length.py`, whose `ROOTS` names the
+  directories the migration in the tracked issue has reached
 - Annotate all public functions and class members; no `Any` in the public API
 - Raise a specific `ModbusError` subclass; never bare `except:` or
   `except Exception:` outside a top-level loop that logs and continues
