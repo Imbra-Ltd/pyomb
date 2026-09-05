@@ -7,12 +7,12 @@ stream transport, and a scriptable server/client pair for testing Modbus
 implementations.
 
 The names re-exported here are the supported public API, alongside one
-submodule that is equally public: pyomb.packets for the function-code packet
-classes (ModbusRequestFC1, ModbusResponseFC3, ...). The two simulators and
-the TLS settings they take are re-exported as well, bound on first use rather
-than on import. UNSET travels with them: it is the value every optional TLS
-setting carries until a caller chooses one, and comparing against it is how a
-caller tells a choice from a default.
+submodule that is equally public: pyomb.packets, for the function-code packet
+classes. The simulators and the TLS settings they take are re-exported too,
+bound on first use rather than on import.
+
+UNSET travels with them. It is what every optional TLS setting carries until a
+caller chooses one, so comparing against it tells a choice from a default.
 """
 
 from importlib import import_module
@@ -48,16 +48,8 @@ from .stream import ModbusTcpReceiver
 from .stream import ModbusTcpSender
 from .stream import ModbusTcpStream
 
-# The simulators are named below but not imported here, because importing them
-# costs every caller the ssl import: roughly 13ms against this package's own
-# 35ms on CPython 3.13, so a caller who only needs the codec would pay a 38%
-# penalty for a transport it never opens. __getattr__ binds them on the first
-# access that names one, which puts them in the public API without moving that
-# cost onto import. Note that socket, threading and select are NOT part of the
-# saving: stream.py is re-exported above and imports all three, so they are
-# already paid before this comment applies. Re-measure with
-# `python -X importtime -c "import pyomb"` before treating the numbers as
-# current.
+# Named below but not imported: they reach ssl, and __getattr__ binds them on
+# first access instead. See PLAYBOOK, deferred imports, for the measurement.
 if TYPE_CHECKING:
     from .client_simulator import ModbusClientSimulator
     from .server_simulator import ModbusServerSimulator
@@ -65,10 +57,8 @@ if TYPE_CHECKING:
     from .tls import TlsRole
     from .tls import TlsSettings
 
-# Each deferred name against the submodule that defines it. The TLS settings
-# join the simulators here for the same reason: pyomb.tls imports ssl, so
-# binding it eagerly would put back the cost the deferral removes, and it is
-# the only thing a caller needs before constructing a secure simulator.
+# Each deferred name against the submodule defining it. The TLS settings join
+# the simulators because pyomb.tls reaches ssl for the same reason.
 _DEFERRED = {
     "ModbusClientSimulator": "client_simulator",
     "ModbusServerSimulator": "server_simulator",

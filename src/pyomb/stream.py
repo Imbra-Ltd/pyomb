@@ -1,18 +1,12 @@
 # encoding: utf-8
-"""Modbus TCP Straming Services
+"""Modbus TCP streaming services.
 
-This Python module provides comprehensive tools for handling Modbus TCP
-communications, including classes for sending, receiving, fragmenting, and
-reassembling Modbus messages.
+Sending, receiving, fragmenting and reassembling Modbus messages over a TCP
+socket. The banners below divide the module into the abstract contracts, the
+fragmenter, and the three streaming classes a caller uses.
 
-Features:
-
-- ModbusSenderAbc   : Abstract base classes defining the contract for sending
-- ModbusReceiverAbc : Abstract base classes defining the contract for receiving
-- ModbusFragmenter  : Handles the fragmentation/reassembly of Modbus messages
-- ModbusTcpStream   : Wraps the sending and receiving of Modbus messages
-- ModbusTcpSender   : Buffered sender for Modbus messages over TCP/IP
-- ModbusTcpReceiver : Buffered receiver for Modbus messages over TCP/IP
+A frame does not arrive one per recv(). The only thing saying where one ends
+is the length field in its own header, which is what the fragmenter reads.
 """
 
 from __future__ import print_function
@@ -32,12 +26,8 @@ from .errors import ModbusNetworkError, ModbusPacketError, ModbusBaseError
 # Modbus MBAP header size
 HEADER_SIZE = ModbusHeader.SIZE
 
-# The transport's own logger, with a null handler so importing this module
-# writes nothing. A library that installs a real handler decides where its
-# host's output goes, which is the host's decision to make. The simulators
-# construct a stdout logger instead, because an application is what they are.
-# Each class below takes a logger, so this is the fallback rather than the
-# only route.
+# A null handler, so importing this module writes nothing: where a host's
+# output goes is the host's decision. Each class below takes a logger.
 _LOG = logging.getLogger(__name__)
 _LOG.addHandler(logging.NullHandler())
 
@@ -50,12 +40,8 @@ _LOG.addHandler(logging.NullHandler())
 class ModbusSenderAbc(metaclass=ABCMeta):
     """Abstract base class for sending Modbus messages."""
 
-    # Burst is a property of the sender, not of one run: it sets TCP_NODELAY
-    # on the socket the sender owns. The only implementation carries it as
-    # state, set through the constructor or set_burst_mode, and no caller has
-    # ever passed it here. Declaring it on the operation promised a per-call
-    # choice that nothing honours; see ADR-009 for the same defect settled in
-    # the packet hierarchy.
+    # Burst is a property of the sender rather than of one run: it sets
+    # TCP_NODELAY on the socket the sender owns, so it is not a parameter here.
     @abstractmethod
     def run_once(self):
         """Sends the Modbus messages."""
@@ -98,10 +84,8 @@ class ModbusFragmenterAbc(metaclass=ABCMeta):
 class ModbusStreamAbc(metaclass=ABCMeta):
     """Abstract base class for sending and receiving Modbus messages."""
 
-    # Named for what every caller passes, which is the serialized bytes rather
-    # than the packet object they came from. The implementation always called
-    # it message; a supertype promising a different keyword is a promise its
-    # own subtype breaks.
+    # Named for what every caller passes -- the serialized bytes, not the
+    # packet they came from. A supertype's keyword binds every subtype.
     @abstractmethod
     def send(self, message):
         """Sends a serialized packet"""
@@ -397,9 +381,8 @@ class ModbusTcpStream(ModbusStreamAbc):
             fragments = [header_bytes]
             pending = pdu_length
 
-            # Read the PDU, in fragment-sized reads where a fragment size is
-            # configured and in one read otherwise. The split changes how the
-            # bytes are collected, never how many.
+            # Read the PDU, fragment-sized where one is configured and in one
+            # read otherwise. The split never changes how many bytes arrive.
             while pending > 0:
                 chunk_size = min(self.frag_size, pending) if self.frag_size else pending
                 chunk = self._recv_exactly(chunk_size)
@@ -432,18 +415,14 @@ class ModbusTcpStream(ModbusStreamAbc):
 class ModbusTcpSender(ModbusSenderAbc):
     """Sends a sequence of Modbus messages over TCP.
 
-    Some usecases for this class are:
-    - Send multiple Modbus messages in a single shot
-    - Simulating DDOS attacks
-    - Stress testing the Modbus server to check stability
-    - Load testing the Modbus server to check performance
+    Sends several messages in one shot, which is what makes it useful for
+    stress, load and denial-of-service testing against a peer.
 
-    This class is safe to drive from more than one thread. Its lock covers the
-    fragment settings and the send loop together: a setter cannot land between
-    two of the three values being copied into the stream, and two callers
-    cannot interleave fragments and put a malformed frame on the wire. The
-    cost is that a setter waits for a send in progress, including its
-    fragment delays. Calling stop() makes the next run_once() do nothing.
+    Safe to drive from more than one thread: the lock covers the fragment
+    settings and the send loop together, so a setter cannot land mid-copy and
+    two callers cannot interleave fragments into a malformed frame. The cost
+    is that a setter waits for a send in progress. Calling stop() makes the
+    next run_once() do nothing.
 
     Args:
         sock (socket.socket)    : A TCP socket.
@@ -516,15 +495,12 @@ class ModbusTcpSender(ModbusSenderAbc):
         """Sends the provided Modbus messages with optional fragmentation."""
 
         # A stopped sender does no work. Reading the event here is what makes
-        # stop() observable; setting it and never consulting it left the call
-        # changing nothing a later one could see.
+        # stop() observable rather than a call that changes nothing.
         if self._stop.is_set():
             return
 
-        # Held across the copy and the send loop together, not each in turn. A
-        # setter landing between two of the three copies configures the stream
-        # from two intentions at once, and two senders interleaving fragments
-        # put a malformed frame on the wire.
+        # Held across the copy and the send loop together: a setter landing
+        # between them, or two senders interleaving, malforms a frame.
         with self._lock:
             # Update the stream attributes before sending messages
             self.stream.frag_size = self._frag_size
@@ -557,18 +533,14 @@ class ModbusTcpSender(ModbusSenderAbc):
 class ModbusTcpReceiver(ModbusReceiverAbc):
     """Receives a sequence of Modbus messages over TCP.
 
-    Some usecases for this class are:
-    - Store the received messages for further analysis and replay
-    - Monitor the Modbus traffic
-    - Debug the Modbus client
+    Keeps what arrives, which is what makes it useful for monitoring traffic,
+    debugging a client, or replaying a capture.
 
-    This class is safe to drive from more than one thread. Its lock covers the
-    collected packets and the fragment setting, so a reader walking the list
-    never sees a partial append and a setter cannot land while the value is
-    being copied into the stream. The lock is taken per append rather than
-    held across the receive loop, so a reader is not blocked for as long as
-    the socket stays open. Calling stop() ends the loop at the next message
-    boundary and makes the next run_once() do nothing.
+    Safe to drive from more than one thread: the lock covers the collected
+    packets and the fragment setting, so a reader never sees a partial append.
+    It is taken per append rather than held across the receive loop, so a
+    reader is not blocked for as long as the socket stays open. Calling stop()
+    ends the loop at the next message boundary.
 
     Args:
         sock (socket.socket)    : A TCP socket to receive messages.
@@ -625,9 +597,8 @@ class ModbusTcpReceiver(ModbusReceiverAbc):
         if self._stop.is_set():
             return self.packets
 
-        # Taken for the copy alone rather than held across the loop below,
-        # which also takes it per append -- this lock is not reentrant, and
-        # holding it here would deadlock on the first message.
+        # For the copy alone. The loop below takes it per append, and this lock
+        # is not reentrant, so holding it here deadlocks on the first message.
         with self._lock:
             # Update the stream attributes before receiving messages
             self.stream.frag_size = self._frag_size
