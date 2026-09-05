@@ -80,7 +80,7 @@ packages = ["src/pyomb"]
 # Every pattern is anchored to the repository root. A bare name matches at any
 # depth, so an unanchored `tests` or `LICENSE` also selects the copy inside the
 # templates submodule and republishes it here. See
-# tests/test_sdist_includes_are_anchored.py.
+# checks/test_sdist_includes_are_anchored.py.
 #
 # CHANGELOG.md is deliberately not here. It is carried by the tree each tag
 # names, which is what the source archives generated from that tag ship, and
@@ -108,8 +108,13 @@ convention = "google"
 [tool.ruff.lint.per-file-ignores]
 
 # A test's name carries its intent, so a docstring on top of it is the busywork
-# the quality-gates template rules out.
+# the quality-gates template rules out. checks/ carries the same exemption for
+# the same reason: the repository gates are tests, and the only thing that
+# changed about them is which directory they sit in. Without the second entry
+# they report 142 D findings -- 126 D202, 15 D102 and one D403 -- on files
+# whose content never moved.
 "tests/**" = ["D"]
+"checks/**" = ["D"]
 
 # Everything below freezes the violations that existed when ruff replaced
 # flake8. It is generated, not curated: a file is listed with exactly the rules
@@ -122,7 +127,7 @@ convention = "google"
 # so the command below reports nothing and the table would rebuild as empty.
 # Then group the output by filename and rule code and paste it back.
 #
-#   ruff check src tests scripts --output-format=json
+#   ruff check src tests checks scripts --output-format=json
 
 "src/pyomb/__init__.py" = ["I001", "RUF022", "UP009"]
 "src/pyomb/defines.py" = ["D100", "I001", "UP009", "UP010"]
@@ -195,11 +200,13 @@ skips = ["*test_*.py"]
 # documentation a reader is most likely to copy and the part most able to be
 # checked, and until this was added nothing ran them -- one example had been
 # asserting something its class does not provide, on main, unnoticed.
-testpaths = ["tests", "src"]
+testpaths = ["tests", "checks", "src"]
 
-# tests/ deliberately has no __init__.py: the default prepend import mode puts
-# each test module's own directory on sys.path, which is what resolves
-# `from stub_socket import ...`. Making tests/ a package breaks those imports.
+# Neither tests/ nor checks/ has an __init__.py, deliberately: the default
+# prepend import mode puts each module's own directory on sys.path, which is
+# what resolves `from stub_socket import ...` in tests/ and
+# `from changelog import ...` in checks/. Making either a package breaks those
+# imports.
 #
 # Nothing is deselected. Three transport examples were, because each opened a
 # socket to a server nothing starts; they are gone rather than exempt, and the
@@ -208,7 +215,7 @@ testpaths = ["tests", "src"]
 # pass: an example that cannot run is a defect in the example, and an exemption
 # records one that was already broken rather than one that may be.
 #
-# tests/test_doctests_are_gated.py asserts that this list and the list recorded
+# checks/test_doctests_are_gated.py asserts that this list and the list recorded
 # there agree, and that the gate still reaches the examples in the package.
 addopts = [
     "--import-mode=prepend",

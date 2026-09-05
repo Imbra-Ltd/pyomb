@@ -48,13 +48,13 @@ jobs:
       # --no-sync on every step below: the install above is the only place a
       # dependency may be resolved, so a gate cannot quietly pull one in.
       - name: Lint
-        run: uv run --no-sync python -m ruff check src tests scripts examples
+        run: uv run --no-sync python -m ruff check src tests checks scripts examples
 
       # A separate ruff command from the lint one above, and it only reports:
       # --check never rewrites a file, so a red run names the fix rather than
       # applying it behind the contributor's back.
       - name: Format
-        run: uv run --no-sync python -m ruff format --check src tests scripts examples
+        run: uv run --no-sync python -m ruff format --check src tests checks scripts examples
 
       # No arguments: the scope, the strict setting and the per-module freeze
       # all live in pyproject.toml, so the gate and a local run cannot resolve
@@ -68,11 +68,11 @@ jobs:
         run: uv run --no-sync python scripts/gen_test_certs.py
 
       # No path argument, for the reason the type-check step gives: testpaths
-      # in pyproject.toml names tests/ and src/, and pytest honours that list
-      # only when it is given no path of its own. Naming one here replaces the
-      # list rather than adding to it, which dropped every docstring example
+      # in pyproject.toml names tests/, checks/ and src/, and pytest honours that
+      # list only when it is given no path of its own. Naming one here replaces
+      # the list rather than adding to it, which dropped every docstring example
       # from this gate while a local run still collected them. See
-      # tests/test_ci_collects_the_doctests.py.
+      # checks/test_ci_collects_the_doctests.py.
       - name: Test
         run: >
           uv run --no-sync python -m pytest
@@ -133,8 +133,8 @@ jobs:
   # Passing -c is load-bearing. Bandit reads no configuration from
   # pyproject.toml unless pointed at it, so without the flag the exclusions
   # and the test-only assert skip vanish and this run stops matching a local
-  # one. scripts/, tests/ and examples/ are in scope alongside src/: none of
-  # them is shipped, but all of them run on somebody's machine, and the
+  # one. tests/, checks/, scripts/ and examples/ are in scope alongside src/:
+  # none of them is shipped, but all run on somebody's machine, and the
   # examples run on a reader's.
   security:
     runs-on: ubuntu-latest
@@ -154,7 +154,7 @@ jobs:
         run: uv sync --locked --extra test --python 3.13
 
       - name: Static analysis
-        run: uv run --no-sync python -m bandit -c pyproject.toml -r src scripts tests examples
+        run: uv run --no-sync python -m bandit -c pyproject.toml -r src tests checks scripts examples
 
   secrets:
     runs-on: ubuntu-latest

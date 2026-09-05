@@ -4,18 +4,21 @@
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
 
-  // Discovery starts at tests/. The suite has no __init__.py there on
-  // purpose: pytest prepends each test module's own directory to sys.path,
-  // which is what makes `from stub_socket import ...` resolve. Adding an
-  // __init__.py turns tests/ into a package and breaks those imports.
-  "python.testing.pytestArgs": ["tests"],
+  // Discovery starts at both roots: tests/ holds the library suite and
+  // checks/ the gates over this repository's own conventions. Neither has
+  // an __init__.py, on purpose -- pytest prepends each module's own
+  // directory to sys.path, which is what makes `from stub_socket import
+  // ...` resolve in tests/ and `from changelog import ...` in checks/.
+  // Adding an __init__.py turns a directory into a package and breaks
+  // those imports.
+  "python.testing.pytestArgs": ["tests", "checks"],
 
   // The integration tests bind real ports and sleep through timeouts, so a
   // full run takes around 25 seconds. Re-discovering on every save makes the
   // editor feel stuck.
   "python.testing.autoTestDiscoverOnSaveEnabled": false,
 
-  "python.analysis.extraPaths": ["tests"],
+  "python.analysis.extraPaths": ["tests", "checks"],
 
   // One type-checker at one strictness. Pylance runs its own analysis by
   // default and reports findings the mypy gate is configured to ignore, so

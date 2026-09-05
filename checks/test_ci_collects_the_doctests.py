@@ -1,9 +1,15 @@
 """The pipeline's test step collects the package's docstring examples.
 
-`pyproject.toml` declares `testpaths = ["tests", "src"]`, and the `src` entry
-is the only thing that reaches the docstring examples. That list applies only
-when pytest is given no path of its own, so a step naming one silently
+`pyproject.toml` declares `testpaths = ["tests", "checks", "src"]`. The `src`
+entry is the only thing that reaches the docstring examples and the `checks`
+entry is the only thing that reaches the repository gates. That list applies
+only when pytest is given no path of its own, so a step naming one silently
 replaces it.
+
+Both entries fail the same way and neither is visible in a passing run. A
+collection that reaches no `src` item runs no docstring example; one that
+reaches no `checks` item runs no repository gate, and every rule this project
+enforces about its own documents goes unchecked while the suite stays green.
 
 The pipeline named `tests` for as long as the doctest configuration existed.
 Locally a bare `pytest` collected 627 items including 37 doctests; the step
@@ -12,7 +18,7 @@ machine and none ran where a merge is decided. The configuration that exists
 to catch a wrong example was added after exactly that -- an example asserting
 something its class does not provide, on main, unnoticed.
 
-`tests/test_doctests_are_gated.py` cannot see this. Its subject is the
+`checks/test_doctests_are_gated.py` cannot see this. Its subject is the
 configuration, and the configuration was correct throughout: the list named
 both directories, the exemption machinery was consistent, and the gate reached
 the package. What failed is the invocation, which no test read.
@@ -25,7 +31,7 @@ a form nobody anticipated -- which is checking the configuration again, one
 level along.
 
 The workflow is read as text rather than parsed as YAML, for the reason
-`tests/test_workflow_downloads_retry.py` gives: the only YAML dependency in
+`checks/test_workflow_downloads_retry.py` gives: the only YAML dependency in
 the test extra's closure is a transitive one, so parsing would stake this
 module on a dependency no manifest here declares.
 """
@@ -96,7 +102,8 @@ def collect(paths):
         paths (list[str]) : Positional path arguments, empty for none
 
     Returns:
-        tuple[int, int] : Items collected, and how many are doctests in src
+        tuple[int, int, int] : Items collected, how many are doctests in src,
+            and how many are repository gates in checks
     """
 
     # The argument vector is a list, so it reaches the operating system
@@ -112,7 +119,11 @@ def collect(paths):
 
     items = [line for line in completed.stdout.splitlines() if "::" in line]
 
-    return len(items), len([line for line in items if line.startswith("src/")])
+    return (
+        len(items),
+        len([line for line in items if line.startswith("src/")]),
+        len([line for line in items if line.startswith("checks/")]),
+    )
 
 
 class ThePipelineCollectsTheDocstringExamples(unittest.TestCase):
@@ -129,13 +140,13 @@ class ThePipelineCollectsTheDocstringExamples(unittest.TestCase):
             "establishes anything -- the step's shape changed",
         )
 
-        collected, doctests = collect([token for token in arguments if not token.startswith("-")])
+        collected, doctests, gates = collect([token for token in arguments if not token.startswith("-")])
 
         self.assertGreater(
             collected,
             0,
-            "the collection reached nothing, so the doctest count below "
-            "establishes nothing either -- check the step still names pytest",
+            "the collection reached nothing, so the counts below establish "
+            "nothing either -- check the step still names pytest",
         )
 
         self.assertGreater(
@@ -148,10 +159,21 @@ class ThePipelineCollectsTheDocstringExamples(unittest.TestCase):
             "contributor's machine",
         )
 
+        self.assertGreater(
+            gates,
+            0,
+            f"the pipeline's test step collects {collected} items and none of "
+            "them is a repository gate from checks/. The gates enforce this "
+            "project's rules about its own documents -- the Markdown width, "
+            "the decision-record schema, the changelog, the character set -- "
+            "and a collection that misses them leaves every one of those "
+            "unchecked while the suite reports green",
+        )
+
     def test_naming_a_path_is_what_would_break_it(self):
         """The control: the failing form must fail, or the test above is blind."""
 
-        collected, doctests = collect(["tests"])
+        collected, doctests, gates = collect(["tests"])
 
         self.assertGreater(collected, 0, "the control collected nothing")
         self.assertEqual(
@@ -160,6 +182,13 @@ class ThePipelineCollectsTheDocstringExamples(unittest.TestCase):
             "collecting from tests/ alone was expected to reach no docstring "
             "example; if it now does, the assertion above no longer "
             "discriminates and this module needs rewriting",
+        )
+        self.assertEqual(
+            gates,
+            0,
+            "collecting from tests/ alone was expected to reach no repository "
+            "gate; if it now does, a gate has moved back under tests/ and the "
+            "assertion above no longer discriminates",
         )
 
 
