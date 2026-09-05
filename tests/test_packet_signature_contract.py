@@ -18,10 +18,9 @@ call the supertype accepts working.
 import inspect
 import unittest
 
-from packet_hierarchy import packet_classes
-from signatures import caller_parameters
-
 from pyomb.packets import ModbusPacketAbc
+from tests.helpers.packet_hierarchy import packet_classes
+from tests.helpers.signatures import caller_parameters
 
 
 class PacketSignatureContract(unittest.TestCase):

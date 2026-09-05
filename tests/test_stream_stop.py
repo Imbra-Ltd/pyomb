@@ -17,10 +17,9 @@ work, which is the promise `stop()` makes to a caller.
 
 import unittest
 
-from stub_socket import StubSocket
-
 from pyomb.packets import ModbusHeader, ModbusPdu, ModbusTcpPacket
 from pyomb.stream import ModbusTcpReceiver, ModbusTcpSender
+from tests.helpers.stub_socket import StubSocket
 
 
 def a_request():

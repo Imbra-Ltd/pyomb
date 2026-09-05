@@ -12,6 +12,9 @@ numbers follow [Semantic Versioning](https://semver.org/).
   Running `pytest` against an unpacked sdist previously ran the Markdown width
   rule, the decision-record schema and the changelog rules over the consumer's
   own checkout. See #172, ADR-044
+- The shipped test suite is tiered. A bare `pytest` against an unpacked sdist
+  now runs only the fast tier; the tests that open sockets and start threads
+  need `pytest -m integration`. See #172, ADR-044
 
 ### Removed
 

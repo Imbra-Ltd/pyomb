@@ -9,10 +9,9 @@ field. These tests pin the single convention at both layers.
 
 import unittest
 
-from stub_socket import StubSocket
-
 from pyomb.packets import ModbusHeader, ModbusPduParser, ModbusRequestFC1, ModbusTcpRequest
 from pyomb.stream import ModbusFragmenter, ModbusTcpStream
+from tests.helpers.stub_socket import StubSocket
 
 
 class TestLengthConvention(unittest.TestCase):

@@ -78,13 +78,20 @@ duplicate it here. Create that section if it is missing.
 - Anything that reads or writes a socket goes in the transport package
 - The client and server simulators depend on the codec and the transport, and
   nothing depends on them
-- Tests mirror the source tree one file per module; regression tests for a
-  fixed defect get their own module named for the behaviour, not the issue
+- A test module's home follows its subject, never its imports — a simulator
+  test that builds a frame through the codec is still a simulator test.
+  Regression tests for a fixed defect get their own module named for the
+  behaviour, not the issue; see ADR-044
 - A test of the library goes in `tests/`; a gate over this repository's own
   conventions goes in `checks/`. The two are told apart by subject, never by
   what a module imports: a gate exercises no source module and never will.
   `checks/` is absent from the sdist include list, which is what stops a
   consumer's `pytest` scanning their own checkout; see ADR-044
+- `tests/` is a package and is tiered by directory. A module that opens a
+  socket or starts a thread goes in `tests/integration/`, which a bare
+  `pytest` deselects; shared doubles go in `tests/helpers/` and are imported
+  by dotted path. The tier is derived by the hook in `tests/conftest.py`, so
+  no module carries a marker of its own
 - Source lives under `src/` — check `pip uninstall -y pyomb && pytest
   --collect-only`, which MUST fail with `ModuleNotFoundError`
 - No `sys.path` manipulation in the suite — check
@@ -96,7 +103,8 @@ duplicate it here. Create that section if it is missing.
 uv sync --locked --extra dev     # install the locked toolchain into .venv
 uv lock --upgrade                # refresh the lock; review the diff
 pre-commit install               # run the gates before every commit
-pytest                           # run tests
+pytest                           # run the fast tier
+pytest -m integration            # run the tier that opens sockets
 mypy                             # type check; settings in pyproject.toml
 bandit -c pyproject.toml -r src scripts tests examples   # static analysis
 ruff check src tests scripts examples     # lint

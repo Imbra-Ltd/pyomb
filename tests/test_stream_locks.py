@@ -29,10 +29,9 @@ list is what says the send loop ran inside the lock rather than beside it.
 import threading
 import unittest
 
-from stub_socket import StubSocket
-
 from pyomb.packets import ModbusHeader, ModbusPdu, ModbusTcpPacket
 from pyomb.stream import ModbusTcpReceiver, ModbusTcpSender
+from tests.helpers.stub_socket import StubSocket
 
 
 def exercise(lock):

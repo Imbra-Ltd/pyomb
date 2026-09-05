@@ -410,8 +410,26 @@ Run all of these before pushing.
 ### 3.1 Tests (pytest)
 
 ```bash
-python -m pytest -q
+python -m pytest -q                 # the fast tier
+python -m pytest -q -m integration  # sockets and worker threads
+python -m pytest -q -m ""           # both
 ```
+
+The suite is tiered by directory. `tests/conftest.py` marks every item under
+`tests/integration/` and the manifest deselects that marker, so a bare run
+opens no socket and finishes in a few seconds where the whole suite takes
+about half a minute. Nothing carries a marker of its own — the tier follows
+from where a module sits, so it cannot drift.
+
+Naming the directory as a path does not work. A path argument replaces the
+`testpaths` list rather than adding to it, which drops the docstring examples
+and the repository gates from the run; select on the marker instead. The
+deselection is also why `pytest tests/integration/` alone collects nothing —
+the manifest's filter still applies, so pass `-m integration`.
+
+`checks/test_default_run_is_the_fast_tier.py` holds both directions of this:
+that a bare run reaches no socket test, and that the marker still reaches the
+ones it deselects.
 
 ### 3.2 Tests from VS Code
 
@@ -427,17 +445,30 @@ toolchain moved to uv points at the old site-packages install and will keep
 resolving an increasingly stale `pyomb`. Confirm with "Python: Show Output"
 and check the path matches `python -c "import sys; print(sys.executable)"`.
 
+The panel runs the fast tier, because the manifest's deselection applies to
+whatever the editor invokes. The integration tier is reached from a terminal
+with the marker (see 3.1), not from the panel.
+
 The mutual-TLS tests skip until the chain exists — see 2.2. The integration
-tests bind real ports and sleep through timeouts, so a full run takes about 25
-seconds and the run appears to stall part way; that is the inactivity sweep, not
-a hang. Teardown prints `ValueError: I/O operation on closed file` from the
-server's logger, which is noise, not a failure.
+tests bind real ports and sleep through timeouts, so that tier appears to stall
+part way; that is the inactivity sweep, not a hang. Teardown prints
+`ValueError: I/O operation on closed file` from the server's logger, which is
+noise, not a failure.
 
 ### 3.3 Coverage (pytest-cov)
 
 ```bash
-python -m pytest -q --cov=pyomb --cov-report=term-missing --cov-fail-under=80
+python -m pytest -q --cov=pyomb --cov-report=term-missing
+python -m pytest -q -m integration --cov=pyomb --cov-append --cov-fail-under=80
 ```
+
+Two runs, because the two tiers are two selections and the floor belongs on the
+last one to measure. `--cov-append` is what joins them; without it the second
+run replaces the first's data and the floor is read against the integration
+tier alone. The pipeline does exactly this, in two steps.
+
+A single-run equivalent is `-m ""` with the floor attached, which is the right
+form when the question is only what the number is.
 
 CI enforces the floor, and it is the 80% `CLAUDE.md` asks for. The measured
 figure sits above it; read it from the run rather than from here, since a
@@ -1455,3 +1486,25 @@ Before any publish to a package index: claim the name per ADR-002, and publish
 from CI only, never from a local machine. #70 carries the acceptance criteria
 for that work, including Trusted Publishing over a long-lived token; it is
 closed rather than open, so nothing surfaces it until someone reopens it.
+
+### 3.21 Test tiering (pytest)
+
+```bash
+pytest checks/test_default_run_is_the_fast_tier.py
+```
+
+Both directions of the tier filter, plus the pipeline step that depends on it.
+A bare `pytest` must reach no module under `tests/integration/`, and
+`pytest -m integration` must still reach the tier the bare run deselects. The
+second is the one worth having: a marker that stopped matching leaves the fast
+tier green and the heavy tier running nowhere, and 57 tests that no longer run
+report exactly what 57 passing tests report.
+
+Both assertions carry a floor rather than a comparison against each other,
+because an assertion that the default run excludes the tier is satisfied just
+as well by a default run that reached nothing at all.
+
+The fourth test reads `ci.yml` for a step selecting the tier. That step is the
+only thing that runs those tests where a merge is decided — a contributor's
+suite was never going to, by design — so deleting it is otherwise silent.
+Restoring it needs the proposal an off-limits path requires.

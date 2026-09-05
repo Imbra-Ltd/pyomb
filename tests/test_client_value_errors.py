@@ -9,11 +9,10 @@ as something other than a ModbusProtocolError.
 
 import unittest
 
-from stub_socket import LoopbackSocket
-
 from pyomb.client_simulator import ModbusClientSimulator
 from pyomb.errors import ModbusIllegalDataValue, ModbusProtocolError
 from pyomb.packets import ModbusTcpRequest
+from tests.helpers.stub_socket import LoopbackSocket
 
 # The function codes that narrow a sequence to one value.
 SINGLE_WRITE_CODES = (5, 6)
