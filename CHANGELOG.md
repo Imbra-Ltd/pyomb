@@ -6,7 +6,17 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `ModbusPduParseError`, raised when a PDU will not parse behind an MBAP
+  header that did. It carries that header and the function code, so a caller
+  can answer the peer. It subclasses `ModbusPacketError`. See #352, ADR-049
+
 ### Changed
+
+- The server simulator answers a frame whose header parsed and whose PDU did
+  not with exception code 0x03 and keeps the connection, where it previously
+  dropped the peer. A header that will not parse still drops. See #352, ADR-049
 
 - The eight protocol exception classes take an `Error` suffix, so
   `ModbusIllegalDataValue` is now `ModbusIllegalDataValueError`. The old

@@ -17,8 +17,14 @@ import time
 from collections.abc import Callable
 from typing import cast
 
-from .defines import OMB_EXCEPTION_SLAVE_DEVICE_FAILURE
-from .errors import ModbusBaseError, ModbusModeError, ModbusNetworkError, ModbusSlaveDeviceFailureError
+from .defines import OMB_EXCEPTION_ILLEGAL_DATA_VALUE, OMB_EXCEPTION_SLAVE_DEVICE_FAILURE
+from .errors import (
+    ModbusBaseError,
+    ModbusModeError,
+    ModbusNetworkError,
+    ModbusPduParseError,
+    ModbusSlaveDeviceFailureError,
+)
 from .logger import Logger
 from .packets import (
     ModbusError,
@@ -442,9 +448,20 @@ class ModbusServerSimulator(threading.Thread):
 
         Raises:
             ModbusSlaveDeviceFailureError: If an error occurs while processing the request.
+            ModbusPacketError: If the header is unreadable, leaving nothing to echo.
         """
-        # Deserialize the incoming data
-        request = ModbusTcpRequest.deserialize(data)
+        try:
+            # Deserialize the incoming data
+            request = ModbusTcpRequest.deserialize(data)
+
+        # The header parsed, so the peer can be told what was wrong instead of
+        # meeting a closed socket it cannot diagnose.
+        except ModbusPduParseError as e:
+            self.log.info(f"Answering an unparsable PDU with an exception response: {e}")
+            self.answer(e.header, ModbusError(fc=e.fc, exc_code=OMB_EXCEPTION_ILLEGAL_DATA_VALUE), conn)
+
+            return
+
         self.log.info(request)
 
         # Call the custom data handler if provided
@@ -518,28 +535,43 @@ class ModbusServerSimulator(threading.Thread):
                 else:
                     response_pdu = ResponseFactory.create_err_rsp(request.pdu.fc)
 
-            # Create the response header
-            response_header = ModbusHeader(
-                trans_id=request.header.trans_id,
-                prot_id=request.header.prot_id,
-                length=len(response_pdu) + 1,  # Add 1 for the unit ID
-                unit_id=request.header.unit_id,
-            )
-
-            # Create the response
-            response = ModbusTcpResponse(header=response_header, pdu=response_pdu)
-
-            # Create a Modbus TCP stream and send the response
-            sender = ModbusTcpStream(sock=conn, frag_delay=0, frag_size=0, burst=False)
-
-            # Send the response
-            sender.send(response.serialize())
+            self.answer(request.header, response_pdu, conn)
 
         # Any failure building or sending the response becomes exception code
         # 0x04, which is what that code means. The cause travels with it.
         except Exception as e:
             self.log.info(f"Error: {e}")
             raise ModbusSlaveDeviceFailureError() from e
+
+    ############################################################################
+    def answer(self, request_header: ModbusHeader, response_pdu: ModbusPdu, conn: socket.socket) -> None:
+        """Send one response, echoing the identifiers the request carried.
+
+        Args:
+            request_header (ModbusHeader)   : The header of the request answered.
+            response_pdu (ModbusPdu)        : The PDU to send back.
+            conn (socket.socket)            : The connection to answer on.
+
+        Returns:
+            None
+        """
+        # A response echoes the transaction, protocol and unit identifiers
+        # unchanged; only the length is its own.
+        response_header = ModbusHeader(
+            trans_id=request_header.trans_id,
+            prot_id=request_header.prot_id,
+            length=len(response_pdu) + 1,  # Add 1 for the unit ID
+            unit_id=request_header.unit_id,
+        )
+
+        # Create the response
+        response = ModbusTcpResponse(header=response_header, pdu=response_pdu)
+
+        # Create a Modbus TCP stream and send the response
+        sender = ModbusTcpStream(sock=conn, frag_delay=0, frag_size=0, burst=False)
+
+        # Send the response
+        sender.send(response.serialize())
 
     ############################################################################
 

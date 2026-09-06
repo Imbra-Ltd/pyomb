@@ -23,6 +23,14 @@ from pyomb.server_simulator import ModbusServerSimulator
 # short. The MBAP length agrees with the ADU, so only the PDU is malformed.
 SHORT_FC1_REQUEST = bytes.fromhex("000100000004") + bytes([1]) + bytes([1, 0, 0])
 
+# Four bytes cannot hold the seven-byte MBAP header, so nothing survives to
+# echo and the sender can only be dropped.
+TRUNCATED_HEADER = bytes.fromhex("00010000")
+
+# Written out rather than through the library, so the two cannot agree on a
+# wrong answer: v1.1b3 section 7, function code plus 0x80, then 0x03.
+EXPECTED_EXCEPTION_REPLY = bytes.fromhex("000100000003") + bytes([1]) + bytes([0x81, 0x03])
+
 # How long the loop is given to notice a dropped connection. The server sweeps
 # on its own cadence, so this is a settle, not a wait on an event.
 SETTLE = 0.5
@@ -94,6 +102,24 @@ class ServerSurvivesABadFrame(unittest.TestCase):
 
         return ModbusTcpResponse.deserialize(header + sock.recv(declared))
 
+    def read_reply(self, sock):
+        """Read one complete response ADU off the socket.
+
+        Never treat one recv() as one frame: read the header, then exactly the
+        number of bytes its length field declares.
+
+        Args:
+            sock (socket.socket) : The connected client socket
+
+        Returns:
+            bytes : The serialized response
+        """
+
+        header = sock.recv(ModbusHeader.SIZE)
+        declared = ModbusHeader.deserialize(header).length - 1
+
+        return header + sock.recv(declared)
+
     def send_bad_frame(self):
         """Deliver the malformed request and let the loop react to it."""
 
@@ -135,10 +161,31 @@ class ServerSurvivesABadFrame(unittest.TestCase):
         self.assertEqual(response.pdu.fc, 1)
         self.assertEqual(response.header.trans_id, 2)
 
-    def test_the_sender_of_a_bad_frame_is_retired(self):
-        # A guard that swallowed the failure but left the socket in the read
-        # list would spin: select keeps reporting it, the parse keeps failing.
-        self.send_bad_frame()
+    def test_the_sender_of_a_bad_frame_is_answered_and_kept(self):
+        # This required the sender to be retired until the server learned to
+        # answer: it replies once now, rather than swallowing and spinning.
+        sock = self.connect()
+
+        try:
+            sock.sendall(SHORT_FC1_REQUEST)
+            reply = self.read_reply(sock)
+
+            self.assertEqual(self.server.get_peers(), [sock.getsockname()])
+        finally:
+            sock.close()
+
+        self.assertEqual(reply, EXPECTED_EXCEPTION_REPLY)
+
+    def test_a_frame_whose_header_does_not_parse_still_retires_the_sender(self):
+        # The other half of the split. Four bytes cannot hold an MBAP header,
+        # so there is nothing to echo and dropping is the only answer left.
+        sock = self.connect()
+
+        try:
+            sock.sendall(TRUNCATED_HEADER)
+            time.sleep(SETTLE)
+        finally:
+            sock.close()
 
         self.assertEqual(self.server.get_peers(), [])
 

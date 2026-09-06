@@ -470,6 +470,7 @@ Exception (Python standard library)
  +-- ModbusBaseError
      +-- ModbusNetworkError
      +-- ModbusPacketError
+        +-- ModbusPduParseError
      +-- ModbusProtocolError
         +-- ModbusIllegalFunctionError
         +-- ModbusIllegalDataAddressError
@@ -485,6 +486,14 @@ Exception (Python standard library)
 The three under `ModbusBaseError` separate where the failure came from: the
 network, a frame that will not parse, and a peer answering with a Modbus
 exception code. Everything under `ModbusProtocolError` is one of those codes.
+
+`ModbusPduParseError` splits the second of those by what the caller can still
+do. It is raised where the MBAP header parsed and the PDU did not, and it
+carries that header and the function code, so a server can answer the peer
+with an exception response instead of dropping it. A header that never parsed,
+or one whose length field contradicts the bytes received, leaves nothing to
+echo and keeps raising the plain `ModbusPacketError`. Catching the parent
+still catches both.
 
 Adding one means adding the class here and a row to the code table in the same
 module — `tests/test_errors.py` fails on a code with no class.
