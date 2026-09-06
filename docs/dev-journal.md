@@ -3900,3 +3900,64 @@ package, per ADR-002. See `README.md` for usage and
   session, the last of them for the gap that let the collision above ship --
   nothing here reads heading ordinals, and the check `base-git` carries for
   this shape has never been run.
+
+## 2026-09-06 -- Bring the configuration inside the bound (second session)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Brought the configuration inside the comment bound (PR #325).** Six
+    tracked files held 48 comment blocks over the two-line bound: the manifest
+    at 13, the three workflows at 28, the hook and Dependabot configs at 7.
+    `pyproject.toml` went from 248 lines to 158 and `ci.yml` from 309 to 221.
+    Most blocks were deleted rather than moved, because PLAYBOOK already
+    carried the same prose -- the ruff freeze in 3.4, the mypy freeze in 3.5,
+    the sdist anchoring in 3.17, the doctest collection in 3.24, the tier
+    filter in 3.25, the fan-in in 3.9 and the release pipeline in 5. What
+    lived only in a configuration file moved to the section that owns it.
+  - **Widened the gate to a configuration corpus (PR #325).**
+    `checks/test_comment_length.py` read Python through `tokenize` and
+    selected on `ROOTS`, so a root-level manifest and every workflow failed
+    both filters and no gate had ever read one of them. `CONFIG` selects by
+    suffix instead, since a manifest sits at the repository root and a
+    workflow does not, and the reader is line-wise: a `#` opening a line is a
+    comment in TOML and in YAML, including inside a block scalar where the
+    shell reads it. The corpus carries its own floor, so a listing that stops
+    reaching it fails as a broken enumeration rather than as a clean tree.
+  - **Scoped the off-limits restriction to what executes (PR #326, ADR-045).**
+    Section 2.5 required a proposal before any change inside two paths,
+    unqualified, and both reasons it gives are about execution. The record
+    narrows the restriction to steps, commands, flags, permissions, triggers,
+    pins and the submodule revision, and keeps the summary naming the path
+    either way. Two clauses carry the risk the narrowing adds: a directive
+    spelled as a comment is executable whatever it looks like, and a diff
+    touching a comment and a step is executable entire.
+- **PRs merged:** #323, #325, #326. #323 was the previous session's wrap,
+  shipped at startup before any new work.
+- **Issues closed/created:** none. #320 moved from 0 of 5 slices ticked to 3 --
+  the first two had shipped in earlier sessions without the checklist being
+  updated.
+- **Lesson:** a length bound finds duplication more often than it finds
+  length. Thirteen of the manifest's blocks ran long and nine of them were
+  restating a PLAYBOOK section nearly sentence for sentence, so the sweep was
+  mostly deletion. The bound was doing the work a DRY rule could not, because
+  nothing compares a comment against a document.
+- **Lesson:** a gate can miss a whole file class rather than a case. This one
+  failed two filters at once -- Python-only and `ROOTS`-scoped -- and each
+  looked deliberate on its own. The tell was not a red run but a file nobody
+  had ever seen a finding from, which is the state the coverage floors this
+  project already requires are written to expose.
+- **Lesson:** a ceremony that cannot be performed honestly gets performed
+  dishonestly. The migration's last slice owed a proposal carrying a rollback
+  strategy and regression coverage for a change to comments, where the answers
+  are `git revert` and nothing executes. Writing them would have taught the
+  next author that the proposal is a form, which is a worse outcome than the
+  narrowing.
+- **Upstream:** ADR-045 carries a candidate against
+  `templates/base/core/git.md` -- a rule that gates a path by blast radius
+  should say which content carries it -- and it is **not filed**. Filing lands
+  on another repository and needs the owner. `braboj/solid-ai-templates#1486`,
+  `#1497` and `#1518` are still open.
+- **Pending:** #320's two remaining slices, `tests/` (81 blocks) and `checks/`
+  (93). The templates pin is at `v2.75.0` against `v2.79.0` upstream; ADR-045
+  does not reach it, because a pointer bump is a revision change and revisions
+  execute, so the bump still needs its own proposal.
