@@ -106,9 +106,6 @@ module = ["pyomb.client_simulator"]
 disable_error_code = ["no-untyped-call", "no-untyped-def"]
 
 
-[[tool.mypy.overrides]]
-module = ["pyomb.stream"]
-disable_error_code = ["no-untyped-call", "no-untyped-def"]
 
 [tool.bandit]
 

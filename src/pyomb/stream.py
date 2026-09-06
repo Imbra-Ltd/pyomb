@@ -8,11 +8,14 @@ A frame does not arrive one per recv(). The only thing saying where one ends
 is the length field in its own header, which is what the fragmenter reads.
 """
 
+from __future__ import annotations
+
 import logging
 import socket
 import threading
 import time
 from abc import ABCMeta, abstractmethod
+from collections.abc import Iterable
 
 from .errors import ModbusBaseError, ModbusNetworkError, ModbusPacketError
 from .packets import ModbusHeader, ModbusTcpPacket
@@ -37,12 +40,12 @@ class ModbusSenderAbc(metaclass=ABCMeta):
     # Burst is a property of the sender rather than of one run: it sets
     # TCP_NODELAY on the socket the sender owns, so it is not a parameter here.
     @abstractmethod
-    def run_once(self):
+    def run_once(self) -> None:
         """Sends the Modbus messages."""
         raise NotImplementedError
 
     @abstractmethod
-    def stop(self):
+    def stop(self) -> None:
         """Stops sending messages."""
         raise NotImplementedError
 
@@ -51,12 +54,12 @@ class ModbusReceiverAbc(metaclass=ABCMeta):
     """Abstract base class for receiving Modbus messages."""
 
     @abstractmethod
-    def run_once(self):
+    def run_once(self) -> list[ModbusTcpPacket]:
         """Starts receiving Modbus messages."""
         raise NotImplementedError
 
     @abstractmethod
-    def stop(self):
+    def stop(self) -> None:
         """Stops receiving messages."""
         raise NotImplementedError
 
@@ -65,12 +68,12 @@ class ModbusFragmenterAbc(metaclass=ABCMeta):
     """Abstract base class for fragmenting/reassembling Modbus messages."""
 
     @abstractmethod
-    def fragment(self, message, frag_size=7):
+    def fragment(self, message: bytes, frag_size: int = 7) -> list[bytes]:
         """Fragments a Modbus message into smaller pieces."""
         raise NotImplementedError
 
     @abstractmethod
-    def assemble(self, fragments):
+    def assemble(self, fragments: Iterable[bytes]) -> bytes:
         """Assembles fragmented Modbus messages into a complete message."""
         raise NotImplementedError
 
@@ -81,12 +84,12 @@ class ModbusStreamAbc(metaclass=ABCMeta):
     # Named for what every caller passes -- the serialized bytes, not the
     # packet they came from. A supertype's keyword binds every subtype.
     @abstractmethod
-    def send(self, message):
+    def send(self, message: bytes) -> None:
         """Sends a serialized packet."""
         raise NotImplementedError
 
     @abstractmethod
-    def receive(self):
+    def receive(self) -> bytes:
         """Receives a serialized packet."""
         raise NotImplementedError
 
@@ -137,7 +140,7 @@ class ModbusFragmenter(ModbusFragmenterAbc):
     """
 
     @staticmethod
-    def get_message_length(message):
+    def get_message_length(message: bytes) -> int:
         """Gets the length of a Modbus message from the MBAP header.
 
         Args:
@@ -153,7 +156,7 @@ class ModbusFragmenter(ModbusFragmenterAbc):
         return packet_len
 
     @staticmethod
-    def fragment(message, frag_size=7):
+    def fragment(message: bytes, frag_size: int = 7) -> list[bytes]:
         """Fragments a Modbus message into smaller pieces.
 
         If the fragment size is 0, the message is not fragmented. If the
@@ -166,8 +169,8 @@ class ModbusFragmenter(ModbusFragmenterAbc):
         """
         # Check if the fragment size is valid
         if frag_size < 0:
-            message = "The allowed fragment size is greater or equal to 0."
-            raise ModbusPacketError(message)
+            reason = "The allowed fragment size is greater or equal to 0."
+            raise ModbusPacketError(reason)
 
         # Disable fragmentation if the fragment size is 0
         elif frag_size == 0:
@@ -190,15 +193,15 @@ class ModbusFragmenter(ModbusFragmenterAbc):
                 pdu = pdu[frag_size:]
 
         except Exception as e:
-            message = f"Error fragmenting the Modbus packet: {e!s}"
-            raise ModbusPacketError(message) from e
+            reason = f"Error fragmenting the Modbus packet: {e!s}"
+            raise ModbusPacketError(reason) from e
 
         else:
             # Return the fragments
             return fragments
 
     @staticmethod
-    def assemble(fragments):
+    def assemble(fragments: Iterable[bytes]) -> bytes:
         """Assembles message fragments into a complete message.
 
         Arguments:
@@ -243,7 +246,15 @@ class ModbusTcpStream(ModbusStreamAbc):
         length its header declares. CI runs it on every pull request.
     """
 
-    def __init__(self, sock, fragmenter=None, frag_delay=0, frag_size=0, burst=False, log=None):
+    def __init__(
+        self,
+        sock: socket.socket | None,
+        fragmenter: ModbusFragmenterAbc | None = None,
+        frag_delay: float = 0,
+        frag_size: int = 0,
+        burst: bool = False,
+        log: logging.Logger | None = None,
+    ) -> None:
         """Bind the socket and the fragmentation settings this stream sends under."""
         # Injected so a caller keeps control of where the transport's output
         # goes; the fallback is silent.
@@ -265,7 +276,7 @@ class ModbusTcpStream(ModbusStreamAbc):
         # Set the burst mode (send TCP packet without delay)
         self.burst = burst
 
-    def send(self, message):
+    def send(self, message: bytes) -> None:
         """Sends a Modbus message to the connected socket.
 
         Args:
@@ -287,10 +298,10 @@ class ModbusTcpStream(ModbusStreamAbc):
 
         except Exception as e:
             self.log.warning("send failed: %s", e)
-            message = f"Error sending Modbus message: {e!s}"
-            raise ModbusNetworkError(message=message) from e
+            reason = f"Error sending Modbus message: {e!s}"
+            raise ModbusNetworkError(message=reason) from e
 
-    def _recv_exactly(self, count):
+    def _recv_exactly(self, count: int) -> bytes:
         """Reads a fixed number of bytes from the socket.
 
         A read returns the bytes that have arrived, which is at most the number
@@ -319,7 +330,7 @@ class ModbusTcpStream(ModbusStreamAbc):
 
         return b"".join(chunks)
 
-    def receive(self):
+    def receive(self) -> bytes:
         """Receives one complete Modbus message from the connected socket.
 
         TCP carries a byte stream rather than a sequence of messages, so a read
@@ -347,13 +358,11 @@ class ModbusTcpStream(ModbusStreamAbc):
                 return b""
 
             if len(header_bytes) < HEADER_SIZE:
-                message = (
-                    f"The peer closed the connection after {len(header_bytes)} of the {HEADER_SIZE} header byte(s)"
-                )
+                reason = f"The peer closed the connection after {len(header_bytes)} of the {HEADER_SIZE} header byte(s)"
 
                 # The guard below re-raises this unchanged, so it is not the
                 # hidden control flow TRY301 exists to report.
-                raise ModbusNetworkError(message=message)  # noqa: TRY301
+                raise ModbusNetworkError(message=reason)  # noqa: TRY301
 
             # Deserialize the header
             header = ModbusHeader.deserialize(header_bytes)
@@ -365,13 +374,11 @@ class ModbusTcpStream(ModbusStreamAbc):
             # The field arrives from the network and is never trusted on its
             # own. A length of zero or less describes no frame at all.
             if pdu_length < 0:
-                message = (
-                    f"The MBAP length field declares {header.length} byte(s), too few to cover the unit identifier"
-                )
+                reason = f"The MBAP length field declares {header.length} byte(s), too few to cover the unit identifier"
 
                 # The guard below re-raises this unchanged, so it is not the
                 # hidden control flow TRY301 exists to report.
-                raise ModbusPacketError(message)  # noqa: TRY301
+                raise ModbusPacketError(reason)  # noqa: TRY301
 
             # Add the header to the fragments list
             fragments = [header_bytes]
@@ -384,7 +391,7 @@ class ModbusTcpStream(ModbusStreamAbc):
                 chunk = self._recv_exactly(chunk_size)
 
                 if len(chunk) < chunk_size:
-                    message = (
+                    reason = (
                         "The peer closed the connection "
                         f"{pdu_length - pending + len(chunk)} byte(s) into a "
                         f"frame declaring {pdu_length} byte(s) of PDU"
@@ -392,7 +399,7 @@ class ModbusTcpStream(ModbusStreamAbc):
 
                     # The guard below re-raises this unchanged, so it is not
                     # the hidden control flow TRY301 exists to report.
-                    raise ModbusNetworkError(message=message)  # noqa: TRY301
+                    raise ModbusNetworkError(message=reason)  # noqa: TRY301
 
                 fragments.append(chunk)
                 pending -= len(chunk)
@@ -407,8 +414,8 @@ class ModbusTcpStream(ModbusStreamAbc):
 
         except Exception as e:
             self.log.warning("receive failed: %s", e)
-            message = f"Error receiving Modbus message: {e!s}"
-            raise ModbusNetworkError(message=message) from e
+            reason = f"Error receiving Modbus message: {e!s}"
+            raise ModbusNetworkError(message=reason) from e
 
         else:
             return message
@@ -443,7 +450,15 @@ class ModbusTcpSender(ModbusSenderAbc):
         care which, and the example uses the first.
     """
 
-    def __init__(self, sock, packets=(), frag_size=0, frag_delay=0, burst_mode=False, log=None):
+    def __init__(
+        self,
+        sock: socket.socket,
+        packets: Iterable[ModbusTcpPacket] = (),
+        frag_size: int = 0,
+        frag_delay: float = 0,
+        burst_mode: bool = False,
+        log: logging.Logger | None = None,
+    ) -> None:
         """Bind the socket, the packets to send, and the fragmentation settings."""
         # Injected so a caller keeps control of where the transport's output
         # goes; the fallback is silent.
@@ -469,28 +484,28 @@ class ModbusTcpSender(ModbusSenderAbc):
         # Create a stop event
         self._stop = threading.Event()
 
-    def set_frag_size(self, value):
+    def set_frag_size(self, value: int) -> ModbusTcpSender:
         """Sets the fragment size in bytes."""
         with self._lock:
             self._frag_size = value
 
         return self
 
-    def set_frag_delay(self, value):
+    def set_frag_delay(self, value: float) -> ModbusTcpSender:
         """Sets the fragment delay in seconds."""
         with self._lock:
             self._frag_delay = value
 
         return self
 
-    def set_burst_mode(self, value):
+    def set_burst_mode(self, value: bool) -> ModbusTcpSender:
         """Sets the burst mode."""
         with self._lock:
             self._burst_mode = value
 
         return self
 
-    def run_once(self):
+    def run_once(self) -> None:
         """Sends the provided Modbus messages with optional fragmentation."""
         # A stopped sender does no work. Reading the event here is what makes
         # stop() observable rather than a call that changes nothing.
@@ -519,10 +534,10 @@ class ModbusTcpSender(ModbusSenderAbc):
 
             except Exception as e:
                 self.log.warning("buffered send failed: %s", e)
-                message = f"Error sending Modbus message: {e!s}"
-                raise ModbusNetworkError(message=message) from e
+                reason = f"Error sending Modbus message: {e!s}"
+                raise ModbusNetworkError(message=reason) from e
 
-    def stop(self):
+    def stop(self) -> None:
         """Stops sending messages and closes the socket."""
         self._stop.set()
 
@@ -554,7 +569,7 @@ class ModbusTcpReceiver(ModbusReceiverAbc):
         route and closes the sending end.
     """
 
-    def __init__(self, sock, frag_size=0, log=None):
+    def __init__(self, sock: socket.socket, frag_size: int = 0, log: logging.Logger | None = None) -> None:
         """Bind the socket to receive on and the fragment size to read in."""
         # Injected so a caller keeps control of where the transport's output
         # goes; the fallback is silent.
@@ -576,16 +591,16 @@ class ModbusTcpReceiver(ModbusReceiverAbc):
         self._stop = threading.Event()
 
         # Create a list to store the received messages
-        self.packets = []
+        self.packets: list[ModbusTcpPacket] = []
 
-    def set_frag_size(self, value):
+    def set_frag_size(self, value: int) -> ModbusTcpReceiver:
         """Sets the fragment size in bytes."""
         with self._lock:
             self._frag_size = value
 
         return self
 
-    def run_once(self):
+    def run_once(self) -> list[ModbusTcpPacket]:
         """Receives Modbus messages until no more messages are available."""
         # A stopped receiver does no work, the same way a stopped sender does
         # none. Reading the event is what makes stop() observable.
@@ -626,6 +641,6 @@ class ModbusTcpReceiver(ModbusReceiverAbc):
         # Return the received messages
         return self.packets
 
-    def stop(self):
+    def stop(self) -> None:
         """Stops receiving messages and closes the socket."""
         self._stop.set()
