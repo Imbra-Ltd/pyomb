@@ -1,5 +1,8 @@
-# coding: utf-8
-from __future__ import print_function, unicode_literals
+"""A scriptable Modbus TCP client, for exercising a server implementation.
+
+The client owns a socket, matches every response to its request by
+transaction identifier, and exposes one method per function code.
+"""
 
 import contextlib
 import logging
@@ -31,7 +34,7 @@ from .stream import ModbusTcpStream
 from .tls import TlsRole
 
 
-class ModbusClientSimulator(object):
+class ModbusClientSimulator:
     """Very simple Modbus TCP Client used for testing purposes.
 
     Args:
@@ -91,7 +94,7 @@ class ModbusClientSimulator(object):
         tls=None,
         timeout=DEFAULT_TIMEOUT,
     ):
-
+        """Build a client. The class docstring documents every argument."""
         # Initialize the logger
         self.log = log or Logger(name="ModbusClientSimulator")
         self.log.addHandler(logging.NullHandler())
@@ -143,7 +146,6 @@ class ModbusClientSimulator(object):
         Raises:
             ModbusNetworkError : If the client has been disconnected
         """
-
         if self.sock is None:
             message = "The client has no socket; call connect() first"
             raise ModbusNetworkError(message=message)
@@ -179,7 +181,6 @@ class ModbusClientSimulator(object):
             host (str)      : The host address to connect to.
             port (int)      : The port number to connect to.
         """
-
         # Set the host and port if not provided
         host = self.host if host is None else host
         port = self.port if port is None else port
@@ -197,11 +198,8 @@ class ModbusClientSimulator(object):
             self.sock = self.crypto.wrap_socket(self.sock, server_hostname=host)
 
         # Connect to the host
-        try:
-            self.sock.connect((host, port))
-            self.log.info("Client connected")
-        except Exception as e:
-            raise e
+        self.sock.connect((host, port))
+        self.log.info("Client connected")
 
     ############################################################################
 
@@ -213,7 +211,6 @@ class ModbusClientSimulator(object):
         context if secure connection was used. It also handles potential socket
         errors during the shutdown process.
         """
-
         self.log.info("Disconnecting client...")
 
         # Asking twice is not an error: a client holding no socket is done.
@@ -234,7 +231,7 @@ class ModbusClientSimulator(object):
             # reference remains, so dropping this changes what the peer sees.
             sock.shutdown(socket.SHUT_RDWR)
 
-        except socket.error:
+        except OSError:
             pass
 
         finally:
@@ -249,20 +246,14 @@ class ModbusClientSimulator(object):
 
     ############################################################################
     def reset(self):
-        """Reset the client socket with linger option set to
+        """Close the socket with SO_LINGER at zero, so the peer sees a reset.
 
-        This method attempts to reset the client connection by closing the
-        socket and setting the SO_LINGER option to (1, 0). The first argument
-        enables the option, and the second argument sets the linger time to
-        zero.
-
-        Setting SO_LINGER with a linger time of zero instructs the kernel to
-        not wait for any unsent data to be acknowledged when the socket is
-        closed. This can be useful to force the connection to be terminated
-        immediately, potentially improving recovery from errors or
-        unexpected disconnections.
+        A linger time of zero tells the kernel not to wait for unsent data to
+        be acknowledged, so the connection is torn down at once rather than
+        drained. That is what makes this a recovery path rather than an
+        ordinary close: a peer that has stopped reading cannot hold the
+        teardown open.
         """
-
         self.log.info("Reset the client connection...")
 
         sock = self._require_socket()
@@ -288,7 +279,6 @@ class ModbusClientSimulator(object):
         Returns:
             int : The transaction identifier to send
         """
-
         trans_id = self._next_trans_id
 
         self._next_trans_id = (trans_id + 1) % self.TRANS_ID_MODULO
@@ -319,7 +309,6 @@ class ModbusClientSimulator(object):
         request to the server, including read and write operations, and
         various other Modbus functions in a burst fashion.
         """
-
         # Handle values based on function code and data type
         try:
             # Check if values is iterable (list, tuple)
@@ -409,7 +398,7 @@ class ModbusClientSimulator(object):
         request = ModbusTcpRequest(header=header, pdu=pdu)
 
         # Log the request
-        self.log.info("{0}".format(request))
+        self.log.info(f"{request}")
 
         # Create a Modbus TCP stream object
         sender = ModbusTcpStream(sock=self.sock, frag_delay=self.frag_delay, frag_size=self.frag_size)
@@ -436,7 +425,6 @@ class ModbusClientSimulator(object):
             ModbusNetworkError: If the peer keeps answering with identifiers
                                 that match no outstanding request.
         """
-
         stream = ModbusTcpStream(sock=self.sock, frag_size=0)
 
         for _ in range(self.MAX_STALE_RESPONSES + 1):
@@ -448,7 +436,7 @@ class ModbusClientSimulator(object):
                 return None, None
 
             response = ModbusTcpResponse.deserialize(data)
-            self.log.info("{0}".format(response))
+            self.log.info(f"{response}")
 
             # A client that has never sent a request has nothing to match
             # against, so whatever arrives is passed through.
@@ -460,13 +448,14 @@ class ModbusClientSimulator(object):
                 return response.header, response.pdu
 
             self.log.warning(
-                "Discarding a response for transaction {0} while waiting for transaction {1}".format(
-                    response.header.trans_id, self._pending_trans_id
-                )
+                f"Discarding a response for transaction "
+                f"{response.header.trans_id} while waiting for transaction "
+                f"{self._pending_trans_id}"
             )
 
-        message = ("Received {0} consecutive responses that do not answer transaction {1}").format(
-            self.MAX_STALE_RESPONSES + 1, self._pending_trans_id
+        message = (
+            f"Received {self.MAX_STALE_RESPONSES + 1} consecutive responses "
+            f"that do not answer transaction {self._pending_trans_id}"
         )
         raise ModbusNetworkError(message=message)
 
@@ -497,7 +486,6 @@ class ModbusClientSimulator(object):
             or_mask (int)       : The OR mask value.
 
         """
-
         self.send_request(
             fc=fc,
             read_address=read_address,
@@ -523,7 +511,6 @@ class ModbusClientSimulator(object):
         Args:
             data (bytearray): The raw data to send.
         """
-
         self._require_socket().send(data)
 
     ############################################################################
@@ -584,7 +571,6 @@ class ModbusClientSimulator(object):
 
     def test(self, addr=0, count=16):
         """Quick test of the client."""
-
         self.connect()
 
         # Exchange data
@@ -605,7 +591,7 @@ class ModbusClientSimulator(object):
         self.disconnect()
 
 
-class RequestFactory(object):
+class RequestFactory:
     """Factory class for creating Modbus request PDUs.
 
     This class provides static methods for creating various Modbus request PDUs
@@ -621,7 +607,6 @@ class RequestFactory(object):
             read_address (int)  : The starting address to read from.
             read_count (int)    : The number of registers to read.
         """
-
         pdu = ModbusRequestFC1(start_addr=read_address, quantity=read_count)
         return pdu
 
@@ -633,7 +618,6 @@ class RequestFactory(object):
             read_address (int)  : The starting address to read from.
             read_count (int)    : The number of registers to read.
         """
-
         pdu = ModbusRequestFC2(start_addr=read_address, quantity=read_count)
         return pdu
 
@@ -645,7 +629,6 @@ class RequestFactory(object):
             read_address (int)  : The starting address to read from.
             read_count (int)    : The number of registers to read.
         """
-
         pdu = ModbusRequestFC3(start_addr=read_address, quantity=read_count)
         return pdu
 
@@ -657,7 +640,6 @@ class RequestFactory(object):
             read_address (int)  : The starting address to read from.
             read_count (int)    : The number of registers to read.
         """
-
         pdu = ModbusRequestFC4(start_addr=read_address, quantity=read_count)
         return pdu
 
@@ -669,7 +651,6 @@ class RequestFactory(object):
             write_address (int) : The address to write to.
             value (int)         : The value to write.
         """
-
         pdu = ModbusRequestFC5(output_address=write_address, output_value=value)
         return pdu
 
@@ -681,7 +662,6 @@ class RequestFactory(object):
             write_address (int) : The address to write to.
             value (int)         : The value to write.
         """
-
         pdu = ModbusRequestFC6(output_address=write_address, output_value=value)
         return pdu
 
@@ -700,12 +680,9 @@ class RequestFactory(object):
             write_count (int)   : The number of coils to write.
             values (list)       : The list of coil values to write.
         """
-
-        # Calculate the number of bytes depending on the number of coil values
-        if write_count % 8 == 0:
-            byte_count = int(write_count // 8)
-        else:
-            byte_count = int((write_count // 8) + 1)
+        # Eight coils to the byte, rounded up: a count that is not a whole
+        # number of bytes takes one more, whose spare bits are sent as zero.
+        byte_count = (write_count + 7) // 8
 
         # Construct the output values and take only the required number of bytes
         output_values = []
@@ -728,7 +705,6 @@ class RequestFactory(object):
             write_count (int)   : The number of registers to write.
             values (list)       : The list of register values to write.
         """
-
         byte_count = 2 * write_count
 
         pdu = ModbusRequestFC16(
@@ -749,7 +725,6 @@ class RequestFactory(object):
             and_mask (int)      : The AND mask value.
             or_mask (int)       : The OR mask value.
         """
-
         pdu = ModbusRequestFC22(ref_addr=write_address, and_mask=and_mask, or_mask=or_mask)
 
         return pdu
@@ -765,7 +740,6 @@ class RequestFactory(object):
             write_count (int)   : The number of registers to write.
             write_values (list) : The list of register values to write.
         """
-
         byte_count = 2 * write_count
 
         pdu = ModbusRequestFC23(
@@ -787,12 +761,12 @@ class RequestFactory(object):
             mei_type (int)  : The MEI type.
             mei_data (bytes): The MEI data.
         """
-
         pdu = ModbusRequestFC43(mei_type=mei_type, mei_data=mei_data)
         return pdu
 
 
 def run_client():
+    """Run the built-in exercise against a server on the loopback interface."""
     logger = Logger(name="ModbusClientSimulator")
     client = ModbusClientSimulator(
         log=logger,
