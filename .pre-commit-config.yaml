@@ -1,14 +1,8 @@
-# Layer 2 of the three-layer gate model: what runs before a commit lands, so a
-# red pipeline is not the first a contributor hears of a formatting or typing
-# slip. CI repeats every check here, because a hook is skippable with
-# --no-verify.
-#
-# Install once, after pip install -e ".[dev]":
-#   pre-commit install
+# What runs before a commit lands. CI repeats every check here, because a hook
+# is skippable with --no-verify. PLAYBOOK 3.6 carries the install.
 repos:
-  # Pinned to the release CI resolves from the ruff range in pyproject.toml. A
-  # hook that formats differently from the gate is worse than no hook, because
-  # it makes the two disagree on a file nobody edited.
+  # Pinned to the release CI resolves. A hook that formats differently from the
+  # gate makes the two disagree on a file nobody edited.
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.3
     hooks:
@@ -24,9 +18,8 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
-      # Two trailing spaces are a hard line break in Markdown, so the
-      # extension is exempted rather than have the hook change what a
-      # document renders as.
+      # Two trailing spaces are a hard line break in Markdown, so the extension
+      # is exempted rather than have the hook change what a document renders as.
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
 
@@ -36,15 +29,8 @@ repos:
       - id: check-toml
       - id: check-yaml
 
-  # mypy gets its own hook environment rather than the contributor's, so the
-  # hook does not depend on python or mypy being on PATH. It can afford to:
-  # the library has no third-party dependencies to resolve, and the strict
-  # settings and the per-module freeze are read from pyproject.toml either
-  # way. Pinned to a minor range for the reason ruff is -- a release that
-  # emits a new error code would fail the gate on frozen, untouched modules.
-  #
-  # pass_filenames is off because the freeze is keyed by module: mypy is given
-  # the file set from its own files setting, not the staged paths.
+  # mypy gets its own hook environment, so the hook does not depend on what is
+  # on PATH. pass_filenames is off because the freeze is keyed by module.
   - repo: local
     hooks:
       - id: mypy

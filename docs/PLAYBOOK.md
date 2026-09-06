@@ -666,6 +666,14 @@ ruff and gitleaks revisions are pinned to the releases CI resolves; a hook that
 formats differently from the gate is worse than no hook, because the two then
 disagree about a file nobody edited.
 
+The mypy hook runs in its own environment rather than the contributor's, so it
+does not depend on what is on `PATH`. It can afford to: the library has no
+third-party dependencies to resolve, and the strict settings and the
+per-module freeze are read from `pyproject.toml` either way. It is pinned to
+the same minor range for the reason ruff is, and it takes no filenames —
+the freeze is keyed by module, so mypy is given the file set from its own
+`files` setting rather than the staged paths.
+
 ### 3.7 Secret scanning (gitleaks)
 
 Runs in CI over the whole history, which is why that job checks out every
@@ -674,8 +682,13 @@ repository was imported at v0.1.0 and has never carried key material, so the
 full range is in scope. Push protection is enabled on the repository and blocks
 a secret at the client before it reaches CI.
 
-The job downloads the gitleaks binary from a release asset before it can scan
-anything, and that download retries. A connection reset there once failed the
+The job runs the released binary rather than `gitleaks-action`, which requires
+a paid licence secret on an organization-owned repository. It downloads that
+binary from a release asset before it can scan anything, and the download
+retries. Dropping `-f` from the fetch is the quiet failure: curl reports
+success on a 404 and writes the response body into the archive, so the run
+fails two lines later at `tar` with a corrupt-archive error standing in for a
+release that is not there. A connection reset there once failed the
 job with `curl: (35) Recv failure` and took the required gate with it, having
 scanned nothing. `checks/test_workflow_downloads_retry.py` pins the retry and
 the fail-fast flags on every download a workflow makes, so the next one added
@@ -697,6 +710,10 @@ bandit is pinned to a minor range for the reason ruff and mypy are: a release
 reporting a new check would fail the gate on untouched code. It also takes its
 `toml` extra, without which it cannot read `pyproject.toml` at all — the
 standard library gained a TOML parser in 3.11 and this project's floor is 3.10.
+
+The gate scans `tests/`, `checks/`, `scripts/` and `examples/` alongside
+`src/`. None of those is shipped, but all of them run on somebody's machine
+and the examples run on a reader's.
 
 The `exclude_dirs` list bounds a contributor's own recursive run; the gate
 names the source directories explicitly. Both of its paths are anchored with
@@ -1288,6 +1305,12 @@ than the one holding the helpers — an `__init__.py` in `tests/` and in each
 subdirectory puts the repository root on the path instead, which is what makes
 `from tests.helpers.stub_socket import ...` resolve from any depth.
 
+The pipeline runs the two tiers as two steps rather than one selection over
+everything, because a tier the pipeline does not name is a tier that can stop
+existing without anything going red. `pytest` exits 5 on an empty selection, so
+a marker that stopped matching fails the integration step rather than passing
+it.
+
 The fourth test reads `ci.yml` for a step selecting the tier. That step is the
 only thing that runs those tests where a merge is decided — a contributor's
 suite was never going to, by design — so deleting it is otherwise silent.
@@ -1542,6 +1565,13 @@ That default is the point of the arrangement rather than an oversight: a pin
 nothing moves is a pin that goes stale, and pinning is only worth doing if
 something keeps it current.
 
+The CodeQL sub-actions are grouped into one pull request. `init` and `analyze`
+refuse to run against different versions of each other — the analysis stops on
+a configuration-version mismatch — so ungrouped bumps move half the pair each
+and fail the analysis they are updating. No merge order fixes that, because
+whichever lands first is red on its own, and the pins then stop moving at all.
+`checks/test_dependabot_groups_split_actions.py` holds the grouping.
+
 Read the release notes for input changes before merging a major bump; the
 gate proves the rest. The pip ecosystem is deliberately not enrolled, because
 this project bounds its dependencies rather than pinning them.
@@ -1656,6 +1686,15 @@ release record if the tag has none, attaches the distribution, then generates
 the SBOM and attaches that. ADR-011 carries why the SBOM is generated from an
 environment holding only the wheel, and why the distribution is uploaded before
 the SBOM exists.
+
+The generator runs with `--output-reproducible`, which drops the timestamp and
+the serial number so anyone can rebuild the tag and compare the SBOM byte for
+byte; the release record already carries the date. That step is allowed to
+fail the run rather than marked `continue-on-error`, which is the treatment an
+advisory scan against a vulnerability service gets. This generation reads a
+local environment, reaches no network and is byte-reproducible, so a failure
+is a defect worth seeing — and the distribution is already attached, so a red
+run blocks nothing a consumer needs.
 
 `release.yml` first executed on `v0.2.0`. Where it changes, rehearse the
 changed steps by hand before the tag rather than after. A tag is the trigger

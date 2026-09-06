@@ -9,12 +9,8 @@ on:
 permissions:
   contents: read
 
-# Every action reference below is pinned to a full commit SHA. A tag is
-# mutable: whoever controls the action repository can repoint it at any
-# commit, which would then run here holding a checkout of this source. The
-# trailing version comment is machine-read rather than decoration --
-# Dependabot reads it to tell which release a SHA names, and rewrites both
-# when it opens a bump, so the pins keep moving instead of freezing.
+# Every action below is pinned to a full commit SHA, and the trailing version
+# comment is machine-read rather than decoration. PLAYBOOK 4.5.
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -37,11 +33,7 @@ jobs:
           enable-cache: true
 
       # --locked is the gate rather than a convenience: uv refuses a lock that
-      # no longer matches pyproject.toml instead of quietly re-resolving, so a
-      # dependency edit that skipped `uv lock` fails here rather than
-      # installing a set the lock does not record. One lock serves both legs --
-      # it is resolved across the whole requires-python range, so 3.10 takes
-      # tomli and an older stevedore from the same file 3.13 reads.
+      # no longer matches pyproject.toml. PLAYBOOK 4.6.
       - name: Install
         run: uv sync --locked --extra test --python "${{ matrix.python-version }}"
 
@@ -50,15 +42,13 @@ jobs:
       - name: Lint
         run: uv run --no-sync python -m ruff check src tests checks scripts examples
 
-      # A separate ruff command from the lint one above, and it only reports:
-      # --check never rewrites a file, so a red run names the fix rather than
-      # applying it behind the contributor's back.
+      # --check only reports, so a red run names the fix rather than applying
+      # it behind the contributor's back.
       - name: Format
         run: uv run --no-sync python -m ruff format --check src tests checks scripts examples
 
-      # No arguments: the scope, the strict setting and the per-module freeze
-      # all live in pyproject.toml, so the gate and a local run cannot resolve
-      # to different checks.
+      # No arguments: the scope, the strict setting and the freeze all live in
+      # pyproject.toml, so the gate and a local run cannot resolve differently.
       - name: Type check
         run: uv run --no-sync python -m mypy
 
@@ -67,37 +57,16 @@ jobs:
       - name: Generate test certificates
         run: uv run --no-sync python scripts/gen_test_certs.py
 
-      # The suite is tiered by directory, and this step runs the fast tier --
-      # everything except tests/integration/, which the manifest deselects. The
-      # step below runs the other one. Two steps rather than one selecting
-      # everything, because a tier the pipeline does not name is a tier that
-      # can stop existing without anything going red.
-      #
-      # No path argument, for the reason the type-check step gives: testpaths
-      # in pyproject.toml names tests/, checks/ and src/, and pytest honours that
-      # list only when it is given no path of its own. Naming one here replaces
-      # the list rather than adding to it, which dropped every docstring example
-      # from this gate while a local run still collected them. See
-      # checks/test_ci_collects_the_doctests.py, which reads this step by name.
-      #
-      # The coverage floor is not asserted here. It belongs on the last step to
-      # measure, so it is read against both tiers rather than against the
-      # fraction of the library the fast tier reaches on its own.
+      # The fast tier. No path argument: naming one replaces testpaths rather
+      # than adding to it, and drops the docstring examples. PLAYBOOK 3.1.
       - name: Test
         run: >
           uv run --no-sync python -m pytest
           --cov=pyomb
           --cov-report=term-missing
 
-      # The heavy tier: real sockets and worker threads. A bare pytest never
-      # collects these, so this step is the only place they run and deleting it
-      # is silent everywhere else -- checks/test_default_run_is_the_fast_tier.py
-      # is what fails when it goes.
-      #
-      # --cov-append rather than a fresh measurement: without it this run
-      # replaces the fast tier's data and the floor below is asserted against
-      # the integration tier alone. pytest exits 5 on an empty selection, so a
-      # marker that stopped matching fails this step rather than passing it.
+      # The heavy tier, and the only place it runs. --cov-append joins the two
+      # measurements so the floor reads against both. PLAYBOOK 3.3 and 3.25.
       - name: Test the integration tier
         run: >
           uv run --no-sync python -m pytest
@@ -107,9 +76,8 @@ jobs:
           --cov-report=term-missing
           --cov-fail-under=80
 
-  # A wheel that does not build, or that carries the test suite, is only
-  # discovered at release time unless something builds it on every change.
-  # One version is enough: the wheel is pure Python and not version-specific.
+  # A wheel that does not build, or that carries the suite, is otherwise only
+  # discovered at release time. One version: the wheel is pure Python.
   build:
     runs-on: ubuntu-latest
 
@@ -135,9 +103,8 @@ jobs:
       - name: Check metadata
         run: uv run --no-sync python -m twine check dist/*
 
-      # The src/ layout is what keeps tests/ and scripts/ out of the wheel.
-      # Asserting it here means a build-configuration change cannot quietly
-      # start shipping them.
+      # The src/ layout keeps tests/ and scripts/ out of the wheel; asserting
+      # it here means a build-configuration change cannot quietly ship them.
       - name: Assert the wheel carries the package and nothing else
         run: |
           uv run --no-sync python - <<'PY'
@@ -150,19 +117,8 @@ jobs:
           print("wheel contents OK:", sorted(tops))
           PY
 
-  # Bandit is half the static analysis the quality gates make a Layer 3 MUST.
-  # CodeQL is the other half and lives in its own workflow, so the write scope
-  # it needs stays off this one. The two are not redundant: bandit fails this
-  # job on any finding at any severity, which blocks the merge, where CodeQL
-  # writes alerts a human reads. The decision records under docs/decisions/
-  # carry both, and why the platform half was declined until it could run.
-  #
-  # Passing -c is load-bearing. Bandit reads no configuration from
-  # pyproject.toml unless pointed at it, so without the flag the exclusions
-  # and the test-only assert skip vanish and this run stops matching a local
-  # one. tests/, checks/, scripts/ and examples/ are in scope alongside src/:
-  # none of them is shipped, but all run on somebody's machine, and the
-  # examples run on a reader's.
+  # Half the static analysis; CodeQL is the other half, in its own workflow so
+  # its write scope stays off this one. PLAYBOOK 3.8.
   security:
     runs-on: ubuntu-latest
 
@@ -189,42 +145,19 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # A history scan needs the history. checkout fetches a single commit
-          # by default, which would scan one revision, find nothing, and report
-          # a clean run -- a gate passing for the wrong reason.
+          # A history scan needs the history. The default single commit would
+          # scan one revision, find nothing, and report a clean run.
           fetch-depth: 0
 
-      # The binary is used rather than gitleaks-action, which requires a paid
-      # licence for organization-owned repositories.
-      #
-      # The scan covers history rather than only the working tree. This
-      # repository starts from a fresh import of the v0.1.0 tree, so the
-      # rotated credential material left unreachable in the predecessor's
-      # history never entered this one, and no commit here has ever carried
-      # key material. The decision record under docs/decisions/ carries the
-      # migration and what it cost.
+      # The binary rather than gitleaks-action, which needs a paid licence on
+      # an organization-owned repository. PLAYBOOK 3.7.
       - name: Scan for secrets
         env:
           GITLEAKS_VERSION: 8.21.2
         run: |
           set -euo pipefail
-          # -f is load-bearing. Without it curl reports success on a 404 and
-          # writes the response body into the archive, so the run fails two
-          # lines down at tar with "not in gzip format" -- a corrupt-archive
-          # error standing in for a release that is not there.
-          #
-          # --retry-all-errors rather than --retry alone. curl counts a
-          # timeout and an HTTP 408, 429 or 5xx as transient and retries
-          # those; a connection reset mid-transfer is none of them, and a
-          # reset is what failed this gate once already, with
-          # "curl: (35) Recv failure" and nothing scanned. The cost is that a
-          # genuine 404 is attempted three times before failing, which buys
-          # keeping the real fault loud for a few seconds.
-          #
-          # This step is a required context, so its failure blocks a merge. A
-          # fault here says nothing about the diff, and the alternative to
-          # retrying is a person re-running the job and calling it green --
-          # which is the retry-until-green habit the review rules name.
+          # -f and --retry-all-errors are both load-bearing, and both are
+          # asserted by checks/test_workflow_downloads_retry.py.
           curl -sSfL -o gitleaks.tar.gz \
             --retry 3 --retry-delay 2 --retry-all-errors \
             --connect-timeout 10 --max-time 120 \
@@ -232,17 +165,8 @@ jobs:
           tar -xzf gitleaks.tar.gz gitleaks
           ./gitleaks detect --source . --redact --verbose --exit-code 1
 
-  # The examples are documentation that runs, so something has to run them.
-  # This job installs the project the way a consumer does and executes every
-  # file in the directory.
-  #
-  # No extras, and no uv. Reusing the test job's environment would prove only
-  # that the examples run beside the gate tooling, which no reader has, and
-  # `pip install .` is the command the index tells a reader to use. An example
-  # reaching for something the wheel does not depend on fails here.
-  #
-  # 3.10 is the floor requires-python declares, so an example cannot quietly
-  # depend on syntax a supported interpreter lacks.
+  # Documentation that runs, installed the way a consumer installs it: no
+  # extras, no uv, and on the declared floor. PLAYBOOK 3.20.
   examples:
     runs-on: ubuntu-latest
 
@@ -256,11 +180,8 @@ jobs:
       - name: Install the project as a consumer
         run: python -m pip install .
 
-      # The directory is globbed rather than listed, so a new example is
-      # covered by existing it. The count guard is what keeps that from
-      # becoming a job that passes having run nothing: an empty directory, a
-      # renamed suffix or a mistyped path would otherwise look identical to
-      # every example passing.
+      # Globbed rather than listed, so a new example is covered by existing.
+      # The count guard is what stops an empty glob reading as every pass.
       - name: Run every example
         run: |
           set -euo pipefail
@@ -276,25 +197,16 @@ jobs:
           fi
           echo "ran ${count} examples"
 
-  # Branch protection names one required context, and this is it. The jobs
-  # above fan out so each fails fast and reports on its own; this one fans them
-  # back in, so a job added later binds the moment it joins the needs list
-  # rather than when someone remembers to edit a repository setting. That gap
-  # is not hypothetical: bandit ran green and blocked nothing from the day it
-  # was wired until the day this job landed.
-  #
-  # The comparison is against success rather than against failure. A skipped or
-  # a cancelled job is not a pass, and the checks list renders it much like
-  # one, so a fan-in testing only for failure lets it through.
+  # The one required context. A job added later binds by joining the needs
+  # list, and the comparison is against success. PLAYBOOK 3.9.
   gate:
     needs: [test, build, security, secrets, examples]
     if: always()
     runs-on: ubuntu-latest
 
     steps:
-      # The results map goes through the environment rather than into the
-      # script body, which keeps a value expanded by the workflow engine off
-      # the shell's command line.
+      # The results map goes through the environment, which keeps a value the
+      # workflow engine expands off the shell's command line.
       - name: Require every gate to have succeeded
         env:
           RESULTS: ${{ toJSON(needs) }}
