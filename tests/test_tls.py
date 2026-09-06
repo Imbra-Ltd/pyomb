@@ -2,7 +2,7 @@
 
 These need no certificate chain. Certificate loading is stubbed out, because
 what is under test is which values reach the context, not whether a file
-parses -- the end-to-end handshake is tests/test_tls_integration.py.
+parses -- the end-to-end handshake is tests/integration/test_tls_integration.py.
 """
 
 import ssl

@@ -79,7 +79,13 @@ this CA anywhere but a test network.
 
 ```bash
 uv run --no-sync python -m pytest -q
+uv run --no-sync python -m pytest -q -m integration
 ```
+
+The suite is tiered by directory. The first command runs the fast tier and
+opens no socket; the second runs the tests that bind ports and start threads,
+which a bare `pytest` deselects. Run both to verify a setup -- the first alone
+never reaches the TLS chain step 2 generated.
 
 Every command in this section is prefixed. A bare `python -m pytest` resolves
 against whatever interpreter is active, which after step 2 may not be the
@@ -87,9 +93,9 @@ against whatever interpreter is active, which after step 2 may not be the
 verify an environment you are not about to develop in. `--no-sync` keeps the
 command from quietly re-resolving what step 2 pinned.
 
-Expect every test to pass and none to be skipped. A skip means the TLS
-chain is missing — rerun step 2's certificate command; the mutual-TLS tests
-skip silently without it, and a suite reporting skips still exits zero.
+Expect every test to pass. The fast tier reports no skips; the integration
+tier skips the mutual-TLS tests when the chain is missing — rerun step 2's
+certificate command, since those skip silently and the run still exits zero.
 
 Expect no deselected examples either. The suite runs the package's docstring
 examples and none of them is exempt; a deselect appearing in the output means
@@ -119,7 +125,7 @@ the certificate generator are reported on their own line.
 | `src/pyomb/client_simulator.py` | Client simulator and the request builder |
 | `src/pyomb/server_simulator.py` | Server simulator, its select loop and the response factory |
 | `src/pyomb/errors.py` | Modbus exception codes as a Python exception hierarchy |
-| `tests/stub_socket.py` | The socket doubles most tests build on |
+| `tests/helpers/stub_socket.py` | The socket doubles most tests build on |
 | `checks/` | Gates over this repository's own conventions, kept out of the library suite and out of the source archive |
 | `examples/README.md` | Every runnable usage pattern with its real output, and the quickest read of what the library does |
 | `CLAUDE.md` | Conventions and the target the rewrite aims at |
