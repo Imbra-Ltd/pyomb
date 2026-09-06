@@ -9,10 +9,11 @@ superseded_by: []
 
 # ADR-045: An off-limits path restricts what executes, not what it says
 
-**Upstream:** candidate against `templates/base/core/git.md`, not yet filed.
-With the domain skin off: a rule that gates a path by blast radius should say
-which content carries that radius. Every such path holds prose as well, and an
-unqualified reading prices a comment fix at a written proposal.
+**Upstream:** filed as braboj/solid-ai-templates#1524 against
+`templates/base/core/git.md`. With the domain skin off: a rule that gates a
+path by blast radius should say which content carries that radius. Every such
+path holds prose as well, and an unqualified reading prices a comment fix at a
+written proposal.
 
 ## Context
 
