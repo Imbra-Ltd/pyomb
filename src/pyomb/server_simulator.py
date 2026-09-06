@@ -349,10 +349,22 @@ class ModbusServerSimulator(threading.Thread):
                             self.forget(conn, last_activity_time)
                             self.log.info("Connection closed by the peer.")
 
-                        # Process the incoming data
+                        # Process the incoming data. The call needs a guard of
+                        # its own: an else: branch is outside the try above it.
                         else:
                             last_activity_time[conn] = current_time
-                            self.on_data(data, conn)
+
+                            try:
+                                self.on_data(data, conn)
+
+                            # The top-level loop CLAUDE.md 2.2 carves out: a
+                            # data_handler is a caller's and raises anything.
+                            except Exception as e:  # noqa: BLE001
+                                # Read before forget(), which drops the entry.
+                                peer = self.peer_names.get(conn)
+
+                                self.forget(conn, last_activity_time)
+                                self.log.info(f"Dropping {peer} - {e}.")
 
             # Over a copy: closing one removes it from the list being
             # walked, which would skip the entry after it.
