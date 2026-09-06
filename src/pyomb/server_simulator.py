@@ -15,7 +15,6 @@ import sys
 import threading
 import time
 from collections.abc import Callable
-from typing import cast
 
 from .defines import OMB_EXCEPTION_ILLEGAL_DATA_VALUE, OMB_EXCEPTION_SLAVE_DEVICE_FAILURE
 from .errors import (
@@ -36,6 +35,7 @@ from .packets import (
     ModbusRequestFC4,
     ModbusRequestFC5,
     ModbusRequestFC6,
+    ModbusRequestFC7,
     ModbusRequestFC15,
     ModbusRequestFC16,
     ModbusRequestFC22,
@@ -480,58 +480,59 @@ class ModbusServerSimulator(threading.Thread):
                 response_pdu = ResponseFactory.create_err_rsp(request.pdu.fc)
 
             else:
-                # The function code is a field, not a class, so the
-                # registry is what ties the branch to the cast below.
+                # Each factory reads fields only its own request class
+                # declares, so the class is what selects the branch.
 
                 # Read coils (FC=1)
-                if request.pdu.fc == 1:
-                    response_pdu = ResponseFactory.create_fc1_rsp(cast("ModbusRequestFC1", request.pdu))
+                if isinstance(request.pdu, ModbusRequestFC1):
+                    response_pdu = ResponseFactory.create_fc1_rsp(request.pdu)
 
                 # Read discrete inputs (FC=2)
-                elif request.pdu.fc == 2:
-                    response_pdu = ResponseFactory.create_fc2_rsp(cast("ModbusRequestFC2", request.pdu))
+                elif isinstance(request.pdu, ModbusRequestFC2):
+                    response_pdu = ResponseFactory.create_fc2_rsp(request.pdu)
 
                 # Read holding registers (FC=3)
-                elif request.pdu.fc == 3:
-                    response_pdu = ResponseFactory.create_fc3_rsp(cast("ModbusRequestFC3", request.pdu))
+                elif isinstance(request.pdu, ModbusRequestFC3):
+                    response_pdu = ResponseFactory.create_fc3_rsp(request.pdu)
 
                 # Read input registers (FC=4)
-                elif request.pdu.fc == 4:
-                    response_pdu = ResponseFactory.create_fc4_rsp(cast("ModbusRequestFC4", request.pdu))
+                elif isinstance(request.pdu, ModbusRequestFC4):
+                    response_pdu = ResponseFactory.create_fc4_rsp(request.pdu)
 
                 # Write single coil (FC=5)
-                elif request.pdu.fc == 5:
-                    response_pdu = ResponseFactory.create_fc5_rsp(cast("ModbusRequestFC5", request.pdu))
+                elif isinstance(request.pdu, ModbusRequestFC5):
+                    response_pdu = ResponseFactory.create_fc5_rsp(request.pdu)
 
                 # Write single register (FC=6)
-                elif request.pdu.fc == 6:
-                    response_pdu = ResponseFactory.create_fc6_rsp(cast("ModbusRequestFC6", request.pdu))
+                elif isinstance(request.pdu, ModbusRequestFC6):
+                    response_pdu = ResponseFactory.create_fc6_rsp(request.pdu)
 
                 # Report slave ID (FC=7)
-                elif request.pdu.fc == 7:
+                elif isinstance(request.pdu, ModbusRequestFC7):
                     response_pdu = ResponseFactory.create_fc7_rsp()
 
                 # Write multiple coils (FC=15)
-                elif request.pdu.fc == 15:
-                    response_pdu = ResponseFactory.create_fc15_rsp(cast("ModbusRequestFC15", request.pdu))
+                elif isinstance(request.pdu, ModbusRequestFC15):
+                    response_pdu = ResponseFactory.create_fc15_rsp(request.pdu)
 
                 # Write multiple registers (FC=16)
-                elif request.pdu.fc == 16:
-                    response_pdu = ResponseFactory.create_fc16_rsp(cast("ModbusRequestFC16", request.pdu))
+                elif isinstance(request.pdu, ModbusRequestFC16):
+                    response_pdu = ResponseFactory.create_fc16_rsp(request.pdu)
 
                 # Mask write register (FC=22)
-                elif request.pdu.fc == 22:
-                    response_pdu = ResponseFactory.create_fc22_rsp(cast("ModbusRequestFC22", request.pdu))
+                elif isinstance(request.pdu, ModbusRequestFC22):
+                    response_pdu = ResponseFactory.create_fc22_rsp(request.pdu)
 
                 # Read/write multiple registers (FC=23)
-                elif request.pdu.fc == 23:
-                    response_pdu = ResponseFactory.create_fc23_rsp(cast("ModbusRequestFC23", request.pdu))
+                elif isinstance(request.pdu, ModbusRequestFC23):
+                    response_pdu = ResponseFactory.create_fc23_rsp(request.pdu)
 
                 # Read device identification (FC=43)
-                elif request.pdu.fc == 43:
-                    response_pdu = ResponseFactory.create_fc43_rsp(cast("ModbusRequestFC43", request.pdu))
+                elif isinstance(request.pdu, ModbusRequestFC43):
+                    response_pdu = ResponseFactory.create_fc43_rsp(request.pdu)
 
-                # Generate response on invalid function code
+                # A function code this server does not answer, or one whose
+                # registered class is not the shape its factory reads.
                 else:
                     response_pdu = ResponseFactory.create_err_rsp(request.pdu.fc)
 

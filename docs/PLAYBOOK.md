@@ -391,7 +391,10 @@ inside them.
 3. Add a builder to `RequestFactory` in `src/pyomb/client_simulator.py` and a
    branch to `send_request`.
 4. Add a responder to `ResponseFactory` in `src/pyomb/server_simulator.py` and a
-   branch to `on_data`.
+   branch to `on_data`. Import the request class and test it with `isinstance`
+   rather than comparing the function code field — the factory reads fields
+   only that class declares, and a caller can register a different class
+   against the same code. See ADR-050.
 5. Add the code to the tables in `tests/test_server_dispatch.py` and
    `tests/test_client_requests.py`; both iterate a table, so one row each.
 6. Assert the wire bytes against a vector from the specification in `docs/`,
