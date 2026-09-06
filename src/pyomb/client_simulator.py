@@ -691,7 +691,7 @@ class RequestFactory:
 
         # Create the Modbus FC15 request PDU
         pdu = ModbusRequestFC15(
-            start_addr=write_address, quantity=write_count, byte_count=byte_count, values=output_values
+            start_addr=write_address, quantity=write_count, byte_count=byte_count, values=tuple(output_values)
         )
 
         return pdu

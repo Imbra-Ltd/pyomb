@@ -10,6 +10,8 @@ its format string, function code and PDU identifier. That identifier runs
 0x8000 reserved for the error PDU.
 """
 
+from __future__ import annotations
+
 import struct
 import warnings
 from abc import ABCMeta, abstractmethod
@@ -42,27 +44,27 @@ class ModbusViolation:
         'quantity'
     """
 
-    def __init__(self, source, field, rule, value):
+    def __init__(self, source: str, field: str, rule: str, value: int) -> None:
         """Initialize the violation."""
         self.source = source
         self.field = field
         self.rule = rule
         self.value = value
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """Check if two violations report the same finding."""
         return self.__dict__ == other.__dict__
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         """Check if two violations report different findings."""
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a string representation of the violation."""
         msg = "{0}.{1} is {2}; the specification requires {3}"
         return msg.format(self.source, self.field, self.value, self.rule)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return the same text the string form carries."""
         return f"ModbusViolation({self})"
 
@@ -83,7 +85,7 @@ class ModbusPacketAbc(metaclass=ABCMeta):
     # for its findings returns the parts' findings too.
     PARTS: ClassVar[tuple[str, ...]] = ()
 
-    def _finding(self, field, rule):
+    def _finding(self, field: str, rule: str) -> ModbusViolation:
         """Build a finding naming this component and one of its fields.
 
         Args:
@@ -100,7 +102,7 @@ class ModbusPacketAbc(metaclass=ABCMeta):
             value=getattr(self, field),
         )
 
-    def _fixed_count(self, field, expected, rule):
+    def _fixed_count(self, field: str, expected: int, rule: str) -> tuple[ModbusViolation, ...]:
         """Report a count that disagrees with what the other fields imply.
 
         Args:
@@ -116,7 +118,7 @@ class ModbusPacketAbc(metaclass=ABCMeta):
 
         return (self._finding(field, f"{rule}, which is {expected}"),)
 
-    def violations(self):
+    def violations(self) -> tuple[ModbusViolation, ...]:
         """Report every constraint this packet and its parts break.
 
         Returns:
@@ -146,7 +148,7 @@ class ModbusPacketAbc(metaclass=ABCMeta):
 
         return tuple(found)
 
-    def validate(self):
+    def validate(self) -> None:
         """Raise unless the packet and its parts are conforming.
 
         Raises:
@@ -157,18 +159,18 @@ class ModbusPacketAbc(metaclass=ABCMeta):
         if found:
             raise ModbusPacketError("; ".join(str(finding) for finding in found))
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """Check if two packets are equal."""
         return self.__dict__ == other.__dict__
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         """Check if two packets are not equal."""
         return not self.__eq__(other)
 
     # No tuning parameters here or below: a packet knows its own wire layout,
     # and a caller handing one in could ask for a frame the spec disallows.
     @abstractmethod
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the packet and return a stream of bytes.
 
         Returns:
@@ -178,7 +180,7 @@ class ModbusPacketAbc(metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusPacketAbc:
         """Deserialize the packet from a stream of bytes.
 
         Args:
@@ -193,27 +195,29 @@ class ModbusPacketAbc(metaclass=ABCMeta):
 class ModbusPduParserAbc(metaclass=ABCMeta):
     """Abstract class for Modbus PDU Parser."""
 
+    @classmethod
     @abstractmethod
-    def parse_request(self, stream):
+    def parse_request(cls, stream: bytes) -> ModbusPdu:
         """Parse the Modbus Request PDU from a stream of bytes.
 
         Args:
             stream (bytes): The stream of bytes to parse
 
         Returns:
-            ModbusPduAbc() : The Modbus PDU object
+            ModbusPdu : The Modbus PDU object
         """
         raise NotImplementedError
 
+    @classmethod
     @abstractmethod
-    def parse_response(self, stream):
+    def parse_response(cls, stream: bytes) -> ModbusPdu:
         """Parse the Modbus Response PDU from a stream of bytes.
 
         Args:
             stream (bytes): The stream of bytes to parse
 
         Returns:
-            ModbusPduAbc() : The Modbus PDU object
+            ModbusPdu : The Modbus PDU object
         """
         raise NotImplementedError
 
@@ -250,7 +254,7 @@ class ModbusHeader(ModbusPacketAbc):
     # v1.0b. The other three header fields carry no stated bound.
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"prot_id": (0x0000, 0x0000)}
 
-    def __init__(self, trans_id=0, prot_id=0, length=0, unit_id=0):
+    def __init__(self, trans_id: int = 0, prot_id: int = 0, length: int = 0, unit_id: int = 0) -> None:
         """Initialize the Modbus Header.
 
         The Modbus Header is used in Modbus TCP transactions. It contains the
@@ -278,16 +282,16 @@ class ModbusHeader(ModbusPacketAbc):
         self.length = length
         self.unit_id = unit_id
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the header."""
         return struct.calcsize(self.HEADER_FMT)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a string representation of the header."""
         msg = "HEADER: (Trans-ID: {0}, Prot-ID: {1}, Length: {2}, Unit-ID: {3})"
         return msg.format(self.trans_id, self.prot_id, self.length, self.unit_id)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the header to a stream of bytes.
 
         Returns:
@@ -303,7 +307,7 @@ class ModbusHeader(ModbusPacketAbc):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusHeader:
         """Deserialize the header from a stream of bytes.
 
         Args:
@@ -367,16 +371,16 @@ class ModbusPdu(ModbusPacketAbc):
     # or None where the layout is scalars only.
     PDU_TAIL: ClassVar[str | None] = None
 
-    def __init__(self, fc, data=None):
+    def __init__(self, fc: int, data: tuple[int, ...] | bytes | bytearray | None = None) -> None:
         """Initialize the Modbus PDU."""
         self.fc = fc
 
         # A class with named fields reads its payload back from them, so
         # storing the argument would restore the copy the property removes.
         if self.PDU_FIELDS is None:
-            self.data = data
+            self.data = () if data is None else data
 
-    def _field_names(self):
+    def _field_names(self) -> list[str]:
         """Name every field the payload is derived from, in wire order.
 
         Returns:
@@ -390,7 +394,7 @@ class ModbusPdu(ModbusPacketAbc):
         return names
 
     @property
-    def data(self):
+    def data(self) -> tuple[int, ...]:
         """The PDU payload.
 
         A class declaring named fields derives this from them on every read,
@@ -411,7 +415,7 @@ class ModbusPdu(ModbusPacketAbc):
         return values
 
     @data.setter
-    def data(self, value):
+    def data(self, value: tuple[int, ...] | bytes | bytearray) -> None:
         """Store the payload, or refuse where the class derives it.
 
         Args:
@@ -433,20 +437,20 @@ class ModbusPdu(ModbusPacketAbc):
 
         self._data = value
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT.format(len(self.data)))
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a string representation of the PDU."""
         msg = "PDU: (FC: {0:02d}, Data: {1})"
         return msg.format(self.fc, self.data)
 
-    def is_request(self):
+    def is_request(self) -> bool:
         """Check if the PDU is a request."""
         return self.PDU_ID < 0x8000
 
-    def pack(self, fmt):
+    def pack(self, fmt: str) -> bytes:
         """Pack under an explicit format string.
 
         Deprecated. Put the finished bytes in data instead, which expresses
@@ -468,7 +472,7 @@ class ModbusPdu(ModbusPacketAbc):
         return self._pack(fmt)
 
     @classmethod
-    def unpack(cls, stream, fmt):
+    def unpack(cls, stream: bytes, fmt: str) -> ModbusPdu:
         """Unpack under an explicit format string.
 
         Deprecated. Use deserialize(), which reads the payload as bytes.
@@ -490,7 +494,7 @@ class ModbusPdu(ModbusPacketAbc):
 
         return cls._unpack(stream, fmt)
 
-    def _pack(self, fmt):
+    def _pack(self, fmt: str) -> bytes:
         """Pack the function code and the data under an explicit format string.
 
         This is the escape hatch for a PDU shape the library does not model.
@@ -514,7 +518,7 @@ class ModbusPdu(ModbusPacketAbc):
         return packed_bytes
 
     @classmethod
-    def _unpack(cls, stream, fmt):
+    def _unpack(cls, stream: bytes, fmt: str) -> ModbusPdu:
         """Unpack a PDU from a stream of bytes under an explicit format string.
 
         This is the escape hatch for a PDU shape the library does not model.
@@ -544,7 +548,7 @@ class ModbusPdu(ModbusPacketAbc):
         # Return a new instance of the class
         return cls(fc, data)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the PDU to a stream of bytes.
 
         Returns:
@@ -565,7 +569,7 @@ class ModbusPdu(ModbusPacketAbc):
         return self._pack(pdu_format)
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusPdu:
         """Deserialize the PDU from a stream of bytes.
 
         Args:
@@ -620,7 +624,7 @@ class ModbusPduParser(ModbusPduParserAbc):
     _registry: ClassVar[dict[int, type[ModbusPdu]]] = {}
 
     @classmethod
-    def register(cls, pdu_class):
+    def register(cls, pdu_class: type[ModbusPdu]) -> None:
         """Register a Modbus PDU.
 
         Args:
@@ -634,7 +638,7 @@ class ModbusPduParser(ModbusPduParserAbc):
         cls._registry[pdu_class.PDU_ID] = pdu_class
 
     @classmethod
-    def unregister(cls, pdu_class):
+    def unregister(cls, pdu_class: type[ModbusPdu]) -> None:
         """Unregister a Modbus PDU.
 
         Args:
@@ -647,7 +651,7 @@ class ModbusPduParser(ModbusPduParserAbc):
         del cls._registry[pdu_class.PDU_ID]
 
     @classmethod
-    def set_registry(cls, registry):
+    def set_registry(cls, registry: dict[int, type[ModbusPdu]]) -> None:
         """Set the Modbus PDU registry.
 
         Args:
@@ -656,7 +660,7 @@ class ModbusPduParser(ModbusPduParserAbc):
         cls._registry = registry
 
     @classmethod
-    def get_registry(cls):
+    def get_registry(cls) -> dict[int, type[ModbusPdu]]:
         """Get the Modbus PDU registry.
 
         Returns:
@@ -665,12 +669,12 @@ class ModbusPduParser(ModbusPduParserAbc):
         return cls._registry
 
     @classmethod
-    def clear_registry(cls):
+    def clear_registry(cls) -> None:
         """Clear the Modbus PDU registry."""
         cls._registry.clear()
 
     @classmethod
-    def parse_request(cls, stream):
+    def parse_request(cls, stream: bytes) -> ModbusPdu:
         """Parse a Modbus PDU Request from a stream of bytes.
 
         Args:
@@ -692,7 +696,7 @@ class ModbusPduParser(ModbusPduParserAbc):
         return pdu.deserialize(stream)
 
     @classmethod
-    def parse_response(cls, stream):
+    def parse_response(cls, stream: bytes) -> ModbusPdu:
         """Parse a Modbus PDU Response from a stream of bytes.
 
         Args:
@@ -701,6 +705,8 @@ class ModbusPduParser(ModbusPduParserAbc):
         try:
             # Get the function code from the stream (first byte)
             func_code = struct.unpack(">B", stream[:1])[0]
+
+            pdu: type[ModbusPdu] | ModbusPdu
 
             # Check if the function code is an error
             if func_code >= 0x80:
@@ -755,7 +761,7 @@ class ModbusError(ModbusPdu):
     PDU_FIELDS = ("exc_code",)
     ERROR_MASK = 0x80
 
-    def __init__(self, fc, exc_code):
+    def __init__(self, fc: int, exc_code: int) -> None:
         """Initialize the Modbus Error PDU."""
         # Set instance attributes
         self.exc_code = exc_code
@@ -765,16 +771,16 @@ class ModbusError(ModbusPdu):
             fc=fc,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a string representation of the Modbus Error PDU."""
         msg = "ERROR: (Function Code: {0}, Exception Code: {1})"
         return msg.format(self.fc, self.exc_code)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the error PDU to a stream of bytes.
 
         Returns:
@@ -795,7 +801,7 @@ class ModbusError(ModbusPdu):
         return func_code + exc_code
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusError:
         """Deserialize the error PDU from a stream of bytes.
 
         Args:
@@ -851,7 +857,7 @@ class ModbusRequestFC1(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x07D0)}
     PDU_FIELDS = ("start_addr", "quantity")
 
-    def __init__(self, start_addr, quantity):
+    def __init__(self, start_addr: int, quantity: int) -> None:
         """Initialize the Modbus Request FC1 PDU."""
         # Set instance attributes
         self.start_addr = start_addr
@@ -862,11 +868,11 @@ class ModbusRequestFC1(ModbusPdu):
             fc=0x01,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the request FC1 PDU to a stream of bytes.
 
         Returns:
@@ -882,7 +888,7 @@ class ModbusRequestFC1(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusRequestFC1:
         """Deserialize the request FC1 PDU from a stream of bytes.
 
         Args:
@@ -935,7 +941,7 @@ class ModbusResponseFC1(ModbusPdu):
     PDU_FIELDS = ("byte_count",)
     PDU_TAIL = "output_status"
 
-    def __init__(self, byte_count, output_status):
+    def __init__(self, byte_count: int, output_status: tuple[int, ...]) -> None:
         """Hold the byte count and the coil states the response carries."""
         # Set instance attributes
         self.byte_count = byte_count
@@ -946,11 +952,11 @@ class ModbusResponseFC1(ModbusPdu):
             fc=0x01,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT.format(self.byte_count))
 
-    def violations(self):
+    def violations(self) -> tuple[ModbusViolation, ...]:
         """Report the bounds, and the rule the specification ties across fields.
 
         Modbus Application Protocol v1.1b3, Read Coils: the byte count is the number of status bytes returned.
@@ -963,7 +969,7 @@ class ModbusResponseFC1(ModbusPdu):
             + list(self._fixed_count("byte_count", len(self.output_status), "the number of status bytes"))
         )
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the response FC1 PDU to a stream of bytes.
 
         Returns:
@@ -979,7 +985,7 @@ class ModbusResponseFC1(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusResponseFC1:
         """Deserialize the response FC1 PDU from a stream of bytes.
 
         Args:
@@ -1042,7 +1048,7 @@ class ModbusRequestFC2(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x07D0)}
     PDU_FIELDS = ("start_addr", "quantity")
 
-    def __init__(self, start_addr, quantity):
+    def __init__(self, start_addr: int, quantity: int) -> None:
         """Initialize the Modbus Request FC2 PDU."""
         # Set instance attributes
         self.start_addr = start_addr
@@ -1053,11 +1059,11 @@ class ModbusRequestFC2(ModbusPdu):
             fc=0x02,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the request FC2 PDU to a stream of bytes.
 
         Returns:
@@ -1073,7 +1079,7 @@ class ModbusRequestFC2(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusRequestFC2:
         """Deserialize the request FC2 PDU from a stream of bytes.
 
         Args:
@@ -1127,7 +1133,7 @@ class ModbusResponseFC2(ModbusPdu):
     PDU_FIELDS = ("byte_count",)
     PDU_TAIL = "input_status"
 
-    def __init__(self, byte_count, input_status):
+    def __init__(self, byte_count: int, input_status: tuple[int, ...]) -> None:
         """Initialize the Modbus Response FC2 PDU."""
         # Set the instance attributes
         self.byte_count = byte_count
@@ -1138,11 +1144,11 @@ class ModbusResponseFC2(ModbusPdu):
             fc=0x02,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT.format(self.byte_count))
 
-    def violations(self):
+    def violations(self) -> tuple[ModbusViolation, ...]:
         """Report the bounds, and the rule the specification ties across fields.
 
         Modbus Application Protocol v1.1b3, Read Discrete Inputs: the byte count is the number of status bytes returned.
@@ -1155,7 +1161,7 @@ class ModbusResponseFC2(ModbusPdu):
             + list(self._fixed_count("byte_count", len(self.input_status), "the number of status bytes"))
         )
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the response FC2 PDU from a stream of bytes.
 
         Returns:
@@ -1171,7 +1177,7 @@ class ModbusResponseFC2(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusResponseFC2:
         """Deserialize the response FC2 PDU to a stream of bytes.
 
         Args:
@@ -1232,7 +1238,7 @@ class ModbusRequestFC3(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x007D)}
     PDU_FIELDS = ("start_addr", "quantity")
 
-    def __init__(self, start_addr, quantity):
+    def __init__(self, start_addr: int, quantity: int) -> None:
         """Initialize the Modbus Request FC3 PDU."""
         # Set the instance attributes
         self.start_addr = start_addr
@@ -1243,11 +1249,11 @@ class ModbusRequestFC3(ModbusPdu):
             fc=0x03,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the request FC3 PDU to a stream of bytes.
 
         Returns:
@@ -1263,7 +1269,7 @@ class ModbusRequestFC3(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusRequestFC3:
         """Deserialize the request FC3 PDU from a stream of bytes.
 
         Args:
@@ -1317,7 +1323,7 @@ class ModbusResponseFC3(ModbusPdu):
     PDU_FIELDS = ("byte_count",)
     PDU_TAIL = "values"
 
-    def __init__(self, byte_count, values):
+    def __init__(self, byte_count: int, values: tuple[int, ...]) -> None:
         """Initialize the Modbus Response FC3 PDU."""
         # Set the instance attributes
         self.byte_count = byte_count
@@ -1328,11 +1334,11 @@ class ModbusResponseFC3(ModbusPdu):
             fc=0x03,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT.format(len(self.values)))
 
-    def violations(self):
+    def violations(self) -> tuple[ModbusViolation, ...]:
         """Report the bounds, and the rule the specification ties across fields.
 
         Modbus Application Protocol v1.1b3, Read Holding Registers: the byte count is twice the registers returned.
@@ -1345,7 +1351,7 @@ class ModbusResponseFC3(ModbusPdu):
             + list(self._fixed_count("byte_count", 2 * len(self.values), "twice the registers returned"))
         )
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the response FC3 PDU to a stream of bytes.
 
         Returns:
@@ -1361,7 +1367,7 @@ class ModbusResponseFC3(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusResponseFC3:
         """Deserialize the response FC3 PDU from a stream of bytes.
 
         Args:
@@ -1424,7 +1430,7 @@ class ModbusRequestFC4(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x007D)}
     PDU_FIELDS = ("start_addr", "quantity")
 
-    def __init__(self, start_addr, quantity):
+    def __init__(self, start_addr: int, quantity: int) -> None:
         """Initialize the Modbus Request FC4 PDU."""
         # Set the instance attributes
         self.start_addr = start_addr
@@ -1435,11 +1441,11 @@ class ModbusRequestFC4(ModbusPdu):
             fc=0x04,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the request FC4 PDU to a stream of bytes.
 
         Returns:
@@ -1455,7 +1461,7 @@ class ModbusRequestFC4(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusRequestFC4:
         """Deserialize the request FC4 PDU from a stream of bytes.
 
         Args:
@@ -1509,7 +1515,7 @@ class ModbusResponseFC4(ModbusPdu):
     PDU_FIELDS = ("byte_count",)
     PDU_TAIL = "values"
 
-    def __init__(self, byte_count, values):
+    def __init__(self, byte_count: int, values: tuple[int, ...]) -> None:
         """Initialize the Modbus Response FC4 PDU."""
         # Set the instance attributes
         self.byte_count = byte_count
@@ -1520,11 +1526,11 @@ class ModbusResponseFC4(ModbusPdu):
             fc=0x04,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT.format(len(self.values)))
 
-    def violations(self):
+    def violations(self) -> tuple[ModbusViolation, ...]:
         """Report the bounds, and the rule the specification ties across fields.
 
         Modbus Application Protocol v1.1b3, Read Input Registers: the byte count is twice the registers returned.
@@ -1537,7 +1543,7 @@ class ModbusResponseFC4(ModbusPdu):
             + list(self._fixed_count("byte_count", 2 * len(self.values), "twice the registers returned"))
         )
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the response FC4 PDU to a stream of bytes.
 
         Returns:
@@ -1553,7 +1559,7 @@ class ModbusResponseFC4(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusResponseFC4:
         """Deserialize the response FC4 PDU from a stream of bytes.
 
         Args:
@@ -1617,7 +1623,7 @@ class ModbusRequestFC5(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("output_address", "output_value")
 
-    def __init__(self, output_address, output_value):
+    def __init__(self, output_address: int, output_value: int) -> None:
         """Initialize the Modbus Request FC5 PDU."""
         # Set the instance attributes
         self.output_address = output_address
@@ -1628,11 +1634,11 @@ class ModbusRequestFC5(ModbusPdu):
             fc=0x05,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
 
-    def violations(self):
+    def violations(self) -> tuple[ModbusViolation, ...]:
         """Report the bounds, and the rule the specification ties across fields.
 
         Modbus Application Protocol v1.1b3, Write Single Coil: the output value is 0x0000 or 0xFF00.
@@ -1647,7 +1653,7 @@ class ModbusRequestFC5(ModbusPdu):
 
         return tuple(found)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the request FC5 PDU from a stream of bytes.
 
         Returns:
@@ -1663,7 +1669,7 @@ class ModbusRequestFC5(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusRequestFC5:
         """Deserialize the request FC5 PDU from a stream of bytes.
 
         Args:
@@ -1714,7 +1720,7 @@ class ModbusResponseFC5(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("output_address", "output_value")
 
-    def __init__(self, output_address, output_value):
+    def __init__(self, output_address: int, output_value: int) -> None:
         """Initialize the Modbus Response FC5 PDU."""
         # Set the instance attributes
         self.output_address = output_address
@@ -1725,11 +1731,11 @@ class ModbusResponseFC5(ModbusPdu):
             fc=0x05,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
 
-    def violations(self):
+    def violations(self) -> tuple[ModbusViolation, ...]:
         """Report the bounds, and the rule the specification ties across fields.
 
         Modbus Application Protocol v1.1b3, Write Single Coil echoes the request, so the same value rule holds.
@@ -1744,7 +1750,7 @@ class ModbusResponseFC5(ModbusPdu):
 
         return tuple(found)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the response FC5 PDU to a stream of bytes.
 
         Returns:
@@ -1760,7 +1766,7 @@ class ModbusResponseFC5(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusResponseFC5:
         """Deserialize the response FC5 PDU from a stream of bytes.
 
         Args:
@@ -1810,7 +1816,7 @@ class ModbusRequestFC6(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("output_address", "output_value")
 
-    def __init__(self, output_address, output_value):
+    def __init__(self, output_address: int, output_value: int) -> None:
         """Initialize the Modbus Request FC6 PDU."""
         # Set the instance attributes
         self.output_address = output_address
@@ -1821,11 +1827,11 @@ class ModbusRequestFC6(ModbusPdu):
             fc=0x06,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the request FC6 PDU to a stream of bytes.
 
         Returns:
@@ -1841,7 +1847,7 @@ class ModbusRequestFC6(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusRequestFC6:
         """Deserialize the request FC6 PDU.
 
         Args:
@@ -1891,7 +1897,7 @@ class ModbusResponseFC6(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("output_address", "output_value")
 
-    def __init__(self, output_address, output_value):
+    def __init__(self, output_address: int, output_value: int) -> None:
         """Initialize the Modbus Response FC6 PDU."""
         # Set the instance attributes
         self.output_address = output_address
@@ -1902,11 +1908,11 @@ class ModbusResponseFC6(ModbusPdu):
             fc=0x06,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the response FC6 PDU to a stream of bytes.
 
         Returns:
@@ -1922,7 +1928,7 @@ class ModbusResponseFC6(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusResponseFC6:
         """Deserialize the response FC6 PDU from a stream of bytes.
 
         Args:
@@ -1964,18 +1970,18 @@ class ModbusRequestFC7(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ()
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the Modbus Request FC7 PDU."""
         # Call the parent constructor
         super().__init__(
             fc=0x07,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the request FC7 PDU to a stream of bytes.
 
         Returns:
@@ -1991,7 +1997,7 @@ class ModbusRequestFC7(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusRequestFC7:
         """Deserialize the request FC7 PDU from a stream of bytes.
 
         Args:
@@ -2036,7 +2042,7 @@ class ModbusResponseFC7(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("status",)
 
-    def __init__(self, status):
+    def __init__(self, status: int) -> None:
         """Initialize the Modbus Response FC7 PDU."""
         # Set the instance attributes
         self.status = status
@@ -2046,11 +2052,11 @@ class ModbusResponseFC7(ModbusPdu):
             fc=0x07,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the response FC7 PDU to a stream of bytes.
 
         Returns:
@@ -2066,7 +2072,7 @@ class ModbusResponseFC7(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusResponseFC7:
         """Deserialize the response FC7 PDU from a stream of bytes.
 
         Args:
@@ -2120,7 +2126,7 @@ class ModbusRequestFC8(ModbusPdu):
     PDU_FIELDS = ("sub_func",)
     PDU_TAIL = "subfunc_data"
 
-    def __init__(self, sub_func, subfunc_data):
+    def __init__(self, sub_func: int, subfunc_data: tuple[int, ...]) -> None:
         """Initialize the Modbus Request FC8 PDU."""
         # Set the instance attributes
         self.sub_func = sub_func
@@ -2131,11 +2137,11 @@ class ModbusRequestFC8(ModbusPdu):
             fc=0x08,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT.format(len(self.subfunc_data)))
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the request FC8 PDU to a stream of bytes.
 
         Returns:
@@ -2151,7 +2157,7 @@ class ModbusRequestFC8(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusRequestFC8:
         """Deserialize the request FC8 PDU from a stream of bytes.
 
         Args:
@@ -2216,7 +2222,7 @@ class ModbusResponseFC8(ModbusPdu):
     PDU_FIELDS = ("sub_func",)
     PDU_TAIL = "subfunc_data"
 
-    def __init__(self, sub_func, subfunc_data):
+    def __init__(self, sub_func: int, subfunc_data: tuple[int, ...]) -> None:
         """Initialize the Modbus Response FC8 PDU."""
         # Set the instance attributes
         self.sub_func = sub_func
@@ -2227,11 +2233,11 @@ class ModbusResponseFC8(ModbusPdu):
             fc=0x08,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT.format(len(self.subfunc_data)))
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the response FC8 PDU to a stream of bytes.
 
         Returns:
@@ -2247,7 +2253,7 @@ class ModbusResponseFC8(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusResponseFC8:
         """Deserialize the response FC8 PDU from a stream of bytes.
 
         Args:
@@ -2318,7 +2324,7 @@ class ModbusRequestFC15(ModbusPdu):
     PDU_FIELDS = ("start_addr", "quantity", "byte_count")
     PDU_TAIL = "values"
 
-    def __init__(self, start_addr, quantity, byte_count, values):
+    def __init__(self, start_addr: int, quantity: int, byte_count: int, values: tuple[int, ...]) -> None:
         """Initialize the Modbus Request FC15 PDU."""
         # Set the instance attributes
         self.start_addr = start_addr
@@ -2330,12 +2336,12 @@ class ModbusRequestFC15(ModbusPdu):
             fc=0x0F,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """The PDU's wire length, which varies with the number of values."""
         fmt = self.PDU_FORMAT.format(len(self.values))
         return struct.calcsize(fmt)
 
-    def violations(self):
+    def violations(self) -> tuple[ModbusViolation, ...]:
         """Report the bounds, and the rule the specification ties across fields.
 
         Modbus Application Protocol v1.1b3, Write Multiple Coils: the byte count is the quantity in whole bytes.
@@ -2352,7 +2358,7 @@ class ModbusRequestFC15(ModbusPdu):
             + list(self._fixed_count("byte_count", whole_bytes, "the quantity rounded up to whole bytes"))
         )
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the request FC15 PDU to a stream of bytes.
 
         Returns:
@@ -2368,7 +2374,7 @@ class ModbusRequestFC15(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusRequestFC15:
         """Deserialize the request FC15 PDU from a stream of bytes.
 
         Args:
@@ -2437,7 +2443,7 @@ class ModbusResponseFC15(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x07B0)}
     PDU_FIELDS = ("start_addr", "quantity")
 
-    def __init__(self, start_addr, quantity):
+    def __init__(self, start_addr: int, quantity: int) -> None:
         """Initialize the Modbus Response FC15 PDU."""
         # Set the instance attributes
         self.start_addr = start_addr
@@ -2448,11 +2454,11 @@ class ModbusResponseFC15(ModbusPdu):
             fc=0x0F,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the response FC15 PDU to a stream of bytes.
 
         Returns:
@@ -2468,7 +2474,7 @@ class ModbusResponseFC15(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusResponseFC15:
         """Deserialize the response FC15 PDU from a stream of bytes.
 
         Args:
@@ -2533,7 +2539,7 @@ class ModbusRequestFC16(ModbusPdu):
     PDU_FIELDS = ("start_addr", "quantity", "byte_count")
     PDU_TAIL = "values"
 
-    def __init__(self, start_addr, quantity, byte_count, values):
+    def __init__(self, start_addr: int, quantity: int, byte_count: int, values: tuple[int, ...]) -> None:
         """Initialize the Modbus Request FC16 PDU."""
         # Set the instance attributes
         self.start_addr = start_addr
@@ -2546,12 +2552,12 @@ class ModbusRequestFC16(ModbusPdu):
             fc=0x10,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         fmt = self.PDU_FORMAT.format(len(self.values))
         return struct.calcsize(fmt)
 
-    def violations(self):
+    def violations(self) -> tuple[ModbusViolation, ...]:
         """Report the bounds, and the rule the specification ties across fields.
 
         Modbus Application Protocol v1.1b3, Write Multiple Registers: the byte count is twice the quantity.
@@ -2564,7 +2570,7 @@ class ModbusRequestFC16(ModbusPdu):
             + list(self._fixed_count("byte_count", 2 * self.quantity, "twice the quantity of registers"))
         )
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the request FC16 PDU to a stream of bytes.
 
         Returns:
@@ -2580,7 +2586,7 @@ class ModbusRequestFC16(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusRequestFC16:
         """Deserialize the request FC16 PDU from a stream of bytes.
 
         Args:
@@ -2649,7 +2655,7 @@ class ModbusResponseFC16(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x007B)}
     PDU_FIELDS = ("start_addr", "quantity")
 
-    def __init__(self, start_addr, quantity):
+    def __init__(self, start_addr: int, quantity: int) -> None:
         """Initialize the Modbus Response FC16 PDU."""
         # Set the instance attributes
         self.start_addr = start_addr
@@ -2660,11 +2666,11 @@ class ModbusResponseFC16(ModbusPdu):
             fc=0x10,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the response FC16 PDU to a stream of bytes.
 
         Returns:
@@ -2680,7 +2686,7 @@ class ModbusResponseFC16(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusResponseFC16:
         """Deserialize the response FC16 PDU from a stream of bytes.
 
         Args:
@@ -2739,7 +2745,7 @@ class ModbusRequestFC22(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("ref_addr", "and_mask", "or_mask")
 
-    def __init__(self, ref_addr, and_mask, or_mask):
+    def __init__(self, ref_addr: int, and_mask: int, or_mask: int) -> None:
         """Initialize the Modbus Request FC22 PDU."""
         # Set the instance attributes
         self.ref_addr = ref_addr
@@ -2751,11 +2757,11 @@ class ModbusRequestFC22(ModbusPdu):
             fc=0x16,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the request FC22 PDU to a stream of bytes.
 
         Returns:
@@ -2771,7 +2777,7 @@ class ModbusRequestFC22(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusRequestFC22:
         """Deserialize the request FC22 PDU from a stream of bytes.
 
         Args:
@@ -2824,7 +2830,7 @@ class ModbusResponseFC22(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("ref_addr", "and_mask", "or_mask")
 
-    def __init__(self, ref_addr, and_mask, or_mask):
+    def __init__(self, ref_addr: int, and_mask: int, or_mask: int) -> None:
         """Initialize the Modbus Response FC22 PDU."""
         # Set the instance attributes
         self.ref_addr = ref_addr
@@ -2836,11 +2842,11 @@ class ModbusResponseFC22(ModbusPdu):
             fc=0x16,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the response FC22 PDU to a stream of bytes.
 
         Returns:
@@ -2856,7 +2862,7 @@ class ModbusResponseFC22(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusResponseFC22:
         """Deserialize the response FC22 PDU from a stream of bytes.
 
         Args:
@@ -2931,8 +2937,14 @@ class ModbusRequestFC23(ModbusPdu):
     PDU_TAIL = "write_values"
 
     def __init__(
-        self, read_start_addr, read_quantity, write_start_addr, write_quantity, write_byte_count, write_values
-    ):
+        self,
+        read_start_addr: int,
+        read_quantity: int,
+        write_start_addr: int,
+        write_quantity: int,
+        write_byte_count: int,
+        write_values: tuple[int, ...],
+    ) -> None:
         """Initialize the Modbus Request FC23 PDU."""
         # Set the instance attributes
         self.read_start_addr = read_start_addr
@@ -2947,12 +2959,12 @@ class ModbusRequestFC23(ModbusPdu):
             fc=0x17,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         fmt = self.PDU_FORMAT.format(len(self.write_values))
         return struct.calcsize(fmt)
 
-    def violations(self):
+    def violations(self) -> tuple[ModbusViolation, ...]:
         """Report the bounds, and the rule the specification ties across fields.
 
         Modbus Application Protocol v1.1b3, Read/Write Multiple Registers:
@@ -2972,7 +2984,7 @@ class ModbusRequestFC23(ModbusPdu):
             )
         )
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the request FC23 PDU to a stream of bytes.
 
         Returns:
@@ -2988,7 +3000,7 @@ class ModbusRequestFC23(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusRequestFC23:
         """Deserialize the request FC23 PDU from a stream of bytes.
 
         Args:
@@ -3075,7 +3087,7 @@ class ModbusResponseFC23(ModbusPdu):
     PDU_FIELDS = ("byte_count",)
     PDU_TAIL = "values"
 
-    def __init__(self, byte_count, values):
+    def __init__(self, byte_count: int, values: tuple[int, ...]) -> None:
         """Initialize the Modbus Response FC23 PDU."""
         # Set the instance attributes
         self.byte_count = byte_count
@@ -3086,12 +3098,12 @@ class ModbusResponseFC23(ModbusPdu):
             fc=0x17,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         fmt = self.PDU_FORMAT.format(len(self.values))
         return struct.calcsize(fmt)
 
-    def violations(self):
+    def violations(self) -> tuple[ModbusViolation, ...]:
         """Report the bounds, and the rule the specification ties across fields.
 
         Modbus Application Protocol v1.1b3, Read/Write Multiple Registers: the byte count is twice the registers read.
@@ -3104,7 +3116,7 @@ class ModbusResponseFC23(ModbusPdu):
             + list(self._fixed_count("byte_count", 2 * len(self.values), "twice the registers read"))
         )
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the response FC23 PDU to a stream of bytes.
 
         Returns:
@@ -3120,7 +3132,7 @@ class ModbusResponseFC23(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusResponseFC23:
         """Deserialize the response FC23 PDU from a stream of bytes.
 
         Args:
@@ -3187,7 +3199,7 @@ class ModbusRequestFC43(ModbusPdu):
     PDU_FIELDS = ("mei_type",)
     PDU_TAIL = "mei_data"
 
-    def __init__(self, mei_type, mei_data):
+    def __init__(self, mei_type: int, mei_data: tuple[int, ...]) -> None:
         """Initialize the Modbus Request FC43 PDU."""
         # Set the instance attributes
         self.mei_type = mei_type
@@ -3198,12 +3210,12 @@ class ModbusRequestFC43(ModbusPdu):
             fc=0x2B,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         fmt = self.PDU_FORMAT.format(len(self.mei_data))
         return struct.calcsize(fmt)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the request FC43 PDU to a stream of bytes.
 
         Returns:
@@ -3219,7 +3231,7 @@ class ModbusRequestFC43(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusRequestFC43:
         """Deserialize the request FC43 PDU from a stream of bytes.
 
         Args:
@@ -3285,7 +3297,7 @@ class ModbusResponseFC43(ModbusPdu):
     PDU_FIELDS = ("mei_type",)
     PDU_TAIL = "mei_data"
 
-    def __init__(self, mei_type, mei_data):
+    def __init__(self, mei_type: int, mei_data: tuple[int, ...]) -> None:
         """Initialize the Modbus Response FC43 PDU."""
         # Set the instance attributes
         self.mei_type = mei_type
@@ -3296,12 +3308,12 @@ class ModbusResponseFC43(ModbusPdu):
             fc=0x2B,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the length of the PDU data."""
         fmt = self.PDU_FORMAT.format(len(self.mei_data))
         return struct.calcsize(fmt)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the response FC43 PDU to a stream of bytes.
 
         Returns:
@@ -3317,7 +3329,7 @@ class ModbusResponseFC43(ModbusPdu):
         return stream
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusResponseFC43:
         """Deserialize the response FC43 PDU from a stream of bytes.
 
         Args:
@@ -3361,7 +3373,7 @@ CRC_FMT = "<H"
 CRC_SIZE = struct.calcsize(CRC_FMT)
 
 
-def calc_crc16(data):
+def calc_crc16(data: bytes | bytearray) -> int:
     """Compute the CRC-16/MODBUS checksum of a buffer.
 
     The result is the checksum as an ordinary integer. It is the caller's job
@@ -3392,7 +3404,7 @@ def calc_crc16(data):
     return crc
 
 
-def validate_crc(stream, packet_name):
+def validate_crc(stream: bytes, packet_name: str) -> int:
     """Check the trailing CRC of an RTU ADU against its own payload.
 
     Args:
@@ -3423,7 +3435,7 @@ def validate_crc(stream, packet_name):
         )
         raise ModbusPacketError(message)
 
-    return received
+    return int(received)
 
 
 class ModbusRtuRequest(ModbusPacketAbc):
@@ -3433,7 +3445,7 @@ class ModbusRtuRequest(ModbusPacketAbc):
 
     Args:
         slave_id (int)      : The slave id
-        pdu (ModbusPduAbc)  : The Modbus Request PDU
+        pdu (ModbusPdu) : The Modbus Request PDU
 
     Example:
         >>> pdu = ModbusRequestFC1(start_addr=1, quantity=2)
@@ -3443,7 +3455,7 @@ class ModbusRtuRequest(ModbusPacketAbc):
         >>> assert request1 == request2
     """
 
-    _pdu_parser = ModbusPduParser
+    _pdu_parser: ClassVar[type[ModbusPduParserAbc]] = ModbusPduParser
 
     # Modicon Modbus Protocol Reference Guide PI-MBUS-300: 0 is the broadcast
     # every device recognises, 1 to 247 address one, and 248 to 255 are invalid.
@@ -3452,20 +3464,20 @@ class ModbusRtuRequest(ModbusPacketAbc):
     # The ADU carries a PDU, whose findings travel with its own.
     PARTS: ClassVar[tuple[str, ...]] = ("pdu",)
 
-    def __init__(self, slave_id, pdu):
+    def __init__(self, slave_id: int, pdu: ModbusPdu) -> None:
         """Initialize the Modbus RTU Request Packet."""
         # Set the instance attributes
         self.slave_id = slave_id
         self.pdu = pdu
         self.crc = 0xFFFF
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a string representation of the Modbus RTU Request Packet."""
         msg = "MODBUS RTU REQ: (Slave ID: {0}, {1}, CRC: {2})"
         return msg.format(self.slave_id, self.pdu, self.crc)
 
     @classmethod
-    def get_parser(cls):
+    def get_parser(cls) -> type[ModbusPduParserAbc]:
         """Get the PDU parser.
 
         Returns:
@@ -3474,7 +3486,7 @@ class ModbusRtuRequest(ModbusPacketAbc):
         return cls._pdu_parser
 
     @classmethod
-    def set_parser(cls, parser):
+    def set_parser(cls, parser: type[ModbusPduParserAbc]) -> None:
         """Set the PDU parser.
 
         Args:
@@ -3486,11 +3498,11 @@ class ModbusRtuRequest(ModbusPacketAbc):
 
         cls._pdu_parser = parser
 
-    def set_crc(self, value):
+    def set_crc(self, value: int) -> None:
         """Set the Modbus CRC."""
         self.crc = value
 
-    def calc_crc(self):
+    def calc_crc(self) -> int:
         """Calculate the Modbus CRC over the slave id and the PDU.
 
         The checksum covers everything ahead of it in the ADU. The result is
@@ -3503,7 +3515,7 @@ class ModbusRtuRequest(ModbusPacketAbc):
 
         return self.crc
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the Modbus RTU ADU to a stream of bytes.
 
         The checksum is recomputed from the current slave id and PDU, so the
@@ -3528,7 +3540,7 @@ class ModbusRtuRequest(ModbusPacketAbc):
         return slave_id + pdu + crc
 
     @classmethod
-    def deserialize(cls, stream, verify_crc=True):
+    def deserialize(cls, stream: bytes, verify_crc: bool = True) -> ModbusRtuRequest:
         """Deserialize the Modbus RTU Packet from a stream of bytes.
 
         Args:
@@ -3577,7 +3589,7 @@ class ModbusRtuResponse(ModbusPacketAbc):
 
     Args:
         slave_id (int)      : The slave id
-        pdu (ModbusPduAbc)  : The Modbus Response PDU
+        pdu (ModbusPdu) : The Modbus Response PDU
 
     Example:
         >>> pdu = ModbusResponseFC1(byte_count=2, output_status=(1, 2))
@@ -3587,7 +3599,7 @@ class ModbusRtuResponse(ModbusPacketAbc):
         >>> assert request1 == request2
     """
 
-    _pdu_parser = ModbusPduParser
+    _pdu_parser: ClassVar[type[ModbusPduParserAbc]] = ModbusPduParser
 
     # Modicon Modbus Protocol Reference Guide PI-MBUS-300: 0 is the broadcast
     # every device recognises, 1 to 247 address one, and 248 to 255 are invalid.
@@ -3596,20 +3608,20 @@ class ModbusRtuResponse(ModbusPacketAbc):
     # The ADU carries a PDU, whose findings travel with its own.
     PARTS: ClassVar[tuple[str, ...]] = ("pdu",)
 
-    def __init__(self, slave_id, pdu):
+    def __init__(self, slave_id: int, pdu: ModbusPdu) -> None:
         """Initialize the Modbus RTU Response Packet."""
         # Set the instance attributes
         self.slave_id = slave_id
         self.pdu = pdu
         self.crc = 0xFFFF
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a string representation of the Modbus RTU Response Packet."""
         msg = "MODBUS RTU RSP: (Slave ID: {0}, {1}, CRC: {2})"
         return msg.format(self.slave_id, self.pdu, self.crc)
 
     @classmethod
-    def get_parser(cls):
+    def get_parser(cls) -> type[ModbusPduParserAbc]:
         """Get the PDU parser.
 
         Returns:
@@ -3618,7 +3630,7 @@ class ModbusRtuResponse(ModbusPacketAbc):
         return cls._pdu_parser
 
     @classmethod
-    def set_parser(cls, parser):
+    def set_parser(cls, parser: type[ModbusPduParserAbc]) -> None:
         """Set the PDU parser.
 
         Args:
@@ -3630,11 +3642,11 @@ class ModbusRtuResponse(ModbusPacketAbc):
 
         cls._pdu_parser = parser
 
-    def set_crc(self, value):
+    def set_crc(self, value: int) -> None:
         """Set the Modbus CRC."""
         self.crc = value
 
-    def calc_crc(self):
+    def calc_crc(self) -> int:
         """Calculate the Modbus CRC over the slave id and the PDU.
 
         The checksum covers everything ahead of it in the ADU. The result is
@@ -3647,7 +3659,7 @@ class ModbusRtuResponse(ModbusPacketAbc):
 
         return self.crc
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the Modbus RTU Packet to a stream of bytes.
 
         The checksum is recomputed from the current slave id and PDU, so the
@@ -3672,7 +3684,7 @@ class ModbusRtuResponse(ModbusPacketAbc):
         return slave_id + pdu + crc
 
     @classmethod
-    def deserialize(cls, stream, verify_crc=True):
+    def deserialize(cls, stream: bytes, verify_crc: bool = True) -> ModbusRtuResponse:
         """Deserialize the Modbus RTU Packet.
 
         Args:
@@ -3719,7 +3731,7 @@ class ModbusRtuResponse(ModbusPacketAbc):
 ################################################################################
 
 
-def validate_mbap_length(header, stream):
+def validate_mbap_length(header: ModbusHeader, stream: bytes) -> None:
     """Check the MBAP length field against the bytes actually received.
 
     The length field counts the unit identifier plus the PDU, so a well-formed
@@ -3753,8 +3765,8 @@ class ModbusTcpPacket(ModbusPacketAbc):
     case the message is just forwarded without any processing.
 
     Args:
-        header (ModbusHeaderAbc)    : The Modbus TCP Header
-        pdu (ModbusPduAbc)          : The Modbus Request PDU
+        header (ModbusHeader) : The Modbus TCP Header
+        pdu (ModbusPdu)       : The Modbus Request PDU
 
     Example:
         >>> # Create the required PDU
@@ -3785,18 +3797,18 @@ class ModbusTcpPacket(ModbusPacketAbc):
     # The specification states no bound on this packet's fields.
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
 
-    def __init__(self, header, pdu):
+    def __init__(self, header: ModbusHeader, pdu: ModbusPdu) -> None:
         """Initialize the Modbus TCP Packet."""
         # Set the instance attributes
         self.header = header
         self.pdu = pdu
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a string representation of the Modbus TCP Request Packet."""
         msg = "MODBUS TCP PCKT -> | {0} | {1}"
         return msg.format(self.header, self.pdu)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the generic Modbus TCP Packet to a stream of bytes.
 
         Returns:
@@ -3813,7 +3825,7 @@ class ModbusTcpPacket(ModbusPacketAbc):
         return header_bytes + pdu_bytes
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusTcpPacket:
         """Deserialize the generic Modbus TCP Packet.
 
         Args:
@@ -3850,8 +3862,8 @@ class ModbusTcpRequest(ModbusPacketAbc):
     instance whose attributes can be accessed and used to generate a response.
 
     Args:
-        header (ModbusHeaderAbc)   : The Modbus TCP Header
-        pdu (ModbusPduAbc)         : The Modbus Request PDU
+        header (ModbusHeader) : The Modbus TCP Header
+        pdu (ModbusPdu)       : The Modbus Request PDU
 
     Example:
         >>> # Create the required PDU
@@ -3873,7 +3885,7 @@ class ModbusTcpRequest(ModbusPacketAbc):
         >>> assert packet1 == packet2
     """
 
-    _pdu_parser = ModbusPduParser
+    _pdu_parser: ClassVar[type[ModbusPduParserAbc]] = ModbusPduParser
 
     # The specification states no bound on this packet's fields.
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
@@ -3881,19 +3893,19 @@ class ModbusTcpRequest(ModbusPacketAbc):
     # The ADU carries a header and a PDU, whose findings travel with its own.
     PARTS: ClassVar[tuple[str, ...]] = ("header", "pdu")
 
-    def __init__(self, header, pdu):
+    def __init__(self, header: ModbusHeader, pdu: ModbusPdu) -> None:
         """Initialize the Modbus TCP Request Packet."""
         # Set the instance attributes
         self.header = header
         self.pdu = pdu
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a string representation of the Modbus TCP Request Packet."""
         msg = "MODBUS TCP REQ -> | {0} | {1}"
         return msg.format(self.header, self.pdu)
 
     @classmethod
-    def get_parser(cls):
+    def get_parser(cls) -> type[ModbusPduParserAbc]:
         """Get the PDU parser.
 
         Returns:
@@ -3902,7 +3914,7 @@ class ModbusTcpRequest(ModbusPacketAbc):
         return cls._pdu_parser
 
     @classmethod
-    def set_parser(cls, parser):
+    def set_parser(cls, parser: type[ModbusPduParserAbc]) -> None:
         """Set the PDU parser.
 
         Args:
@@ -3914,7 +3926,7 @@ class ModbusTcpRequest(ModbusPacketAbc):
 
         cls._pdu_parser = parser
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the Modbus TCP Packet to a stream of bytes.
 
         Returns:
@@ -3931,7 +3943,7 @@ class ModbusTcpRequest(ModbusPacketAbc):
         return header_bytes + pdu_bytes
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusTcpRequest:
         """Deserialize the Modbus TCP Packet.
 
         Args:
@@ -3969,8 +3981,8 @@ class ModbusTcpResponse(ModbusPacketAbc):
     of the client.
 
     Args:
-        header (ModbusHeaderAbc)   : The Modbus TCP Header
-        pdu (ModbusPduAbc)         : The Modbus Response PDU
+        header (ModbusHeader) : The Modbus TCP Header
+        pdu (ModbusPdu)       : The Modbus Response PDU
 
     Example:
         >>> # Create the required PDU
@@ -3992,7 +4004,7 @@ class ModbusTcpResponse(ModbusPacketAbc):
         >>> assert packet1 == packet2
     """
 
-    _pdu_parser = ModbusPduParser
+    _pdu_parser: ClassVar[type[ModbusPduParserAbc]] = ModbusPduParser
 
     # The specification states no bound on this packet's fields.
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
@@ -4000,19 +4012,19 @@ class ModbusTcpResponse(ModbusPacketAbc):
     # The ADU carries a header and a PDU, whose findings travel with its own.
     PARTS: ClassVar[tuple[str, ...]] = ("header", "pdu")
 
-    def __init__(self, header, pdu):
+    def __init__(self, header: ModbusHeader, pdu: ModbusPdu) -> None:
         """Initialize the Modbus TCP Response Packet."""
         # Set the instance attributes
         self.header = header
         self.pdu = pdu
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a string representation of the Modbus TCP Response Packet."""
         msg = "MODBUS TCP RSP -> | {0} | {1}"
         return msg.format(self.header, self.pdu)
 
     @classmethod
-    def get_parser(cls):
+    def get_parser(cls) -> type[ModbusPduParserAbc]:
         """Get the PDU parser.
 
         Returns:
@@ -4021,7 +4033,7 @@ class ModbusTcpResponse(ModbusPacketAbc):
         return cls._pdu_parser
 
     @classmethod
-    def set_parser(cls, parser):
+    def set_parser(cls, parser: type[ModbusPduParserAbc]) -> None:
         """Set the PDU parser.
 
         Args:
@@ -4033,7 +4045,7 @@ class ModbusTcpResponse(ModbusPacketAbc):
 
         cls._pdu_parser = parser
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         """Serialize the Modbus TCP Packet to a stream of bytes.
 
         Returns:
@@ -4050,7 +4062,7 @@ class ModbusTcpResponse(ModbusPacketAbc):
         return header_bytes + pdu_bytes
 
     @classmethod
-    def deserialize(cls, stream):
+    def deserialize(cls, stream: bytes) -> ModbusTcpResponse:
         """Deserialize the Modbus TCP Packet.
 
         Args:
