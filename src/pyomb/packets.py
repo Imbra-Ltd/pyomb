@@ -296,9 +296,9 @@ class ModbusHeader(ModbusPacketAbc):
         try:
             stream = struct.pack(self.HEADER_FMT, self.trans_id, self.prot_id, self.length, self.unit_id)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error serializing the Modbus Header: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -316,9 +316,9 @@ class ModbusHeader(ModbusPacketAbc):
             # Unpack the header bytes
             header = struct.unpack(cls.HEADER_FMT, stream)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the Modbus Header: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return cls(trans_id=header[0], prot_id=header[1], length=header[2], unit_id=header[3])
 
@@ -506,9 +506,9 @@ class ModbusPdu(ModbusPacketAbc):
             # Pack the data using the format string
             packed_bytes = struct.pack(fmt, self.fc, *self.data)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error serializing the Modbus PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return the packed bytes
         return packed_bytes
@@ -537,9 +537,9 @@ class ModbusPdu(ModbusPacketAbc):
             # The rest of the bytes are the data
             data = pdu[1:]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the Modbus PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(fc, data)
@@ -684,9 +684,9 @@ class ModbusPduParser(ModbusPduParserAbc):
             # Requests have the function code in the range 0x0000 to 0x007F
             pdu = cls._registry.get(func_code, ModbusPdu)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error parsing the Modbus Request: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return the deserialized PDU
         return pdu.deserialize(stream)
@@ -711,9 +711,9 @@ class ModbusPduParser(ModbusPduParserAbc):
                 # carries 0x8000 to 0x807F, 0x8000 being the error PDU.
                 pdu = cls._registry.get(func_code + 0x8000, ModbusPdu)
 
-        except Exception as e:
+        except (ModbusPacketError, struct.error) as e:
             message = f"Error parsing the Modbus Response: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return the deserialized PDU
         return pdu.deserialize(stream)
@@ -787,9 +787,9 @@ class ModbusError(ModbusPdu):
             # Pack the exception code
             exc_code = struct.pack(">B", self.exc_code)
 
-        except Exception as e:
+        except (struct.error, TypeError) as e:
             message = f"Error serializing the Modbus Error PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return the packed bytes
         return func_code + exc_code
@@ -814,9 +814,9 @@ class ModbusError(ModbusPdu):
             # Get the exception code
             exc_code = pdu[1]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the Modbus Error PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(fc=func_code, exc_code=exc_code)
@@ -875,9 +875,9 @@ class ModbusRequestFC1(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT)
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC1 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -895,9 +895,9 @@ class ModbusRequestFC1(ModbusPdu):
             # Unpack the PDU bytes
             pdu = struct.unpack(cls.PDU_FORMAT, stream)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC1 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(start_addr=pdu[1], quantity=pdu[2])
@@ -972,9 +972,9 @@ class ModbusResponseFC1(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT.format(self.byte_count))
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC1 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -1004,9 +1004,9 @@ class ModbusResponseFC1(ModbusPdu):
             # Extract the output status
             output_status = pdu[2:]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC1 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return new instance
         return cls(byte_count=byte_count, output_status=output_status)
@@ -1066,9 +1066,9 @@ class ModbusRequestFC2(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT)
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC2 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -1086,9 +1086,9 @@ class ModbusRequestFC2(ModbusPdu):
             # Unpack the PDU bytes
             pdu = struct.unpack(cls.PDU_FORMAT, stream)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC2 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(start_addr=pdu[1], quantity=pdu[2])
@@ -1164,9 +1164,9 @@ class ModbusResponseFC2(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT.format(self.byte_count))
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC2 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -1196,9 +1196,9 @@ class ModbusResponseFC2(ModbusPdu):
             # Extract the input status
             input_status = pdu[2:]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC2 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return cls(byte_count=byte_count, input_status=input_status)
 
@@ -1256,9 +1256,9 @@ class ModbusRequestFC3(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT)
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC3 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -1276,9 +1276,9 @@ class ModbusRequestFC3(ModbusPdu):
             # Unpack the PDU from the stream of bytes
             pdu = struct.unpack(cls.PDU_FORMAT, stream)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC3 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(start_addr=pdu[1], quantity=pdu[2])
@@ -1354,9 +1354,9 @@ class ModbusResponseFC3(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT.format(len(self.values)))
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC3 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -1387,9 +1387,9 @@ class ModbusResponseFC3(ModbusPdu):
             # Extract the register values
             values = pdu[2:]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC3 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return new instance
         return cls(byte_count=byte_count, values=values)
@@ -1448,9 +1448,9 @@ class ModbusRequestFC4(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT)
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC4 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -1468,9 +1468,9 @@ class ModbusRequestFC4(ModbusPdu):
             # Unpack the PDU from the stream of bytes
             pdu = struct.unpack(cls.PDU_FORMAT, stream)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC4 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(start_addr=pdu[1], quantity=pdu[2])
@@ -1546,9 +1546,9 @@ class ModbusResponseFC4(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT.format(len(self.values)))
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC4 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -1579,9 +1579,9 @@ class ModbusResponseFC4(ModbusPdu):
             # Extract the register values
             values = pdu[2:]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC4 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return new instance
         return cls(byte_count=byte_count, values=values)
@@ -1656,9 +1656,9 @@ class ModbusRequestFC5(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT)
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC5 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -1676,9 +1676,9 @@ class ModbusRequestFC5(ModbusPdu):
             # Unpack the PDU from the stream of bytes
             pdu = struct.unpack(cls.PDU_FORMAT, stream)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC5 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(output_address=pdu[1], output_value=pdu[2])
@@ -1753,9 +1753,9 @@ class ModbusResponseFC5(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT)
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC5 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -1773,9 +1773,9 @@ class ModbusResponseFC5(ModbusPdu):
             # Unpack the PDU from the stream of bytes
             pdu = struct.unpack(">BHH", stream)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC5 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(output_address=pdu[1], output_value=pdu[2])
@@ -1834,9 +1834,9 @@ class ModbusRequestFC6(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT)
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC6 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -1854,9 +1854,9 @@ class ModbusRequestFC6(ModbusPdu):
             # Unpack the PDU from the stream of bytes
             pdu = struct.unpack(cls.PDU_FORMAT, stream)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC6 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(output_address=pdu[1], output_value=pdu[2])
@@ -1915,9 +1915,9 @@ class ModbusResponseFC6(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT)
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC6 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -1935,9 +1935,9 @@ class ModbusResponseFC6(ModbusPdu):
             # Unpack the PDU from the stream of bytes
             pdu = struct.unpack(cls.PDU_FORMAT, stream)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC6 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(output_address=pdu[1], output_value=pdu[2])
@@ -1984,9 +1984,9 @@ class ModbusRequestFC7(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT)
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC7 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -2004,9 +2004,9 @@ class ModbusRequestFC7(ModbusPdu):
             # Unpack the PDU from the stream of bytes
             struct.unpack(cls.PDU_FORMAT, stream)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC7 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return cls()
 
@@ -2059,9 +2059,9 @@ class ModbusResponseFC7(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT)
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC7 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -2079,9 +2079,9 @@ class ModbusResponseFC7(ModbusPdu):
             # Unpack the pdu
             pdu = struct.unpack(cls.PDU_FORMAT, stream)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC7 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return new instance
         return cls(status=pdu[1])
@@ -2144,9 +2144,9 @@ class ModbusRequestFC8(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT.format(len(self.subfunc_data)))
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC8 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -2175,9 +2175,9 @@ class ModbusRequestFC8(ModbusPdu):
             # Get the data
             subfunc_data = pdu[2:]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC8 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return new instance
         return cls(sub_func=sub_func, subfunc_data=subfunc_data)
@@ -2240,9 +2240,9 @@ class ModbusResponseFC8(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT.format(len(self.subfunc_data)))
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC8 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -2274,9 +2274,9 @@ class ModbusResponseFC8(ModbusPdu):
             # Get the data
             subfunc_data = pdu[2:]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC8 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return new instance
         return cls(sub_func=sub_func, subfunc_data=subfunc_data)
@@ -2361,9 +2361,9 @@ class ModbusRequestFC15(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT.format(len(self.values)))
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC15 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -2400,9 +2400,9 @@ class ModbusRequestFC15(ModbusPdu):
             # Extract the values
             values = pdu[4:]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC15 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return new instance
         return cls(start_addr=start_addr, quantity=quantity, byte_count=byte_count, values=values)
@@ -2461,9 +2461,9 @@ class ModbusResponseFC15(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT)
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC15 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -2487,9 +2487,9 @@ class ModbusResponseFC15(ModbusPdu):
             # Get the quantity of outputs
             quantity = pdu[2]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC15 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(start_addr=start_addr, quantity=quantity)
@@ -2573,9 +2573,9 @@ class ModbusRequestFC16(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT.format(len(self.values)))
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC16 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -2612,9 +2612,9 @@ class ModbusRequestFC16(ModbusPdu):
             # Extract the values
             values = pdu[4:]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC16 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return new instance
         return cls(start_addr=start_addr, quantity=quantity, byte_count=byte_count, values=values)
@@ -2673,9 +2673,9 @@ class ModbusResponseFC16(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT)
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC16 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -2699,9 +2699,9 @@ class ModbusResponseFC16(ModbusPdu):
             # Get the quantity of outputs
             quantity = pdu[2]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC16 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(start_addr=start_addr, quantity=quantity)
@@ -2764,9 +2764,9 @@ class ModbusRequestFC22(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT)
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC22 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -2784,9 +2784,9 @@ class ModbusRequestFC22(ModbusPdu):
             # Unpack the PDU from the stream of bytes
             pdu = struct.unpack(cls.PDU_FORMAT, stream)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC22 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(ref_addr=pdu[1], and_mask=pdu[2], or_mask=pdu[3])
@@ -2849,9 +2849,9 @@ class ModbusResponseFC22(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT)
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC22 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -2869,9 +2869,9 @@ class ModbusResponseFC22(ModbusPdu):
             # Unpack the PDU from the stream of bytes
             pdu = struct.unpack(cls.PDU_FORMAT, stream)
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC22 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(ref_addr=pdu[1], and_mask=pdu[2], or_mask=pdu[3])
@@ -2981,9 +2981,9 @@ class ModbusRequestFC23(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT.format(len(self.write_values)))
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC23 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -3027,9 +3027,9 @@ class ModbusRequestFC23(ModbusPdu):
             # Extract the write values
             write_values = pdu[6:]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC23 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return new instance
         return cls(
@@ -3113,9 +3113,9 @@ class ModbusResponseFC23(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT.format(len(self.values)))
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC23 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -3146,9 +3146,9 @@ class ModbusResponseFC23(ModbusPdu):
             # Extract the register values
             values = pdu[2:]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC23 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return new instance
         return cls(byte_count=byte_count, values=values)
@@ -3212,9 +3212,9 @@ class ModbusRequestFC43(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT.format(len(self.mei_data)))
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC43 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -3244,9 +3244,9 @@ class ModbusRequestFC43(ModbusPdu):
             # Get the MEI data
             mei_data = pdu[2:]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC43 Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return new instance
         return cls(mei_type=mei_type, mei_data=mei_data)
@@ -3310,9 +3310,9 @@ class ModbusResponseFC43(ModbusPdu):
         try:
             stream = self._pack(self.PDU_FORMAT.format(len(self.mei_data)))
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error serializing the FC43 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return stream
 
@@ -3341,9 +3341,9 @@ class ModbusResponseFC43(ModbusPdu):
             # Get the MEI data
             mei_data = pdu[2:]
 
-        except Exception as e:
+        except struct.error as e:
             message = f"Error deserializing the FC43 Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return new instance
         return cls(mei_type=mei_type, mei_data=mei_data)
@@ -3520,9 +3520,9 @@ class ModbusRtuRequest(ModbusPacketAbc):
             self.crc = calc_crc16(slave_id + pdu)
             crc = struct.pack(CRC_FMT, self.crc)
 
-        except Exception as e:
+        except (ModbusPacketError, struct.error) as e:
             message = f"Error serializing the RTU Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return the packed bytes
         return slave_id + pdu + crc
@@ -3562,9 +3562,9 @@ class ModbusRtuRequest(ModbusPacketAbc):
             packet = cls(slave_id=slave_id, pdu=pdu)
             packet.set_crc(crc)
 
-        except Exception as e:
+        except (ModbusPacketError, struct.error) as e:
             message = f"Error deserializing the RTU Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return the packet
         return packet
@@ -3664,9 +3664,9 @@ class ModbusRtuResponse(ModbusPacketAbc):
             self.crc = calc_crc16(slave_id + pdu)
             crc = struct.pack(CRC_FMT, self.crc)
 
-        except Exception as e:
+        except (ModbusPacketError, struct.error) as e:
             message = f"Error serializing the RTU Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return the packed bytes
         return slave_id + pdu + crc
@@ -3706,9 +3706,9 @@ class ModbusRtuResponse(ModbusPacketAbc):
             packet = cls(slave_id=slave_id, pdu=pdu)
             packet.set_crc(crc)
 
-        except Exception as e:
+        except (ModbusPacketError, struct.error) as e:
             message = f"Error deserializing the RTU Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return the packet
         return packet
@@ -3806,9 +3806,9 @@ class ModbusTcpPacket(ModbusPacketAbc):
             header_bytes = self.header.serialize()
             pdu_bytes = self.pdu.serialize()
 
-        except Exception as e:
+        except (AttributeError, ModbusPacketError) as e:
             message = f"Error serializing the TCP Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return header_bytes + pdu_bytes
 
@@ -3832,9 +3832,9 @@ class ModbusTcpPacket(ModbusPacketAbc):
             # Get the concrete request PDU
             pdu = ModbusPdu.deserialize(stream[ModbusHeader.SIZE :])
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error deserializing the TCP Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(header=header, pdu=pdu)
@@ -3924,9 +3924,9 @@ class ModbusTcpRequest(ModbusPacketAbc):
             header_bytes = self.header.serialize()
             pdu_bytes = self.pdu.serialize()
 
-        except Exception as e:
+        except (AttributeError, ModbusPacketError) as e:
             message = f"Error serializing the TCP Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return header_bytes + pdu_bytes
 
@@ -3950,9 +3950,9 @@ class ModbusTcpRequest(ModbusPacketAbc):
             # Get the concrete request PDU
             pdu = cls._pdu_parser.parse_request(stream[ModbusHeader.SIZE :])
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error deserializing the TCP Request PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(header=header, pdu=pdu)
@@ -4043,9 +4043,9 @@ class ModbusTcpResponse(ModbusPacketAbc):
             header_bytes = self.header.serialize()
             pdu_bytes = self.pdu.serialize()
 
-        except Exception as e:
+        except (AttributeError, ModbusPacketError) as e:
             message = f"Error serializing the TCP Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         return header_bytes + pdu_bytes
 
@@ -4069,9 +4069,9 @@ class ModbusTcpResponse(ModbusPacketAbc):
             # Get the concrete request PDU
             pdu = cls._pdu_parser.parse_response(stream[ModbusHeader.SIZE :])
 
-        except Exception as e:
+        except ModbusPacketError as e:
             message = f"Error deserializing the TCP Response PDU: {e}"
-            raise ModbusPacketError(message)
+            raise ModbusPacketError(message) from e
 
         # Return a new instance of the class
         return cls(header=header, pdu=pdu)
