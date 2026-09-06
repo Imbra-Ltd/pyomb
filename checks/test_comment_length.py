@@ -8,12 +8,21 @@ rule.
 
 The bound is on prose, not on the contract: a docstring's `Args:`, `Returns:`
 and `Raises:` sections are excluded, so annotating a wide signature never
-costs anything here. Whether a comment was needed at all is a judgement this
-cannot reach, and review keeps it.
+costs anything here.
+
+Four other things are excluded for one reason -- none of them states any
+reasoning the bound could relocate. A licence header is a legal notice. A
+comment trailing code is one label on one line. A banner ruled top and bottom
+is navigation. A wire-layout table's rows are the frame's length rather than
+the author's.
+
+Whether a comment was needed at all is a judgement this cannot reach, and
+review keeps it.
 """
 
 import ast
 import pathlib
+import re
 import subprocess  # nosec B404
 import tokenize
 import unittest
@@ -22,7 +31,7 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 
 # The directories under the bound. Each migration slice adds one as it cleans
 # it, so the gate and the tree widen together.
-ROOTS = ("scripts", "examples")
+ROOTS = ("src", "scripts", "examples")
 
 COMMENT_LINES = 2
 
@@ -47,9 +56,17 @@ OWNS_A_DOCSTRING = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunction
 # explanation, so its length is not this project's to choose.
 LICENCE = ("Copyright", "SPDX-License-Identifier")
 
-# What the two roots held when this floor was set: 8 modules on 2026-09-05.
+# A banner ruled top and bottom is navigation through a long module. It states
+# no reasoning, so there is nothing in it the bound could relocate.
+RULE = "#####"
+
+# One row of a wire-layout table, and the ellipsis standing in for the rows
+# between. Spelled without a shorthand escape, which can be lost into a file.
+LAYOUT_ROW = re.compile(r"^-[ ]+(Byte(?![A-Za-z0-9])|[.]{3}$)")
+
+# What the roots held when this floor was set: 17 modules on 2026-09-05.
 # Files churn, so the floor takes a margin below the measured count.
-FILES_AT_LEAST = 5
+FILES_AT_LEAST = 11
 
 REMEDY = (
     "Read the block, then delete it if it restates the code, move it to "
@@ -83,10 +100,13 @@ def comment_blocks(path):
     """Runs of consecutive comment lines in one module.
 
     Read through `tokenize` rather than line-wise, so a `#` inside a string or
-    a docstring is not mistaken for a comment. Two things are deliberately not
-    blocks: a licence header, which is a legal notice rather than an
-    explanation, and a comment trailing code, which is one label on one line
-    however many of them stack up.
+    a docstring is not mistaken for a comment.
+
+    Three things are deliberately not blocks, and none of them states any
+    reasoning the bound could relocate: a licence header, which is a legal
+    notice; a comment trailing code, which is one label on one line however
+    many stack up; and a banner ruled top and bottom, which is navigation
+    through a long module.
 
     Args:
         path (str) : Repository-relative path to a Python module
@@ -123,11 +143,36 @@ def comment_blocks(path):
     if runs and runs[0][0] == 1 and any(word in source[0] for word in LICENCE):
         runs = runs[1:]
 
-    return runs
+    return [(start, length) for start, length in runs if not is_banner(source, start, length)]
+
+
+def is_banner(source, start, length):
+    """Whether a run is a section banner rather than an explanation.
+
+    Ruled top and bottom is the narrowest property that separates the two. A
+    run merely containing a rule line is not enough -- that would exempt any
+    paragraph an author underlined.
+
+    Args:
+        source (list[str]) : The module's lines
+        start (int) : The run's first line, 1-based
+        length (int) : How many lines the run spans
+
+    Returns:
+        bool : True where the run opens and closes with a rule line
+    """
+
+    body = [source[number - 1].strip() for number in range(start, start + length)]
+
+    return len(body) > 2 and body[0].startswith(RULE) and body[-1].startswith(RULE)
 
 
 def docstring_prose(text):
     """How many lines of explanation a docstring carries.
+
+    A wire-layout table is not explanation. Its rows name byte offsets from a
+    published specification, so their number is the frame's length rather than
+    the author's, and there is nothing in one the bound could relocate.
 
     Args:
         text (str) : The docstring, uncleaned
@@ -143,7 +188,7 @@ def docstring_prose(text):
             lines = lines[:number]
             break
 
-    return len([line for line in lines if line.strip()])
+    return len([line for line in lines if line.strip() and not LAYOUT_ROW.match(line.strip())])
 
 
 def docstrings(path):

@@ -428,6 +428,55 @@ comparison on the value agrees with the byte-swapped frame a device refuses.
 `examples/checksum_an_rtu_frame.py` runs the walkthrough against frames written
 out from published sources.
 
+### 2.4 The TLS floor
+
+`TlsSettings.MINIMUM_VERSION` is TLS 1.2, which MB-TCP-Security v21 requires
+(R-32) while forbidding a negotiation down to TLS 1.1, TLS 1.0 or SSL 3.0
+(R-34). The floor is the specification's rather than this project's
+preference.
+
+Declaring it matters even where OpenSSL already defaults there. That default
+is a property of the linked library and its security level, so an older or
+differently configured build answers differently and nothing in this library
+would notice — which is why the regression test substitutes a context starting
+at TLS 1.0 and asserts the code raises it, rather than asserting the value on
+the development machine's own context.
+
+It is assigned after the caller's `options`, which are OR-ed in and can only
+add a restriction. Nothing a caller passes, including no mask at all, drops
+the session below the floor.
+
+### 2.5 The exception hierarchy
+
+`src/pyomb/errors.py` defines one class per scenario a caller may want to react
+to, so a caller catches the branch it cares about rather than matching on a
+message.
+
+```text
+Exception (Python standard library)
+ +-- ...
+ +-- ModbusBaseError
+     +-- ModbusNetworkError
+     +-- ModbusPacketError
+     +-- ModbusProtocolError
+        +-- ModbusIllegalFunction
+        +-- ModbusIllegalDataAddress
+        +-- ModbusIllegalDataValue
+        +-- ModbusSlaveDeviceFailure
+        +-- ModbusAcknowledge
+        +-- ModbusSlaveDeviceBusy
+        +-- ModbusMemoryParityError
+        +-- ModbusGatewayPathUnavailable
+        +-- ModbusGatewayTargetDeviceFailedToRespond
+```
+
+The three under `ModbusBaseError` separate where the failure came from: the
+network, a frame that will not parse, and a peer answering with a Modbus
+exception code. Everything under `ModbusProtocolError` is one of those codes.
+
+Adding one means adding the class here and a row to the code table in the same
+module — `tests/test_errors.py` fails on a code with no class.
+
 ## 3. Quality
 
 Run all of these before pushing.
@@ -667,6 +716,16 @@ the tree on `refs/heads/main`.
 A green CodeQL run means the analysis ran, not that it found nothing. ADR-007
 declined this half while the repository was private and named the trigger that
 reopened it.
+
+One alert is dismissed there as intentional:
+`py/bind-socket-all-network-interfaces` on the server simulator's listener. An
+empty host binds every interface, which is what the default asks for and is
+deliberate — this server exists to accept connections from a device under
+test, and that device is normally on another host, so a loopback-only default
+would refuse the traffic the simulator is for. A caller wanting a narrower
+bind passes `host` and gets exactly the interface it names. The reason is here
+as well as in the platform's dismissal, so it survives migrating off that
+platform.
 
 ### 3.9 CI
 

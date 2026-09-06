@@ -17,16 +17,14 @@ class _UnsetType(enum.Enum):
     """The absence of a caller's choice.
 
     A distinct type rather than None, because None is a legal value for
-    ciphers and means the interpreter's own suite. Sharing one value between
-    "said nothing" and "asked for the default" would make a caller who
-    weakened nothing indistinguishable from one who set a value back to where
-    it already was.
+    ciphers and means the interpreter's own suite. One value for both would
+    make a caller who weakened nothing look like one who set a value back to
+    where it already was.
 
-    An enum carrying one member rather than a plain class, because a type
-    checker narrows a union on identity against an enum member and not against
-    an arbitrary instance. Without that a caller who guards on `is UNSET`
-    still holds the union afterwards and has to cast it, which makes the
-    check observable but not usable.
+    An enum with one member rather than a plain class, because a type checker
+    narrows a union on identity against an enum member and not against an
+    arbitrary instance. Without that, guarding on `is UNSET` leaves the caller
+    holding the union and casting it.
     """
 
     UNSET = "UNSET"
@@ -39,9 +37,8 @@ class _UnsetType(enum.Enum):
         """
         return "UNSET"
 
-    # An enum defines its own __str__, where a plain class falls back to
-    # __repr__. Without this the two spellings disagree and an f-string leaks
-    # the private type name into whatever a caller is formatting.
+    # An enum defines its own __str__, so without this an f-string leaks the
+    # private type name into whatever a caller is formatting.
     __str__ = __repr__
 
 
@@ -140,13 +137,8 @@ class TlsSettings:
     verify_hostname: "bool | _UnsetType" = UNSET
     options: "ssl.Options | _UnsetType" = UNSET
 
-    # The lowest protocol version the transport will negotiate. MB-TCP-Security
-    # v21 requires TLS 1.2 or better (R-32) and forbids negotiating down to TLS
-    # 1.1, TLS 1.0 or SSL 3.0 (R-34), so the floor is the specification's
-    # rather than a preference. Declaring it matters even where OpenSSL already
-    # defaults here: that default is a property of the linked library and its
-    # security level, so an older or differently configured build answers
-    # differently and nothing in this library would notice.
+    # MB-TCP-Security v21 requires TLS 1.2 or better (R-32) and forbids
+    # negotiating down (R-34). See PLAYBOOK, the TLS floor.
     MINIMUM_VERSION: ClassVar[ssl.TLSVersion] = ssl.TLSVersion.TLSv1_2
 
     def context(self, role: TlsRole) -> ssl.SSLContext:
@@ -173,19 +165,16 @@ class TlsSettings:
         if ciphers is not None:
             context.set_ciphers(ciphers)
 
-        # Hostname checking is cleared before verify_mode is assigned:
-        # PROTOCOL_TLS_CLIENT enables it by default, and the ssl module refuses
-        # CERT_NONE while it is still on. It is re-applied after.
+        # Cleared before verify_mode is assigned and re-applied after: the ssl
+        # module refuses CERT_NONE while hostname checking is still on.
         context.check_hostname = False
         context.verify_mode = verify_mode
         context.check_hostname = verify_hostname
 
         context.options |= options
 
-        # Applied after the caller's options, which are OR-ed in and so can
-        # only add a restriction. options therefore still pins a session higher
-        # than the floor, and neither passing a mask that omits the protocol
-        # switches nor passing none at all can drop below it.
+        # After the caller's options, which are OR-ed in and can only add a
+        # restriction, so nothing a caller passes drops below the floor.
         context.minimum_version = self.MINIMUM_VERSION
 
         return context
@@ -220,8 +209,7 @@ class TlsSettings:
         verify_hostname = _resolved(self.verify_hostname, defaults.verify_hostname)
 
         # Only a weakening where the role checks hostnames at all. A server
-        # context never does, so False there is the baseline rather than
-        # something the caller turned off.
+        # never does, so False there is the baseline rather than a choice.
         if defaults.verify_hostname and not verify_hostname:
             weakened.append("hostname checking off")
 

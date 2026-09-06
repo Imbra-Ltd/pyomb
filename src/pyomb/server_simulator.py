@@ -118,32 +118,27 @@ class ModbusServerSimulator(threading.Thread):
         self.peercerts = {}
         self.fail = False
 
-        # Peer addresses captured at accept time, because getpeername() fails
-        # once a connection is gone, which is when it is wanted. Held on the
-        # instance rather than inside run() so accept() can report the peer to
-        # a caller outside the thread.
+        # Captured at accept time: getpeername() fails once a connection is
+        # gone, which is when it is wanted. accept() reads it from here.
         self.peer_names = {}
 
         self.process_connections = True  # Process connected clients by default
         self.data_handler = None
 
         # The TLS settings, or None for plaintext. One object rather than a
-        # flag beside the material it guards, so a caller cannot hand over
-        # certificates that are then silently unused.
+        # flag, so certificates cannot be handed over and silently unused.
         self.tls = tls
 
         if tls is not None:
-            # A secure listener does not run on the plaintext port, so a caller
-            # who named no port binds the encrypted one rather than the port a
-            # plaintext peer expects to find unencrypted.
+            # A secure listener does not run on the plaintext port, so
+            # naming no port binds the encrypted one.
             if port == ModbusServerSimulator.PLAINTEXT_PORT:
                 self.port = ModbusServerSimulator.ENCRYPTED_PORT
 
             self.ssl_context = tls.context(TlsRole.SERVER)
 
-            # Said out loud because the arguments cannot say it. A caller who
-            # weakened one setting believing they weakened another sees the
-            # list of what the session will actually carry.
+            # Said out loud because the arguments cannot: a caller sees what
+            # the session carries, not what they thought they set.
             for relaxation in tls.relaxations(TlsRole.SERVER):
                 self.log.warning("TLS relaxed: %s", relaxation)
 
@@ -205,10 +200,8 @@ class ModbusServerSimulator(threading.Thread):
             if isinstance(sock, ssl.SSLSocket):
                 sock = sock.unwrap()
 
-            # A peer that reset the connection leaves nothing to shut down.
-            # Linux reports ENOTCONN for that where Windows stays silent, so
-            # this sits inside the guard rather than in the finally: reaching
-            # here with a dead connection is the ordinary case, not a fault.
+            # A reset peer leaves nothing to shut down, and Linux reports
+            # ENOTCONN where Windows is silent. Ordinary here, not a fault.
             sock.shutdown(socket.SHUT_RDWR)
 
         except socket.error:
@@ -237,9 +230,8 @@ class ModbusServerSimulator(threading.Thread):
         if conn in self.read_list:
             self.read_list.remove(conn)
 
-        # The live-client list feeds reset() and accept(), so a connection that
-        # is gone has to leave it too. Left in, it accumulated every connection
-        # ever accepted and reset() raised on the first dead one.
+        # The live-client list feeds reset() and accept(), so a gone
+        # connection leaves it too or reset() raises on the first dead one.
         if conn in self.clients:
             self.clients.remove(conn)
 
@@ -256,33 +248,22 @@ class ModbusServerSimulator(threading.Thread):
 
         self.log.info("Server starting")
 
-        # Create the server socket. An empty host binds every interface, which
-        # is what the default asks for and is deliberate: this server exists to
-        # accept connections from a device under test, and that device is
-        # normally on another host, so a loopback-only default would refuse the
-        # traffic the simulator is for. A caller wanting a narrower bind passes
-        # host and gets exactly the interface it names.
-        #
-        # CodeQL reports this as py/bind-socket-all-network-interfaces. It is
-        # dismissed there as intentional, and the reason is written here as well
-        # so it survives migrating off that platform.
+        # An empty host binds every interface, deliberately: the device
+        # under test is elsewhere. See PLAYBOOK, static analysis.
         srv = socket.socket()
         srv.bind((self.host, self.port))
         srv.setblocking(False)
         srv.listen(self.connection_limit)
 
-        # Report back the port the socket actually got. Port 0 asks the operating system for a free one, and the
-        # caller has no other way to learn which; without this it reads the 0 it passed in and cannot reach its own
-        # server. Assigning before the started event means every caller the event releases sees the real port.
+        # Port 0 asks for a free one and the caller has no other way to
+        # learn which. Assigned before the started event, so waiters see it.
         self.port = srv.getsockname()[1]
 
         # Add the server socket to the read list
         self.read_list.append(srv)
 
-        # Last client activity, keyed by the connection itself. No address
-        # works here: getsockname() reports the server's own address on every
-        # accepted socket, so all clients collapsed onto one entry, and a peer
-        # address is not unique either once two clients share a host.
+        # Keyed by the connection itself. getsockname() names the server on
+        # every accepted socket, and a peer address is not unique either.
         last_activity_time = {}
 
         last_print_time = time.time()
@@ -303,10 +284,8 @@ class ModbusServerSimulator(threading.Thread):
                 # client, so the client count is one short of its length.
                 client_count = len(self.read_list) - 1
 
-                # Refuse the connection rather than leave the loop. Breaking
-                # here ended the server and aborted every established session
-                # with it, so any peer could stop the simulator by opening one
-                # connection more than the limit.
+                # Refuse the connection rather than leave the loop, which
+                # let any peer stop the server by exceeding the limit.
                 if client_count >= self.connection_limit:
                     refused, refused_addr = srv.accept()
                     self.log.info(
@@ -329,9 +308,8 @@ class ModbusServerSimulator(threading.Thread):
                         except ssl.SSLError as e:
                             self.log.info(e)
 
-                    # Recorded in both modes: accept() reports this address to
-                    # a caller outside the thread, and that path never enters
-                    # the read list below.
+                    # Recorded in both modes: accept() reports it to a
+                    # caller outside the thread, which never enters the list.
                     self.peer_names[conn] = addr
 
                     # Add the new connection to the read list
@@ -358,10 +336,8 @@ class ModbusServerSimulator(threading.Thread):
                         # Receive the data from the client
                         data = stream.receive()
 
-                    # Handle gracefully socket errors. ModbusTcpStream.receive()
-                    # wraps every transport failure in a ModbusBaseError, which
-                    # is not a socket.error, so catching the latter alone let a
-                    # reset connection escape this loop and end the thread.
+                    # receive() wraps every transport failure in a
+                    # ModbusBaseError, which is not a socket.error.
                     except (socket.error, ModbusBaseError) as e:
                         self.forget(conn, last_activity_time)
                         self.log.info("Socket Error - {0}.".format(e))
@@ -378,9 +354,8 @@ class ModbusServerSimulator(threading.Thread):
                             last_activity_time[conn] = current_time
                             self.on_data(data, conn)
 
-            # Check for inactive connections, over a copy of the list: closing
-            # one removes it from the list being walked, which skips the entry
-            # after it.
+            # Over a copy: closing one removes it from the list being
+            # walked, which would skip the entry after it.
             for conn in list(self.read_list):
                 if conn is srv:
                     continue
@@ -558,10 +533,8 @@ class ModbusServerSimulator(threading.Thread):
         # Start the server thread
         super(ModbusServerSimulator, self).start()
 
-        # Wait for the listener, bounded. This used to spin on the event with
-        # no timeout and no liveness check, so anything that stopped run()
-        # before it bound -- a port already in use, most often -- hung the
-        # caller for good, with the reason on stderr and no way to act on it.
+        # Bounded, with a liveness check. Unbounded, a port already in use
+        # hung the caller for good with the reason only on stderr.
         self.log.info("Waiting for the server to start.")
         deadline = time.time() + timeout
 
@@ -588,9 +561,8 @@ class ModbusServerSimulator(threading.Thread):
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
                 sock.close()
 
-            # Already gone. The linger option only means anything for a socket
-            # still holding a connection, and one client disconnecting normally
-            # used to make this method unusable for all the rest.
+            # Already gone. Linger means nothing without a connection, and
+            # one client leaving used to make this unusable for the rest.
             except OSError:
                 self.log.info("The client connection was already closed")
 
@@ -617,10 +589,8 @@ class ModbusServerSimulator(threading.Thread):
 
         # If there are no clients, wait for a new connection
         if len(self.clients) == 0:
-            # Cleared before the wait, not after. Every accept sets the event
-            # and only this method clears it, so a connection handed out
-            # earlier left it set and the next wait returned at once, reporting
-            # no client while one was still arriving.
+            # Cleared before the wait, not after: an earlier accept left it
+            # set, so the next wait returned at once on a client not yet there.
             self.new_connection_event.clear()
             self.new_connection_event.wait(timeout)
 
@@ -997,14 +967,8 @@ def run_server():
 
 
 if __name__ == "__main__":
-    # Inside the guard, never at import. Reconfiguring stdout mutates a stream
-    # the importing application owns, and this is a library module first; run
-    # as a script it is the entry point and the choice is its own to make.
-    #
-    # The attribute is checked rather than assumed. Only a text stream over a
-    # buffer carries reconfigure, and sys.stdout is whatever the host put
-    # there -- a capture object under a test runner, and None under a
-    # windowed interpreter with no console attached.
+    # Inside the guard, never at import: stdout belongs to the application.
+    # Checked rather than assumed -- see PLAYBOOK, entry-point output encoding.
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
 
