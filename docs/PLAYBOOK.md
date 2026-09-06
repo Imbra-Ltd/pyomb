@@ -659,8 +659,8 @@ checks. `mypy src/ --strict`, the command `CLAUDE.md` documents, reports the
 same thing — the overrides apply on top of it.
 
 `strict` is on globally, so a module added from here is held to all of it from
-its first commit. The six modules that predate the gate are frozen by error
-code in `[[tool.mypy.overrides]]`, each listing exactly what it emits today.
+its first commit. The modules that predate the gate are frozen by error code in
+`[[tool.mypy.overrides]]`, each listing exactly what it emits today.
 The two rules are the ones the lint freeze carries: never add a module to make
 the gate pass, and never widen an entry. ADR-005 records why. Narrowing is the
 migration, and it has run once: ADR-009 settled the packet operation signatures
@@ -672,10 +672,17 @@ signatures above; `assignment` went when the client's socket attribute took the
 optional type its own teardown always implied. Each is pinned by a test rather
 than by the freeze, which is what stops it returning under a different entry.
 What remains is two codes, both of them annotations the tree does not yet
-carry: 597 findings across six modules measured on 2026-09-01, `no-untyped-call`
-at 327 and `no-untyped-def` at 270. That figure rises as the tree grows —
-re-measure by emptying the override blocks and rerunning the checker rather
-than trusting the number written here.
+carry: 513 findings across four modules measured on 2026-09-06, `packets.py`
+at 326, `client_simulator.py` at 78, `server_simulator.py` at 75 and
+`stream.py` at 34. That figure moves as the tree grows and as the migration
+retires modules — re-measure by emptying the override blocks and rerunning the
+checker rather than trusting the number written here.
+
+The migration takes the modules in import-graph order rather than cheapest
+first, which is not obvious and costs a wasted slice to discover. Most of what
+a module emits is `no-untyped-call`, raised by calling an untyped function in
+another module, so annotating a caller cannot clear it while its callee is
+frozen. The order is `errors`, `packets`, `stream`, then the two simulators.
 
 mypy is pinned to a minor range for the reason ruff is: the freeze records one
 version's error codes, and a release reporting a new one would fail the gate

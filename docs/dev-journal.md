@@ -4096,3 +4096,63 @@ package, per ADR-002. See `README.md` for usage and
   by 181 lines and `quality.md` by 30, so PLAYBOOK 4.1's divergence re-read is
   owed with it. #318 is untouched and more visible now: the documented lint
   and scan commands still do not name `checks/`.
+
+## 2026-09-06 -- Four slices off the freeze epic (sixth session)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Brought `logger.py` inside the mypy gate (PR #337).** Six errors, all
+    annotations. The constructor took `*args, **kwargs` and forwarded them to
+    `logging.Logger`; annotating that as written means `Any` in the public API,
+    which this project forbids, so it took the base signature it was already
+    forwarding. Every call site in the tree passes a name alone.
+  - **Retired the ruff freeze for `client_simulator.py` (PR #338).** 41
+    findings, 30 of them ruff's own. `connect()` caught every exception and
+    re-raised the same object, which changes nothing except making the re-raise
+    the reported origin. `reset()` documented itself with a sentence that stops
+    mid-clause -- "Reset the client socket with linger option set to" -- which
+    is what a frozen `D415` buys.
+  - **Retired both freezes for `errors.py` (PR #339).** 62 findings and 28
+    errors. A `__str__` built through two branches and a temporary, a
+    constructor that rebound its `int` parameter to a `str`, and a stray
+    `# Recommendations accodrding to chatGPT` comment referring to nothing.
+  - **Renamed the eight protocol exceptions (PR #339, ADR-046).** `N818` had
+    been frozen, so nothing had ever reported that `ModbusIllegalDataValue` and
+    seven siblings carry no `Error` suffix. They take it; the old spellings
+    resolve through the package resolver the deferred imports already needed,
+    warn as they do, and go at 2.0.
+  - **Took twelve of the fourteen rules frozen for `packets.py` (PR #340).**
+    459 of 496 findings were ruff's own fixes across 4,246 lines. The entry is
+    narrowed to `B904` and `BLE001` rather than removed.
+- **PRs merged:** #337, #338, #339, #340.
+- **Issues closed/created:** none closed; #170 is not done. #170 and #191 both
+  re-measured and corrected in place -- every line number and count in each was
+  stale.
+- **Lesson:** the slice order was wrong and the measurement did not show it. I
+  planned one pull request per module taking both gates, sized cheapest-first,
+  and `client_simulator.py` at 78 errors looked like the obvious start. Two
+  thirds of those were `no-untyped-call`, which is raised in the caller and
+  fixed in the callee, so the module could not clear while `packets.py` was
+  frozen. The per-module counts are what suggested the wrong order; the import
+  graph is what settles it, and nothing in the freeze table records it.
+- **Lesson:** an auto-fix that rewrites 156 call sites from `str.format` to
+  f-strings reaches every `__str__` and every wrapped error message, and the
+  suite asserts on none of them verbatim. A throwaway probe fingerprinting the
+  serialized bytes, the `__str__` output and six failure-path messages of every
+  registered class came back byte-identical on both sides. A green suite would
+  not have said that, and the probe cost one command.
+- **Lesson:** retiring a freeze surfaces decisions, not just findings. `N818`
+  was eight public classes named for the specification's own wording, and the
+  choice between PEP 8 and PI-MBUS-300's vocabulary is not one a lint pass
+  makes. The freeze had been holding a decision closed, not a defect.
+- **Upstream:** `braboj/solid-ai-templates#1556` filed, on a per-module
+  type-check freeze retiring in import-graph order rather than cheapest-first.
+  ADR-046 is judged project-specific and carries no candidate: it turns on this
+  project's specification vocabulary. #1544, #1524, #1486, #1497 and #1518 are
+  still open.
+- **Not done:** the suite still emits one warning in the fast tier, an
+  `ssl.OP_NO_TLS*` deprecation from `tls.py`, and two in the integration tier
+  from the bind collision #210 records. The owner asked for a tree with no
+  warnings in it and this session did not reach them.
+- **Pending:** the submodule pin still sits at `v2.79.0` against `v2.81.0`, on
+  the same terms the previous entry records. #318 is still untouched.
