@@ -218,14 +218,21 @@ tests pass.
   that cannot be taken back, and no suite runs it
 - `docs/solid-ai-templates` is off-limits — the pointer is one line and
   changes every rule this project binds
-- Propose a change inside either before making it; the proposal carries a
-  rollback strategy and the coverage that would catch a regression
+- The restriction binds what executes — steps, commands, flags, permissions,
+  triggers, pins and the submodule revision. A diff confined to comments is
+  ordinary work, but a `#` line some tool reads is executable however it
+  looks, and a diff touching a comment and a step is executable entire
+- Propose an executable change inside either before making it; the proposal
+  carries a rollback strategy and the coverage that would catch a regression
 - The approval is for that plan, not for the area — the next change needs its
   own proposal
-- A diff touching either names it at the top of its summary; the reviewer's
-  attention is the control, and it is spent only if the summary spends it
+- A diff touching either names it at the top of its summary, prose or not; the
+  reviewer's attention is the control, and it is spent only if the summary
+  spends it
 - Run the check in PLAYBOOK 1.3 before opening a pull request; it reads the
-  two paths above, so the list has one home. See ADR-023
+  two paths above, so the list has one home. It reports path names rather than
+  content, so a prose-only hit is discharged by the summary. See ADR-023 and
+  ADR-045
 
 ## 3. Quality
 
