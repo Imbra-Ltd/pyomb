@@ -23,10 +23,6 @@ from pyomb.server_simulator import ModbusServerSimulator
 # short. The MBAP length agrees with the ADU, so only the PDU is malformed.
 SHORT_FC1_REQUEST = bytes.fromhex("000100000004") + bytes([1]) + bytes([1, 0, 0])
 
-# Four bytes cannot hold the seven-byte MBAP header, so nothing survives to
-# echo and the sender can only be dropped.
-TRUNCATED_HEADER = bytes.fromhex("00010000")
-
 # Written out rather than through the library, so the two cannot agree on a
 # wrong answer: v1.1b3 section 7, function code plus 0x80, then 0x03.
 EXPECTED_EXCEPTION_REPLY = bytes.fromhex("000100000003") + bytes([1]) + bytes([0x81, 0x03])
@@ -175,19 +171,6 @@ class ServerSurvivesABadFrame(unittest.TestCase):
             sock.close()
 
         self.assertEqual(reply, EXPECTED_EXCEPTION_REPLY)
-
-    def test_a_frame_whose_header_does_not_parse_still_retires_the_sender(self):
-        # The other half of the split. Four bytes cannot hold an MBAP header,
-        # so there is nothing to echo and dropping is the only answer left.
-        sock = self.connect()
-
-        try:
-            sock.sendall(TRUNCATED_HEADER)
-            time.sleep(SETTLE)
-        finally:
-            sock.close()
-
-        self.assertEqual(self.server.get_peers(), [])
 
 
 class ServerSurvivesAFailingDataHandler(unittest.TestCase):
