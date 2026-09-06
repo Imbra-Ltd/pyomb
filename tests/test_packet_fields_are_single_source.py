@@ -3,17 +3,13 @@
 Every concrete PDU class used to store its values twice: as the named
 attributes a caller reads and writes, and as a combined `data` tuple built
 once in `__init__`. Only `data` was packed, so writing `quantity` updated the
-copy nobody serialized. The frame that went out was not the frame the caller
-asked for, and nothing raised.
+copy nobody serialized and the frame that went out was not the one asked for.
 
-The classes now declare their fields in `PDU_FIELDS`, and `data` is derived
-from those fields on every read. The tests below pin the three behaviours
-that follow: a changed field changes the bytes, two packets sending the same
-bytes compare equal, and the derived view refuses to be assigned.
-
-Wire output is asserted against the frames in the specification-backed
-per-function-code suites, which this module does not duplicate. What it adds
-is the mutation path none of them exercised.
+The classes now declare their fields in `PDU_FIELDS` and derive `data` on
+every read. The tests below pin the three behaviours that follow: a changed
+field changes the bytes, two packets sending the same bytes compare equal, and
+the derived view refuses assignment. What this adds to the specification-backed
+per-function-code suites is the mutation path none of them exercised.
 """
 
 import unittest
@@ -34,9 +30,8 @@ class ChangedFieldReachesTheWire(unittest.TestCase):
     def test_a_changed_scalar_changes_the_bytes(self):
         request = ModbusRequestFC3(start_addr=0, quantity=10)
 
-        # 0x07D1 is one past the specification's cap for this function code.
-        # The value is deliberately one a device rejects, so a frame carrying
-        # the stale 10 cannot be mistaken for the intended one.
+        # 0x07D1 is one past the specification's cap, so a frame carrying the
+        # stale 10 cannot be mistaken for the intended one.
         request.quantity = 0x07D1
 
         self.assertEqual(request.serialize().hex(), "03000007d1")
@@ -115,9 +110,8 @@ class TheDerivedViewIsNotWritable(unittest.TestCase):
         self.assertEqual(ModbusRequestFC7().data, ())
 
     def test_the_generic_pdu_still_stores_what_it_is_given(self):
-        # The generic PDU models no function code, so it has no named fields
-        # to derive from and keeps the stored payload the fix removed
-        # everywhere else.
+        # The generic PDU models no function code, so it has no named fields to
+        # derive from and keeps the stored payload removed everywhere else.
         pdu = ModbusPdu(fc=1, data=(1, 2))
 
         self.assertEqual(pdu.data, (1, 2))

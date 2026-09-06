@@ -45,14 +45,8 @@ class ServerFixture(unittest.TestCase):
     """One server per test on its own port, with the sockets cleaned up."""
 
     def setUp(self):
-        # 0 asks the operating system for a free port, so nothing here can
-        # collide with a parallel run, a repeated run, or another process. The
-        # real port is only known once the listener is up, so start_server
-        # reads it back and every caller must start the server before dialling
-        # it. A counter cannot do this: the previous one was module-level
-        # precisely because `type(self).port_counter += 1` writes the attribute
-        # onto each subclass, restarting every subclass from the inherited
-        # value, and even the module-level form only made a collision unlikely.
+        # 0 asks the operating system for a free port. PLAYBOOK 3.1 carries why
+        # that beats naming one, and why a counter cannot do it.
         self.port = 0
         self.sockets = []
         self.server = None
@@ -89,21 +83,8 @@ class ServerFixture(unittest.TestCase):
     def occupy_a_port(self):
         """Binds a listener and returns its port, so a server given that port cannot bind."""
 
-        # Taking the port from the operating system and holding it beats naming
-        # one: a guessed port is only occupied if nothing else got there first,
-        # which is the assumption these tests exist to stop relying on.
-        #
-        # The empty host binds every interface on purpose. The point is to hold
-        # the port rather than to serve on it, and the server under test binds
-        # every interface too at its default, so the blocker has to cover the
-        # same set for the collision to be guaranteed. Narrowing it to loopback
-        # makes the test platform-dependent: Linux refuses a later wildcard bind
-        # over a loopback-only holder, Windows allows it, and there the server
-        # would start cleanly and the test would prove nothing.
-        #
-        # CodeQL reports this as py/bind-socket-all-network-interfaces. It is
-        # dismissed there as used in tests, and the reason is written here as
-        # well so it survives migrating off that platform.
+        # The blocker binds every interface, matching the server it has to
+        # collide with. PLAYBOOK 3.1 carries why, and 3.8 the alert it raises.
         blocker = socket.socket()
         blocker.bind(("", 0))
         blocker.listen(1)
@@ -175,20 +156,15 @@ class TestConnectionLimit(ServerFixture):
 
 class TestAssignedPort(ServerFixture):
     def test_port_zero_reports_the_port_the_operating_system_assigned(self):
-        # run() used to bind whatever it was given and never look at the
-        # result, so a server asked for port 0 bound a real port and kept
-        # reporting 0. The listener was up and unreachable: no caller could
-        # learn where it was, which is what forced every test module here to
-        # name a fixed port instead.
+        # run() once bound whatever it was given and never read the result
+        # back, so a server asked for port 0 bound one and kept reporting 0.
         self.start_server()
 
         self.assertNotEqual(0, self.server.port, "the server still reports the port 0 it was asked for")
 
     def test_a_client_reaches_a_server_started_on_port_zero(self):
-        # A reported port that nothing is listening on would satisfy the test
-        # above. This dials it. The reply is not decoded here: what it says is
-        # the dispatch suite's subject, and asserting the bytes would pin the
-        # frame against this library's own output.
+        # A reported port nothing listens on satisfies the test above, so this
+        # dials it. What the reply says is the dispatch suite's subject.
         self.start_server()
 
         self.assertTrue(self.exchange(self.connect()), "the reported port accepted no connection")
@@ -196,10 +172,8 @@ class TestAssignedPort(ServerFixture):
 
 class TestStartup(ServerFixture):
     def test_start_reports_a_port_it_cannot_bind(self):
-        # start() used to spin on the started event with no timeout and no
-        # liveness check. A port already in use stops run() before it binds, so
-        # the event never arrived and the caller hung for good, with the reason
-        # on stderr where nothing could act on it.
+        # start() once spun on the started event with no timeout, so a port
+        # already in use hung the caller with the reason on stderr.
         self.port = self.occupy_a_port()
 
         self.server = ModbusServerSimulator(port=self.port)
@@ -226,16 +200,14 @@ class TestHostSelection(ServerFixture):
     """The interface the server binds is named the way the client names it.
 
     The parameter was a 32-bit integer the server unpacked with inet_ntoa, so
-    passing the dotted quad a caller actually holds raised `struct.error`
-    inside the server thread. The first two cases fail against that signature
-    for that reason, and they are not enough on their own: a server that
-    accepted the string and then bound the wildcard anyway would satisfy both,
-    because a loopback client reaches a wildcard listener either way.
+    the dotted quad a caller holds raised `struct.error` in the server thread.
+    The first two cases fail against that signature and are not enough alone: a
+    server accepting the string and binding the wildcard anyway satisfies both,
+    since a loopback client reaches a wildcard listener either way.
 
-    The third case is the one that discriminates. It names an address in
-    TEST-NET-3, which is reserved for documentation and so is assigned to no
-    interface on any host running this suite. Binding it has to fail. A server
-    ignoring the parameter would bind successfully and start.
+    The third discriminates. It names a TEST-NET-3 address, reserved for
+    documentation and assigned to no interface on any host running this suite,
+    so binding it has to fail where a server ignoring the parameter starts.
     """
 
     # RFC 5737 reserves this block for documentation, which is what makes it

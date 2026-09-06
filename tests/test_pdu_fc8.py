@@ -32,9 +32,8 @@ class TestPduRequestFC8(unittest.TestCase):
 
     def test_length_grows_with_the_subfunction_data(self):
 
-        # One byte of function code and one two-byte word per field: the
-        # subfunction and each subfunction data word, per the Diagnostics
-        # function of the Modbus Application Protocol
+        # One byte of function code, then one two-byte word per field: the
+        # subfunction and each subfunction data word, per Diagnostics.
         request = ModbusRequestFC8(sub_func=1, subfunc_data=(1, 2))
         longer = ModbusRequestFC8(sub_func=1, subfunc_data=(1, 2, 3))
 
@@ -92,9 +91,8 @@ class TestPduResponseFC8(unittest.TestCase):
 
     def test_length_grows_with_the_subfunction_data(self):
 
-        # One byte of function code and one two-byte word per field: the
-        # subfunction and each subfunction data word, per the Diagnostics
-        # function of the Modbus Application Protocol
+        # One byte of function code, then one two-byte word per field: the
+        # subfunction and each subfunction data word, per Diagnostics.
         response = ModbusResponseFC8(sub_func=1, subfunc_data=(1, 2))
         longer = ModbusResponseFC8(sub_func=1, subfunc_data=(1, 2, 3))
 

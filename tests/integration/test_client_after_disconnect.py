@@ -1,16 +1,14 @@
 """A disconnected client refuses socket work by name, and tears down twice.
 
 `disconnect()` closes the socket and clears the attribute, so every operation
-that reaches for one afterwards used to fail on `NoneType` -- an AttributeError
-raised from inside the library, naming a private attribute rather than the
-mistake the caller made. The attribute is optional now, which is what its own
-teardown path always implied, and each of those operations reports
+that reaches for one afterwards used to fail on `NoneType` -- an
+AttributeError naming a private attribute rather than the caller's mistake.
+The attribute is optional now, and each of those operations reports
 `ModbusNetworkError` instead.
 
-Tearing down twice is the ordinary case rather than a fault: a caller that
-cannot tell whether it already disconnected has to be able to ask again. So
-`disconnect()` returns quietly on a client that holds no socket, while the
-operations that need one refuse.
+Tearing down twice is ordinary rather than a fault: a caller that cannot tell
+whether it already disconnected has to be able to ask again. So `disconnect()`
+returns quietly on a client that holds no socket.
 """
 
 import contextlib

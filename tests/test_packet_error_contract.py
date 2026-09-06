@@ -1,19 +1,15 @@
 """Every packet operation reports failure as ModbusPacketError.
 
-A codec's callers sit behind a socket, so malformed input is the ordinary case
-rather than the exceptional one. The library answers that with a try/except
-around each serialize and deserialize that re-raises as ModbusPacketError, and
-a caller guarding a decode catches that one type. Nothing pinned it: the
-handlers were written per class, forty-odd times, and a class whose handler
-was missing or mis-scoped would let a raw struct.error out through an except
-clause the caller never wrote.
+A codec's callers sit behind a socket, so malformed input is ordinary rather
+than exceptional. The library answers with a try/except around each serialize
+and deserialize that re-raises as ModbusPacketError. Nothing pinned it: the
+handlers were written per class, forty-odd times, and a missing or mis-scoped
+one lets a raw struct.error out through an except clause nobody wrote.
 
 The hierarchy-wide tests collect their subjects from the module rather than
-listing them, so a packet class added later is covered the day it lands. Where
-a class holds a failure mode the collected input cannot reach, it gets a named
-case of its own -- ModbusPdu builds its format from a length, and a caller
-following the documented signature never supplies a shape that cannot be
-measured.
+listing them, so a packet class added later is covered the day it lands. A
+class holding a failure mode the collected input cannot reach gets a named
+case of its own.
 """
 
 import inspect
@@ -23,11 +19,8 @@ from pyomb.errors import ModbusPacketError
 from pyomb.packets import ModbusPdu, ModbusPduParser, ModbusPduParserAbc
 from tests.helpers.packet_hierarchy import concrete_packet_classes, packet_classes
 
-# A one-element tuple holding a value no Modbus field can hold. The tuple is
-# not an integer and its element exceeds every unsigned format the
-# specification uses, so struct refuses it whether the field it lands on is a
-# scalar or a sequence -- which is what lets one value corrupt every packet in
-# the hierarchy without a per-class table of field types.
+# A one-element tuple holding a value no Modbus field can hold, so struct
+# refuses it whether the field is a scalar or a sequence.
 UNREPRESENTABLE = (2**64,)
 
 
@@ -44,9 +37,8 @@ def unrepresentable_packet(cls):
     parameters = list(inspect.signature(cls.__init__).parameters.values())[1:]
     packet = cls(**{parameter.name: UNREPRESENTABLE for parameter in parameters})
 
-    # The fields are overwritten after construction as well as supplied to it,
-    # because a packet that fixes its own function code takes no constructor
-    # parameter carrying it -- FC7 requests are the case
+    # Overwritten after construction as well as supplied to it: a packet that
+    # fixes its own function code takes no constructor parameter for it.
     for field in vars(packet):
         setattr(packet, field, UNREPRESENTABLE)
 

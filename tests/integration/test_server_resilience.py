@@ -68,12 +68,8 @@ class TestDisconnectToleratesADeadSocket(unittest.TestCase):
 
 class TestAbruptDisconnect(unittest.TestCase):
     def setUp(self):
-        # The inactivity sweep would otherwise close an idle connection after
-        # a second, which these tests would race against.
-        #
-        # Port 0 asks the operating system for a free one, so a listener the
-        # previous test has not finished releasing cannot collide with this
-        # one. The port is read back below, once the listener is up.
+        # The inactivity sweep would otherwise close an idle connection after a
+        # second, which these tests would race against. Port 0 per PLAYBOOK 3.1.
         self.server = ModbusServerSimulator(port=0, inactive_timeout=30.0)
         self.server.daemon = True
         self.server.start()
@@ -131,8 +127,7 @@ class TestAbruptDisconnect(unittest.TestCase):
 
     def test_server_keeps_serving_after_a_reset(self):
         # The strongest form: a second client gets a correct answer after the
-        # first one vanished. Previously the thread was already gone and this
-        # connection was never accepted.
+        # first vanished. The thread was previously gone and never accepted it.
         first = self.connect()
         self.exchange(first)
         self.reset(first)

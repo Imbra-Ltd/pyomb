@@ -5,9 +5,8 @@ from pyomb.packets import ModbusError, ModbusPdu, ModbusPduParser, ModbusRequest
 
 class TestModbusPduParser(unittest.TestCase):
     def setUp(self):
-        # The registry is process-global and several tests below clear it.
-        # Snapshot and restore it, so a test leaving it empty cannot break
-        # unrelated tests that run afterwards.
+        # The registry is process-global and several tests below clear it, so
+        # snapshot and restore it rather than leak an empty one.
         self.saved_registry = dict(ModbusPduParser.get_registry())
 
         ModbusPduParser.register(ModbusRequestFC1)

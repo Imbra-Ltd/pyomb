@@ -1,24 +1,15 @@
 """The transport says what went wrong, and says it where the caller chose.
 
-`stream.py` is where a frame is read off a socket in pieces and where a
-length-driven read decides how many more bytes to wait for. Every failure
-there was raised as a `ModbusError` carrying a formatted message, and nothing
-else: no log line, and no link to the exception that caused it. A short read, a
-checksum mismatch and a peer that goes away mid-frame all reached the caller as
-the same sentence with the original traceback discarded.
+Every failure in `stream.py` was raised as a `ModbusError` carrying a
+formatted message and nothing else: no log line, and no link to the exception
+that caused it. A short read, a checksum mismatch and a peer going away
+mid-frame all reached the caller as the same sentence.
 
-Two properties are pinned here, and they fail independently.
-
-The cause travels with the error. `raise X(...) from e` is what puts the
-socket error underneath the transport error, so a handler three frames up can
-still see what the operating system said. Without it the chain stops at the
-message, and the message is a string someone wrote.
-
-The logger is the caller's. A library that installs a handler decides where
-its host's output goes, so the module's own logger carries a null handler and
-writes nothing until an application asks for it. The simulators construct a
-stdout logger instead, because an application is what they are; that split is
-the point, so the silence of the default is asserted rather than assumed.
+Two properties are pinned here and they fail independently. The cause travels
+with the error, through `raise X(...) from e`, so a handler three frames up
+still sees what the operating system said. And the logger is the caller's: the
+module's own carries a null handler, where the simulators construct a stdout
+logger because an application is what they are.
 """
 
 import logging
@@ -190,10 +181,7 @@ class TheLoggerIsTheCallers(unittest.TestCase):
 
     def test_a_fragment_boundary_is_debug_and_never_a_warning(self):
         # Routine progress must not compete with a real failure at the default
-        # level, or the level stops carrying information. This needs a socket
-        # that accepts: the failing one raises on the first write, so the
-        # boundary line is never reached and an assertion against it would
-        # pass over an empty list.
+        # level. A socket that accepts, or the boundary line is never reached.
         logger, handler = recording_logger()
         stream = ModbusTcpStream(sock=QuietSocket(), log=logger, frag_size=4)
 
@@ -229,13 +217,8 @@ class TheLoggerIsTheCallers(unittest.TestCase):
             self.assertNotIn(marker.lower(), rendered, rendered)
 
     def test_the_default_logger_writes_nothing(self):
-        # Run in a fresh interpreter, because in this one the assertion cannot
-        # fail. With no handler anywhere, logging's last-resort handler writes
-        # a warning to stderr, and the null handler is what stops it -- but
-        # the test runner installs a root handler of its own, so last resort
-        # never fires here and the check passes whether or not the library
-        # attached anything. Only an interpreter the runner has not touched
-        # can tell the two apart.
+        # A fresh interpreter: the runner installs a root handler, so logging's
+        # last resort never fires here and the check would pass either way.
         program = (
             "import sys\n"
             "from pyomb.stream import ModbusTcpStream\n"
@@ -250,9 +233,8 @@ class TheLoggerIsTheCallers(unittest.TestCase):
             "    pass\n"
         )
 
-        # The argument vector is a list holding this process's own interpreter
-        # and a literal built above, so nothing reaches a shell and no caller
-        # input is in it. The checks match on call shape and see neither.
+        # The argument vector is a list holding this interpreter and a literal,
+        # so nothing reaches a shell. The checks match on call shape only.
         completed = subprocess.run(  # nosec B603
             [sys.executable, "-c", program],
             capture_output=True,

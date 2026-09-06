@@ -23,10 +23,8 @@ class TestModbusHeader(unittest.TestCase):
 
     def test_length_is_the_seven_byte_mbap_header(self):
 
-        # Two bytes of transaction id, two of protocol id, two of length and
-        # one of unit id, per the Modbus Messaging Implementation Guide. The
-        # length field then counts the unit id plus the PDU, which is why a
-        # frame is this size plus length minus one
+        # Two bytes each of transaction id, protocol id and length, then one of
+        # unit id. Length counts the unit id plus the PDU.
         header = ModbusHeader(trans_id=1, prot_id=2, length=3, unit_id=4)
 
         self.assertEqual(len(header), 7)

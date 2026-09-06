@@ -1,18 +1,14 @@
 """One signature per packet operation, across the whole hierarchy.
 
 Every packet class implemented serialize and deserialize with a signature of
-its own choosing. The abstract base declared both as instance methods taking
-**kwargs, ModbusPdu redeclared them with a format parameter, and each concrete
-PDU dropped whatever it did not use -- so a caller holding a ModbusPacketAbc
-could not call either operation without knowing the concrete class it really
-had. The type checker reported 122 of these in packets.py alone.
+its own choosing, so a caller holding a ModbusPacketAbc could not call either
+operation without knowing the concrete class it really had. The type checker
+reported 122 of these in packets.py alone.
 
 The uniform contract is serialize(self) and a classmethod deserialize(stream).
 Where a PDU shape genuinely needs a caller-supplied format, ModbusPdu.pack and
-ModbusPdu.unpack carry it under their own names; see ADR-009. A subclass may
-still add optional keyword parameters to deserialize -- the RTU packets take a
-CRC verification toggle -- because appending an optional parameter keeps every
-call the supertype accepts working.
+ModbusPdu.unpack carry it under their own names. A subclass may still append
+optional keyword parameters, as the RTU packets do for CRC verification.
 """
 
 import inspect

@@ -30,9 +30,8 @@ HAVE_CERTS = all(os.path.exists(p) for p in (CA, SERVER_CRT, SERVER_KEY, CLIENT_
 
 SKIP_REASON = "run 'py scripts/gen_test_certs.py' to generate the test chain"
 
-# Seconds tearDown waits for the server thread, matching the other server
-# fixtures. The run loop sits in a select with a one second timeout, so the
-# thread needs up to that long to notice the quit event before it can wind down.
+# Seconds tearDown waits for the server thread. The run loop sits in a select
+# with a one second timeout, so it needs that long to notice the quit event.
 SHUTDOWN_TIMEOUT = 5.0
 
 
@@ -46,20 +45,13 @@ class TestMutualTls(unittest.TestCase):
         ModbusPduParser.register(ModbusRequestFC1)
         ModbusPduParser.register(ModbusResponseFC1)
 
-        # Port 0 asks the operating system for a free one. tearDown waits for
-        # the listener to close, but the server sets no SO_REUSEADDR, so a
-        # named port that has just carried a connection can still refuse the
-        # next bind while that connection sits in TIME_WAIT. Letting the
-        # operating system choose sidesteps that rather than timing it.
+        # Port 0 asks the operating system for a free one, which sidesteps the
+        # TIME_WAIT refusal a named port hits. PLAYBOOK 3.1.
         settings = TlsSettings(cert=SERVER_CRT, key=SERVER_KEY, ca_chain=CA)
         self.server = ModbusServerSimulator(port=0, tls=settings)
 
-        # start() returns only once the listener is accepting: it waits on the
-        # server's own started event, bounded by STARTUP_TIMEOUT, and raises
-        # ModbusNetworkError if the thread dies or the deadline passes. Sleeping
-        # here waited a second time for something already waited for, and a
-        # fixed half second is the wrong answer either way -- too long when the
-        # listener is up in milliseconds, too short if it ever is not.
+        # start() returns only once the listener accepts, bounded and raising
+        # on failure, so a sleep here waits again for what it already waited.
         self.server.start()
 
         self.PORT = self.server.port
@@ -71,11 +63,8 @@ class TestMutualTls(unittest.TestCase):
                 self.client.disconnect()
         self.server.stop()
 
-        # stop() only sets the quit event, so the thread is still in its select
-        # when this returns. Sleeping a fifth of a second here was shorter than
-        # the loop's own timeout and so never waited long enough: the thread ran
-        # on into the next test, and at the end of the run into pytest's capture
-        # teardown, where its remaining log writes hit a closed stream.
+        # stop() only sets the quit event, so join is the wait. A sleep shorter
+        # than the loop's timeout let the thread run into the next test.
         self.server.join(SHUTDOWN_TIMEOUT)
 
         self.assertFalse(
@@ -129,9 +118,7 @@ class TestMutualTls(unittest.TestCase):
 
     def test_peer_certificate_carries_the_modbus_role(self):
         # The role OID is what MB-TCP-Security authorizes on. getpeercert()
-        # without binary_form does not expose custom extensions, which is why
-        # the server cannot currently read it -- see the audit's Security
-        # finding on unimplemented role authorization.
+        # without binary_form hides custom extensions, so nothing reads it yet.
         client = self.connect()
         parsed = client.sock.getpeercert()
         raw = client.sock.getpeercert(binary_form=True)

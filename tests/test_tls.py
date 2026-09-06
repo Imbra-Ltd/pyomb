@@ -99,10 +99,8 @@ class TestRoleDefaults(unittest.TestCase):
                 self.assertEqual(build(role).verify_mode, ssl.CERT_REQUIRED)
 
     def test_no_cipher_string_is_imposed_by_default(self):
-        # None means the interpreter's secure default suite. The values this
-        # replaced enabled null encryption and anonymous key exchange, so the
-        # regression is that the library imposes no string of its own rather
-        # than that it imposes a particular one.
+        # None means the interpreter's secure default suite. What this pins is
+        # that the library imposes no string, not that it imposes a good one.
         with mock.patch.object(WeakPlatformContext, "set_ciphers") as spy:
             build(TlsRole.CLIENT)
             build(TlsRole.SERVER)
@@ -166,9 +164,8 @@ class TestUnsetIsNotTheDefaultValue(unittest.TestCase):
         self.assertEqual(chosen, [ssl.PROTOCOL_TLS_CLIENT, ssl.PROTOCOL_TLS_SERVER])
 
     def test_an_unset_field_reads_as_unset_when_the_object_is_printed(self):
-        # Inspectability is the point of grouping these, so printing one has
-        # to show which fields carry a choice. Without the sentinel's own
-        # repr the absence renders as an object address.
+        # Printing has to show which fields carry a choice; without the
+        # sentinel's own repr an absence renders as an object address.
         settings = TlsSettings(cert=CERT, key=KEY, ca_chain=CA)
 
         self.assertIn("verify_hostname=UNSET", repr(settings))
@@ -197,9 +194,8 @@ class TestUnsetIsPublic(unittest.TestCase):
         self.assertIs(pyomb.UNSET, UNSET)
 
     def test_the_root_and_the_submodule_hand_back_one_object(self):
-        # Identity is the entire mechanism. Two spellings returning equal but
-        # distinct objects would make `is` answer False for a caller who
-        # imported from the root, and no assertion on value would catch it.
+        # Identity is the mechanism: two spellings returning equal but distinct
+        # objects would make `is` answer False, and no value assertion sees it.
         self.assertIs(pyomb.UNSET, tls.UNSET)
 
     def test_the_sentinel_is_advertised_and_not_merely_reachable(self):
@@ -216,9 +212,8 @@ class TestUnsetIsPublic(unittest.TestCase):
         self.assertIsNot(settings.verify_hostname, pyomb.UNSET)
 
     def test_both_spellings_render_as_the_name_a_caller_writes(self):
-        # An enum defines its own __str__, where the plain class this replaced
-        # fell back to __repr__. Letting the two disagree leaks the private
-        # type name into any message that formats the value.
+        # An enum defines its own __str__ where the plain class fell back to
+        # __repr__, leaking the private type name into any formatted message.
         self.assertEqual(repr(pyomb.UNSET), "UNSET")
         self.assertEqual(str(pyomb.UNSET), "UNSET")
         self.assertEqual(f"{pyomb.UNSET}", "UNSET")
@@ -236,18 +231,14 @@ class TestTheFloorIsNotRelaxable(unittest.TestCase):
 
     def test_options_cannot_lower_the_floor_by_omission(self):
         # The parameter is a bitmask the caller ORs in, so it can add a
-        # restriction and never remove one. Passing none at all must still
-        # leave the declared floor standing.
+        # restriction and never remove one. Passing none leaves the floor.
         context = build(TlsRole.CLIENT, options=ssl.Options(0))
 
         self.assertEqual(context.minimum_version, ssl.TLSVersion.TLSv1_2)
 
     def test_the_floor_is_set_after_the_caller_options(self):
-        # No value distinguishes the two orderings, because OR only ever adds
-        # a bit and the floor's setter touches only the switches below the
-        # version it names -- a reordered pair passes every assertion above.
-        # The ordering is a rule this project binds, so the order of the two
-        # writes is what the test has to reach.
+        # No value distinguishes the two orderings, so the order of the writes
+        # is what this reaches. PLAYBOOK 2.4 carries why the floor goes last.
         written = []
 
         class Recording(WeakPlatformContext):
@@ -276,9 +267,8 @@ class TestTheFloorIsNotRelaxable(unittest.TestCase):
         self.assertEqual(written[-2:], ["options", "minimum_version"])
 
     def test_options_still_restricts_above_the_floor(self):
-        # A caller pinning the session to TLS 1.3 passes the 1.2 switch. The
-        # declared floor must not quietly clear the bit they set, or the
-        # parameter would stop working for what it is for.
+        # A caller pinning the session to TLS 1.3 passes the 1.2 switch, and
+        # the declared floor must not clear the bit they set.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", DeprecationWarning)
             no_tls12 = ssl.OP_NO_TLSv1_2
@@ -320,9 +310,8 @@ class TestRelaxationsAreReported(unittest.TestCase):
         self.assertEqual(weakened.relaxations(TlsRole.SERVER), ())
 
     def test_every_weakening_is_listed_rather_than_the_first(self):
-        # The defect the object exists to prevent is a caller weakening one
-        # setting while believing they weakened another, so a report naming
-        # one of three would recreate it.
+        # The defect this prevents is a caller weakening one setting believing
+        # they weakened another, so a report naming one of three recreates it.
         weakened = self.settings(
             ciphers="ALL:eNULL",
             verify_mode=ssl.CERT_NONE,
@@ -382,9 +371,8 @@ class TestTheSimulatorsConsumeTheSettings(unittest.TestCase):
         self.assertEqual(client.port, ModbusClientSimulator.PLAINTEXT_PORT)
 
     def test_each_simulator_logs_the_weakenings_it_was_handed(self):
-        # The report exists so a caller sees what the session will carry. It
-        # is worth nothing sitting on the settings object unread, so both
-        # simulators say it at construction.
+        # The report is worth nothing sitting unread on the settings object,
+        # so both simulators say it at construction.
         from pyomb.client_simulator import ModbusClientSimulator
         from pyomb.server_simulator import ModbusServerSimulator
 

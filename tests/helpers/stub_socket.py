@@ -2,9 +2,8 @@ import socket
 
 
 class StubSocket(socket.socket):
-    # Trans-ID 0, Prot-ID 0, Length 4, Unit-ID 1, PDU b'\x01\x02\x03'.
-    # The length field counts the unit identifier plus the PDU, so a 3-byte
-    # PDU is declared as 4.
+    # Trans-ID 0, Prot-ID 0, Length 4, Unit-ID 1, PDU b'\x01\x02\x03'. Length
+    # counts the unit identifier plus the PDU, so a 3-byte PDU declares 4.
     DATA = b"\x00\x00\x00\x00\x00\x04\x01\x01\x02\x03"
 
     def __init__(self):

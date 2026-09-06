@@ -1,18 +1,15 @@
 """Packet constraints are declared per class and queried, never a mode.
 
-The codec checked two things, both structural: the RTU checksum and the TCP
-header's declared length. No function-code field limit was written down
-anywhere, so a frame carrying a quantity no device will honour was built and
-emitted without complaint -- well formed, correct checksum, and wrong.
+The codec checked two structural things, the RTU checksum and the TCP header's
+declared length. No function-code field limit was written down, so a frame
+carrying a quantity no device will honour was emitted without complaint --
+well formed, correct checksum, and wrong.
 
-The bounds now sit on the class carrying the field, as `LIMITS`, and two
-methods read them: `violations()` returns findings, `validate()` raises.
-`serialize()` calls neither, because building a frame a device rejects is
-the point of a simulator rather than an accident to prevent.
-
-Each bound below is anchored to the published specification rather than to
-this library's output: the boundary values come from the Modbus Application
-Protocol v1.1b3, and two cases use that document's own worked examples.
+The bounds now sit on the class carrying the field, as `LIMITS`, read by two
+methods: `violations()` returns findings, `validate()` raises. `serialize()`
+calls neither, because building a frame a device rejects is the point of a
+simulator. Each bound is anchored to the Modbus Application Protocol v1.1b3,
+and two cases use that document's own worked examples.
 """
 
 import ast
@@ -51,9 +48,8 @@ class ASpecificationExampleIsConforming(unittest.TestCase):
         self.assertEqual(request.violations(), ())
 
     def test_the_write_multiple_coils_example(self):
-        # Modbus Application Protocol v1.1b3: write 10 coils from 0x0013,
-        # with a byte count of 2. That example is what fixes the rounding
-        # rule -- 10 coils occupy two whole bytes.
+        # Modbus Application Protocol v1.1b3: write 10 coils from 0x0013 with
+        # a byte count of 2, which is what fixes the rounding rule.
         request = ModbusRequestFC15(
             start_addr=0x0013,
             quantity=10,
@@ -239,12 +235,8 @@ class TheTwoMethodsDifferInWhatTheyReturn(unittest.TestCase):
 class EveryPacketClassStatesWhatItWasReadFor(unittest.TestCase):
     """The coverage assertion: an unaudited class must not look audited."""
 
-    # What the module held when this floor was set: 32 concrete packet
-    # classes, each declaring LIMITS in its own body. The count is a floor
-    # with a margin rather than the exact number, so retiring one class does
-    # not fail a rule about specification coverage. Any way the enumeration
-    # breaks returns nothing at all, so a floor above zero catches all of
-    # them and the margin costs no detection.
+    # What the module held when this floor was set: 32 concrete packet classes
+    # declaring LIMITS. A margin below it, so retiring one fails nothing.
     CLASSES_AT_LEAST = 28
 
     @classmethod
@@ -281,10 +273,8 @@ class EveryPacketClassStatesWhatItWasReadFor(unittest.TestCase):
     def test_every_concrete_class_declares_its_own_limits(self):
         """Inheriting an empty mapping would read as an audited class."""
 
-        # The base declares an empty LIMITS, so a class that never declared
-        # one inherits it and reports no violations -- indistinguishable from
-        # a class the specification genuinely bounds in no way. Declaring it
-        # per class is what separates "unbounded" from "nobody has looked".
+        # The base declares an empty LIMITS, so a class that never declared one
+        # reads as unbounded rather than as unexamined. Declaring separates it.
         silent = sorted(name for name in self.concrete if name not in self.declared)
 
         self.assertEqual(
