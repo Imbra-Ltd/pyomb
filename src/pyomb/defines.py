@@ -1,6 +1,9 @@
-# encoding: utf-8
-from __future__ import print_function
-from __future__ import unicode_literals
+"""The protocol's named constants: the function codes and the exception codes.
+
+Every value here comes from the Modbus Application Protocol specification
+rather than from this implementation, so a number is the specification's
+number and changing one changes what goes on the wire.
+"""
 
 ################################################################################
 

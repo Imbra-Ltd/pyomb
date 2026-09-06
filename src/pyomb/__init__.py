@@ -1,5 +1,3 @@
-# encoding: utf-8
-
 """pyomb -- Open Modbus protocol library.
 
 Serialization and deserialization of Modbus TCP and RTU packets, fragmented
@@ -18,44 +16,43 @@ caller chooses one, so comparing against it tells a choice from a default.
 from importlib import import_module
 from typing import TYPE_CHECKING
 
-from .errors import ModbusAcknowledge
-from .errors import ModbusBaseError
-from .errors import ModbusGatewayPathUnavailable
-from .errors import ModbusGatewayTargetDeviceFailedToRespond
-from .errors import ModbusIllegalDataAddress
-from .errors import ModbusIllegalDataValue
-from .errors import ModbusIllegalFunction
-from .errors import ModbusMemoryParityError
-from .errors import ModbusModeError
-from .errors import ModbusNetworkError
-from .errors import ModbusPacketError
-from .errors import ModbusProtocolError
-from .errors import ModbusSlaveDeviceBusy
-from .errors import ModbusSlaveDeviceFailure
+from .errors import (
+    ModbusAcknowledge,
+    ModbusBaseError,
+    ModbusGatewayPathUnavailable,
+    ModbusGatewayTargetDeviceFailedToRespond,
+    ModbusIllegalDataAddress,
+    ModbusIllegalDataValue,
+    ModbusIllegalFunction,
+    ModbusMemoryParityError,
+    ModbusModeError,
+    ModbusNetworkError,
+    ModbusPacketError,
+    ModbusProtocolError,
+    ModbusSlaveDeviceBusy,
+    ModbusSlaveDeviceFailure,
+)
 from .logger import Logger
-from .packets import ModbusError
-from .packets import ModbusHeader
-from .packets import ModbusPdu
-from .packets import ModbusPduParser
-from .packets import ModbusRtuRequest
-from .packets import ModbusRtuResponse
-from .packets import ModbusTcpPacket
-from .packets import ModbusTcpRequest
-from .packets import ModbusTcpResponse
-from .packets import ModbusViolation
-from .stream import ModbusFragmenter
-from .stream import ModbusTcpReceiver
-from .stream import ModbusTcpSender
-from .stream import ModbusTcpStream
+from .packets import (
+    ModbusError,
+    ModbusHeader,
+    ModbusPdu,
+    ModbusPduParser,
+    ModbusRtuRequest,
+    ModbusRtuResponse,
+    ModbusTcpPacket,
+    ModbusTcpRequest,
+    ModbusTcpResponse,
+    ModbusViolation,
+)
+from .stream import ModbusFragmenter, ModbusTcpReceiver, ModbusTcpSender, ModbusTcpStream
 
 # Named below but not imported: they reach ssl, and __getattr__ binds them on
 # first access instead. See PLAYBOOK, deferred imports, for the measurement.
 if TYPE_CHECKING:
     from .client_simulator import ModbusClientSimulator
     from .server_simulator import ModbusServerSimulator
-    from .tls import UNSET
-    from .tls import TlsRole
-    from .tls import TlsSettings
+    from .tls import UNSET, TlsRole, TlsSettings
 
 # Each deferred name against the submodule defining it. The TLS settings join
 # the simulators because pyomb.tls reaches ssl for the same reason.
@@ -69,7 +66,9 @@ _DEFERRED = {
 
 __version__ = "0.6.0"
 
-__all__ = [
+# Grouped by the submodule each name comes from. Sorting interleaves the
+# groups and strands every comment below it.
+__all__ = [  # noqa: RUF022
     "__version__",
     # Packets
     "ModbusHeader",
