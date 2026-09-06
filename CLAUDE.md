@@ -249,13 +249,15 @@ follow the referenced templates. Project-specific additions only:
   wire. Pair it with a fixed vector from the specification
 - Coverage floor is 80%, enforced in CI. Check: `pytest --cov=pyomb
   --cov-fail-under=80`
-- Never silence a lint finding by adding a file to, or widening an entry in,
-  the `per-file-ignores` freeze in `pyproject.toml` — it records what was
-  already broken, not what may be. Fix the finding; see ADR-003
-- The same holds for the mypy freeze in `[[tool.mypy.overrides]]`: never add a
-  module and never widen its `disable_error_code` list. Freeze a finding, never
+- Neither retrofit freeze exists any more, so the rule is now that no source
+  file is exempt from either gate. `[tool.ruff.lint.per-file-ignores]` carries
+  the two `D`-only exemptions for `tests/**` and `checks/**` and nothing else,
+  and `[[tool.mypy.overrides]]` is absent. Never reintroduce either; fix the
+  finding. See ADR-047 and ADR-048
+- The reason binds anything that would replace them. Freeze a finding, never
   the analysis that produces it — turning off a strict sub-flag stops the
-  checker looking and discards findings the module already has; see ADR-005
+  checker looking and discards findings the module already has. Both tables
+  hid real defects behind two codes that read as missing annotations
 - Suppress a bandit finding at the line with `# nosec <ID>` naming the one
   check, and put the reason above it. Never add to the config-level `skips`,
   which stops the check firing tree-wide; see ADR-012

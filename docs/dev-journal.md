@@ -4244,3 +4244,97 @@ package, per ADR-002. See `README.md` for usage and
 - **Pending:** the submodule pin sits at `v2.79.0` against `v2.82.0`, which
   has moved a tag since the previous entry. It is off-limits, so the bump
   needs a proposal before it is made. #318 is still untouched.
+
+## 2026-09-06 -- Both freezes retired, and the P1 they hid (eighth session)
+
+- **Tool:** Claude Code (Opus 5).
+- **Scope:** close the P1 the previous session filed, then finish #170 --
+  the ruff freeze first, then all four mypy override blocks.
+- **Key changes:**
+  - **The server survives a request the parser rejects (#346).** `run()`
+    called `on_data` from the `else:` branch of the `try` that reads the
+    socket, and an `else:` branch is not covered by its own statement's
+    `except` clauses. Guarded the call so a failure retires that one
+    connection through `forget()` and the loop carries on. The clause
+    catches `Exception` rather than the two protocol types, because
+    `on_data` has a third exit reachable from the wire: the caller's own
+    `data_handler` is invoked above `on_data`'s try, so whatever it
+    raises passes through untouched.
+  - **The ruff freeze is gone (#347).** The last entry held `B904` and
+    `BLE001` on 70 handlers in the codec. Each was narrowed to what its
+    `try` body can raise -- 33 wrapping a `struct` call, 32 wrapping
+    another packet operation, 5 both -- and chained with `from e`.
+    ADR-047 records it and supersedes ADR-003.
+  - **The mypy freeze is gone (#348, #349, #350, #351).** Four slices in
+    import-graph order, 514 errors to zero. ADR-048 records it and
+    supersedes ADR-005.
+  - **Documentation caught up.** PLAYBOOK 3.4 and 3.5 rewrote both gate
+    sections against a tree with no freeze, and four cross-references
+    elsewhere in that file pointed at the retired records. Two CLAUDE.md
+    rules described tables that no longer exist; they now bind against
+    reintroducing either.
+- **PRs merged:** #346, #347, #348, #349, #350, #351.
+- **Issues closed/created:** #343 and #170 closed. #352 and #353 created,
+  both from findings this work surfaced and neither fixed here.
+- **Post-mortem (the four annotation slices):**
+  - **What the type freeze was hiding.** Two error codes that both read
+    as missing annotations, and underneath them: a PDU built with no
+    payload storing `None` where `len()` is called on it; an abstraction
+    declaring both parse operations as instance methods while its one
+    implementation and every call site use classmethods; a local holding
+    the payload on one path and the error text on another, in six places;
+    a response variable typed by whichever branch came first, in two
+    modules; a `send_raw()` default of `()` that `socket.send` rejects;
+    and an FC15 factory half-reading a generator its own tests document
+    as acceptable.
+  - **Why it stayed hidden.** `disable_error_code` switches off the
+    analysis, not the finding. A module under it does not report the
+    defects it already has, so the table's size measured annotations
+    while the defects behind them were invisible in the same number.
+  - **The order was not free.** `no-untyped-call` is raised at the
+    caller, so the codec had to go first: its slice cleared 362 of the
+    514 while the module itself carried 330. Cheapest-first would have
+    started with the 42-error transport and cleared well under half of
+    it.
+- **Lesson:** a count sizes a diff, not the reading. The epic predicted
+  the last ruff slice as one fix applied 70 times, on the evidence that
+  `raise ... from e` clears `B904` and `BLE001` together. That was right
+  about the rules and wrong about the work: chaining alone leaves 70
+  blind excepts standing. Narrowing each handler instead was the work,
+  and it needed reading rather than a batch edit.
+- **Lesson:** a narrowing needs a control the linter cannot provide.
+  Narrowing the 70 handlers left four sites too tight, and what found
+  them was `tests/test_packet_error_contract.py`, which builds every
+  packet class with a value the wire cannot carry and asserts the
+  declared error type comes back. Three ADU serializers take
+  `AttributeError`, because a caller's header or PDU is taken on trust;
+  the error PDU's serializer takes `TypeError`, because it adds the
+  exception mask before it packs. Without that test the slice would have
+  merged green with a narrower error contract than the module documents.
+- **Lesson:** the docstrings were the annotations. Every parameter type
+  in three of the four modules was already written down in prose, so the
+  slices made existing contracts checkable rather than inventing them.
+  Two classes the prose named -- `ModbusPduAbc` and `ModbusPduRequest` --
+  turned out not to exist, which is the failure mode of a contract
+  nothing reads.
+- **Lesson:** a gate that reads git's index is blind to an unstaged file,
+  and running the suite before `git add` is the natural way to meet that
+  blindness. The comment-length gate passed locally on a new test module
+  and failed in CI on the same commit. `CLAUDE.md` already states this;
+  what was missing was applying it to a file being added rather than to a
+  document being edited.
+- **Upstream:** two candidates filed, both against
+  `templates/base/workflow/quality-gates.md`.
+  `braboj/solid-ai-templates#1571` says a slice that narrows behaviour
+  states the control proving it did not narrow too far, because a suite
+  that passed before the slice cannot report a contract that got
+  narrower. `braboj/solid-ai-templates#1572` says a freeze whose findings
+  are raised at the caller comes off in dependency order, and the
+  per-module counts do not show that order. #1563, #1556, #1544, #1524,
+  #1486, #1497 and #1518 are still open.
+- **Not done:** the warnings the previous two entries record are still
+  there, in both tiers. This session did not reach them either. #318 is
+  still untouched.
+- **Pending:** the submodule pin sits at `v2.79.0` against `v2.82.0`. It
+  is off-limits, so the bump needs a proposal carrying a rollback
+  strategy before it is made. Carried from the previous entry unchanged.

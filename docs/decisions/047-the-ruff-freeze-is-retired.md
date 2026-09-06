@@ -9,8 +9,8 @@ superseded_by: []
 
 # ADR-047: The ruff freeze is retired
 
-**Upstream:** candidate against
-`templates/base/workflow/quality-gates.md`, not yet filed. The generic rule:
+**Upstream:** filed as braboj/solid-ai-templates#1571 against
+`templates/base/workflow/quality-gates.md`. The generic rule:
 a retrofit freeze is retired by narrowing each suppressed site to what its
 body can raise, and a contract test over the whole class hierarchy is what
 proves the narrowing is not too tight.

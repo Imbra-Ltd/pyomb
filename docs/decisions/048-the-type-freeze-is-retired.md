@@ -9,8 +9,8 @@ superseded_by: []
 
 # ADR-048: The type freeze is retired
 
-**Upstream:** candidate against
-`templates/base/workflow/quality-gates.md`, not yet filed. The generic
+**Upstream:** filed as braboj/solid-ai-templates#1572 against
+`templates/base/workflow/quality-gates.md`. The generic
 rule: a checker's retrofit freeze is retired in the dependency order of
 what it suppressed, because a caller's findings do not clear while the
 callee is unannotated, and the count alone does not show that order.

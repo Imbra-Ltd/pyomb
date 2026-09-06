@@ -587,28 +587,29 @@ python -m ruff check src tests scripts examples
 python -m ruff format src tests scripts examples
 ```
 
-Configuration is in `pyproject.toml`. The `per-file-ignores` table freezes the
-violations that existed when ruff replaced flake8: a new file is checked
-against the whole rule set, an existing one cannot get worse, and shrinking the
-table is the migration. To take a rule family on, delete the entries naming it,
-fix what ruff then reports, and commit both together — the gate holds the gain.
+Configuration is in `pyproject.toml`. The `per-file-ignores` table that froze
+the violations existing when ruff replaced flake8 is retired; ADR-047 records
+the migration and supersedes the record that introduced it. Every file under
+`src/` is measured against the whole rule set.
 
-Two entries above the table are exemptions rather than freezes: `tests/**` and
-`checks/**` drop the `D` rules, because a test's name carries its intent and a
-docstring on top of it is the busywork the quality-gates template rules out.
-The gates in `checks/` are tests and only their directory differs; without
-that second entry they report 142 `D` findings — 126 `D202`, 15 `D102` and one
-`D403` — on files whose content never moved.
+What the table still carries is two exemptions rather than freezes: `tests/**`
+and `checks/**` drop the `D` rules, because a test's name carries its intent
+and a docstring on top of it is the busywork the quality-gates template rules
+out. The gates in `checks/` are tests and only their directory differs;
+without that second entry they report 142 `D` findings — 126 `D202`, 15 `D102`
+and one `D403` — on files whose content never moved.
 
-Never add a file to that table to make the gate pass. Regenerate it only after
-a cleanup, and empty the block before you do: with the entries in place ruff
-suppresses exactly the findings the table has to be rebuilt from, so
-`ruff check src tests scripts examples --output-format=json` reports nothing
-and the table would come back empty.
+Never add a source file to that table to make the gate pass. The last freeze
+entry held `B904` and `BLE001` on the codec, and the 70 handlers behind it
+were re-raising without chaining from a blind `except Exception`. Chaining
+alone clears both rules, which is the tempting fix and leaves the blind
+excepts standing; each handler was narrowed to what its `try` body can raise
+instead, and the packet error contract test then named four sites where that
+was too tight.
 
-To size one rule family before taking it on, run it past the table instead of
-editing the table. `--isolated` ignores `pyproject.toml`, so nothing is
-suppressed:
+To size one rule family without editing the configuration, run it isolated.
+`--isolated` ignores `pyproject.toml`, so the two `D` exemptions do not
+apply either:
 
 ```bash
 python -m ruff check --isolated --select N802,N803 src/pyomb/
@@ -617,9 +618,8 @@ python -m ruff check --isolated --select N802,N803 src/pyomb/
 Pass condition: the command reports every finding those rules hide, and it
 reports zero once the family has been taken on. Name the rules, because
 `--isolated` drops the project's own `select`, `line-length` and
-`target-version` along with the freeze — a bare `--isolated` measures ruff's
-defaults rather than this project's gate. That is why it sizes one family and
-does not replace emptying the block to rebuild the whole table.
+`target-version` along with them — a bare `--isolated` measures ruff's
+defaults rather than this project's gate.
 
 ruff is pinned to a minor range in `pyproject.toml`, because a release that
 adds rules to an already-selected family, or that changes what the formatter
@@ -632,10 +632,9 @@ command above before pushing and the check has nothing to say. Formatting is
 therefore not reviewable material — the formatter has already settled it, and
 a pull request cannot carry the argument. ADR-004 records the adoption.
 
-A finding has three homes and only one of them is the freeze table. A rule
-that is wrong at one site is suppressed there; a file that was already broken
-on adoption day is in the table; anything else is fixed. ADR-025 draws the
-line and ADR-003 owns the table.
+A finding now has two homes. A rule that is wrong at one site is suppressed
+there, with `# noqa` naming it and the reason above; anything else is fixed.
+The third home, the freeze table, is gone. ADR-025 draws the line.
 
 ```bash
 grep -rn '# noqa' src tests scripts examples
@@ -653,40 +652,32 @@ path: the repository carried none at all until `v0.3.0`.
 python -m mypy
 ```
 
-No arguments: the scope, the strict setting and the per-module freeze all live
-in `pyproject.toml`, so a local run and the gate cannot resolve to different
-checks. `mypy src/ --strict`, the command `CLAUDE.md` documents, reports the
-same thing — the overrides apply on top of it.
+No arguments: the scope and the strict setting both live in `pyproject.toml`,
+so a local run and the gate cannot resolve to different checks. `mypy src/
+--strict`, the command `CLAUDE.md` documents, reports the same thing.
 
-`strict` is on globally, so a module added from here is held to all of it from
-its first commit. The modules that predate the gate are frozen by error code in
-`[[tool.mypy.overrides]]`, each listing exactly what it emits today.
-The two rules are the ones the lint freeze carries: never add a module to make
-the gate pass, and never widen an entry. ADR-005 records why. Narrowing is the
-migration, and it has run once: ADR-009 settled the packet operation signatures
-and dropped `override` from `pyomb.packets`, which split that entry away from
-`pyomb.stream`.
+`strict` is on globally and no module is exempt. The per-module freeze that
+stood in `[[tool.mypy.overrides]]` is retired; ADR-048 records the migration
+and supersedes the record that introduced it. Never reintroduce it — an
+override switches off the analysis rather than one finding, so a module under
+it stops reporting defects it already has.
 
-Nothing still frozen is a real defect. The `override` code went with the
-signatures above; `assignment` went when the client's socket attribute took the
-optional type its own teardown always implied. Each is pinned by a test rather
-than by the freeze, which is what stops it returning under a different entry.
-What remains is two codes, both of them annotations the tree does not yet
-carry: 513 findings across four modules measured on 2026-09-06, `packets.py`
-at 326, `client_simulator.py` at 78, `server_simulator.py` at 75 and
-`stream.py` at 34. That figure moves as the tree grows and as the migration
-retires modules — re-measure by emptying the override blocks and rerunning the
-checker rather than trusting the number written here.
+That is not a theoretical objection. Emptying the four blocks reported 514
+errors in two codes, both of which read as missing annotations, and the four
+slices that cleared them turned up a PDU whose empty payload was `None` where
+`len()` is called on it, an abstraction whose declared method kind contradicted
+its only implementation and every caller, a local carrying `bytes` on one path
+and `str` on another, and a `send_raw()` default that `socket.send` rejects.
 
-The migration takes the modules in import-graph order rather than cheapest
-first, which is not obvious and costs a wasted slice to discover. Most of what
-a module emits is `no-untyped-call`, raised by calling an untyped function in
-another module, so annotating a caller cannot clear it while its callee is
-frozen. The order is `errors`, `packets`, `stream`, then the two simulators.
+Two sites resisted annotation and are worth knowing about before touching
+them. A dispatch on a function code cannot be narrowed to the class a factory
+needs, and a `try`/`except TypeError` asking whether a payload iterates cannot
+be answered ahead of the call. Both carry a `cast` naming what guarantees the
+type, under a comment. Widening the annotation instead would hide the same
+findings the freeze hid.
 
-mypy is pinned to a minor range for the reason ruff is: the freeze records one
-version's error codes, and a release reporting a new one would fail the gate
-on untouched modules.
+mypy is pinned to a minor range for the reason ruff is: a release reporting a
+new error code would fail the gate on untouched modules.
 
 ### 3.6 Pre-commit hooks (pre-commit)
 
@@ -707,11 +698,11 @@ disagree about a file nobody edited.
 
 The mypy hook runs in its own environment rather than the contributor's, so it
 does not depend on what is on `PATH`. It can afford to: the library has no
-third-party dependencies to resolve, and the strict settings and the
-per-module freeze are read from `pyproject.toml` either way. It is pinned to
-the same minor range for the reason ruff is, and it takes no filenames —
-the freeze is keyed by module, so mypy is given the file set from its own
-`files` setting rather than the staged paths.
+third-party dependencies to resolve, and the strict settings are read from
+`pyproject.toml` either way. It is pinned to the same minor range for the
+reason ruff is, and it takes no filenames — a type check is not per-file, so
+mypy is given the file set from its own `files` setting rather than the
+staged paths.
 
 ### 3.7 Secret scanning (gitleaks)
 
@@ -764,7 +755,7 @@ The tree is clean at every severity, so there is no freeze table and no
 severity floor: any finding fails. Suppress a false positive at the line with
 `# nosec <ID>` naming the specific check, and put the reason in a comment above
 it. Never add a check to the config-level `skips` — that stops bandit looking
-everywhere rather than here, which is the distinction ADR-005 draws and
+everywhere rather than here, which is the distinction ADR-048 draws and
 [ADR-012](decisions/012-adopt-codeql-as-the-platform-sast.md) applies to this
 gate. ADR-007 wrote these rules and ADR-012 supersedes it, carrying them
 forward unchanged, so the live record is the later one.
@@ -1040,8 +1031,8 @@ present, and a supersession names the same pair from both sides. ADR-019
 records the schema and this project's category set.
 
 A new category is a decision that takes its own record. Widening the set in
-`CATEGORIES` to make a record pass inverts that, which is the same move the
-lint and type freezes forbid.
+`CATEGORIES` to make a record pass inverts that, which is the move the two
+retired freezes were built to prevent and ADR-047 and ADR-048 record.
 
 ### 3.17 Sdist include anchors (pytest)
 
