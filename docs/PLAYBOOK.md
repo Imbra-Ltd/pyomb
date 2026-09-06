@@ -1443,8 +1443,9 @@ between `v2.54.0` and `v2.56.0`; `quality.md` moved and `docs.md` did not
 between `v2.56.0` and `v2.57.0`, and again between `v2.57.0` and `v2.59.0`;
 neither moved between `v2.59.0` and `v2.60.0`, which is the case that costs
 nothing; `quality.md` moved and `docs.md` did not between `v2.60.0` and
-`v2.61.0`. Ask the question rather than assume the answer, because a range that
-leaves both files alone is the common one:
+`v2.61.0`; both moved between `v2.75.0` and `v2.79.0`. Ask the question rather
+than assume the answer, because a range that leaves both files alone is the
+common one:
 
 ```bash
 git -C docs/solid-ai-templates ls-tree --name-only <new-tag> templates/base/core/quality.md templates/base/core/docs.md
@@ -1482,6 +1483,18 @@ below the character-set rules, which the range leaves untouched -- identifiers
 stay ASCII-only, and comments, docstrings and string content keep carrying no
 restriction at all. The character-set record is unrefuted a second time and
 still stands the stricter way round.
+
+`v2.79.0` is the third of that shape, and the first where `git.md` moved as
+well. `quality.md`'s two hunks near the character set rewrite the
+output-encoding rule and the line-ending gate, and neither reaches the ASCII
+identifier rule — so the record is unrefuted a third time. `git.md` moved the
+release-proposal wording and the milestone-coverage check rather than the
+off-limits section, so the record narrowing that restriction to executable
+content is this project's own and the issue filed upstream is still open. The
+new line-ending gate matches "not `i/lf`" with an extension filter, because a
+blob carrying CRLF and a lone carriage return files as `i/-text` and a check
+naming `i/crlf` passes over it; `checks/test_line_endings.py` already reads
+all three, so nothing here was carrying that hole.
 
 A clause can also be correct upstream and wrong here. The templates repository
 writes rules for itself as well as for its consumers, so a rule about how it
