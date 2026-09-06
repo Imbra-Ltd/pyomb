@@ -447,7 +447,16 @@ the development machine's own context.
 
 It is assigned after the caller's `options`, which are OR-ed in and can only
 add a restriction. Nothing a caller passes, including no mask at all, drops
-the session below the floor.
+the session below the floor. No value distinguishes the two orderings — OR
+only ever adds a bit, and the floor's setter touches only the switches below
+the version it names — so the regression test asserts the order of the two
+writes rather than the resulting context.
+
+No cipher string is imposed either. The library passes one through verbatim
+when a caller supplies it and otherwise sets none at all, leaving the
+interpreter's own suite. The values that stood here before enabled null
+encryption and anonymous key exchange, which is why the test pins the absence
+of a string rather than the presence of a good one.
 
 ### 2.5 The exception hierarchy
 
@@ -507,6 +516,26 @@ the manifest's filter still applies, so pass `-m integration`.
 `checks/test_default_run_is_the_fast_tier.py` holds both directions of this:
 that a bare run reaches no socket test, and that the marker still reaches the
 ones it deselects.
+
+Every fixture in the integration tier binds port 0 and reads the assigned port
+back, so nothing collides with a parallel run, a repeated run, or another
+process. A named port is only free if nothing else got there first, which is
+the assumption these tests exist to stop relying on, and the server sets no
+`SO_REUSEADDR`, so a named port that has just carried a connection refuses the
+next bind while it sits in `TIME_WAIT`. A counter is not the alternative: a
+class attribute incremented as `type(self).port_counter += 1` writes the
+attribute onto each subclass, so every subclass restarts from the inherited
+value and issues the same sequence. Reading the port back is what made this
+possible — `run()` once bound whatever it was given without reading the
+result, so a server asked for port 0 bound one and went on reporting 0.
+
+Wait on the server rather than sleeping. `start()` returns once the listener
+accepts, bounded by its own timeout and raising if the thread dies, so a sleep
+after it waits a second time for what was already waited for. `stop()` only
+sets the quit event, so `join()` with a timeout is the wait on the way out; a
+sleep shorter than the run loop's own `select` timeout lets the thread run
+into the next test and, at the end of a run, into pytest's capture teardown
+where its log writes hit a closed stream.
 
 ### 3.2 Tests from VS Code
 
@@ -773,6 +802,14 @@ would refuse the traffic the simulator is for. A caller wanting a narrower
 bind passes `host` and gets exactly the interface it names. The reason is here
 as well as in the platform's dismissal, so it survives migrating off that
 platform.
+
+The same alert fires on the blocker socket in
+`tests/integration/test_server_connections.py`, which holds a port so the
+server's bind has to fail. It binds every interface deliberately: the server
+under test binds every interface at its default, so a loopback-only holder
+makes the collision platform-dependent — Linux refuses the later wildcard bind
+over it, Windows allows it, and there the server would start cleanly and the
+test would prove nothing.
 
 ### 3.9 CI
 
