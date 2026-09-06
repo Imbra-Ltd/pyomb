@@ -97,9 +97,6 @@ convention = "google"
 strict = true
 files = ["src"]
 
-[[tool.mypy.overrides]]
-module = ["pyomb.server_simulator"]
-disable_error_code = ["no-untyped-call", "no-untyped-def"]
 
 [[tool.mypy.overrides]]
 module = ["pyomb.client_simulator"]
