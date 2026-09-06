@@ -3896,6 +3896,7 @@ package, per ADR-002. See `README.md` for usage and
 - **Pending:** #320's three remaining slices -- `tests/` (81 blocks), `checks/`
   (93) and the configuration files, two of which are off-limits. The templates
   pin is at `v2.75.0` against `v2.79.0` upstream, and the pointer is off-limits
-  so the bump needs its own proposal. #318 and #319 are open from this session.
-  Nothing gates heading ordinals, which is what let the collision above ship;
-  no issue is filed for that yet.
+  so the bump needs its own proposal. #318, #319 and #324 are open from this
+  session, the last of them for the gap that let the collision above ship --
+  nothing here reads heading ordinals, and the check `base-git` carries for
+  this shape has never been run.
