@@ -1,8 +1,13 @@
 """A logger writing to stdout, which attaches a file handler on request."""
 
+# The handler annotations below subscript logging.StreamHandler, which only
+# became subscriptable at runtime in 3.11; this defers them to strings.
+from __future__ import annotations
+
 import logging
 import os
 import sys
+from typing import TextIO
 
 
 class Logger(logging.Logger):
@@ -12,19 +17,19 @@ class Logger(logging.Logger):
     logging for the host application, so nothing here touches the root logger.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, name: str, level: int | str = logging.NOTSET) -> None:
         """Set the format every handler uses and attach the stdout handler.
 
         Args:
-            *args : Positional arguments for `logging.Logger`
-            **kwargs : Keyword arguments for `logging.Logger`
+            name : Name this logger is registered and reported under
+            level : Threshold below which a record is discarded
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(name, level)
 
         self.log_format = "%(asctime)s %(levelname)-8s - %(name)s: %(message)s"
         self.addHandler(self.console_handler())
 
-    def console_handler(self):
+    def console_handler(self) -> logging.StreamHandler[TextIO]:
         """Build the stdout handler every Logger attaches on construction.
 
         Returns:
@@ -38,7 +43,7 @@ class Logger(logging.Logger):
 
         return stdout_handler
 
-    def file_handler(self, filename=None):
+    def file_handler(self, filename: str | None = None) -> logging.FileHandler:
         """Build a file handler, defaulting to the entry point's name.
 
         The name is derived by appending to the extension-stripped path, not by
@@ -57,7 +62,7 @@ class Logger(logging.Logger):
 
         return file_handler
 
-    def log_to_file(self, filename=None):
+    def log_to_file(self, filename: str | None = None) -> logging.FileHandler:
         """Attach a file handler. Opt-in: constructing a Logger writes no file."""
         handler = self.file_handler(filename)
         self.addHandler(handler)

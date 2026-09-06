@@ -103,7 +103,7 @@ strict = true
 files = ["src"]
 
 [[tool.mypy.overrides]]
-module = ["pyomb.errors", "pyomb.logger", "pyomb.server_simulator"]
+module = ["pyomb.errors", "pyomb.server_simulator"]
 disable_error_code = ["no-untyped-call", "no-untyped-def"]
 
 [[tool.mypy.overrides]]
