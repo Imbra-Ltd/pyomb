@@ -121,9 +121,8 @@ class ServerSurvivesABadFrame(unittest.TestCase):
         self.assertTrue(self.server.is_alive(), "the server thread died parsing a malformed request")
 
     def test_server_keeps_serving_after_a_bad_frame(self):
-        # The strongest form: a second client gets a correct answer after the
-        # first sent nonsense. The thread was previously gone and never
-        # accepted it.
+        # The strongest form: a second client is answered after the first sent
+        # nonsense. The thread was previously gone and never accepted it.
         self.send_bad_frame()
 
         second = self.connect()
@@ -137,9 +136,8 @@ class ServerSurvivesABadFrame(unittest.TestCase):
         self.assertEqual(response.header.trans_id, 2)
 
     def test_the_sender_of_a_bad_frame_is_retired(self):
-        # A guard that swallowed the exception but left the socket in the read
-        # list would spin on it: select reports it ready, the parse fails
-        # again, forever.
+        # A guard that swallowed the failure but left the socket in the read
+        # list would spin: select keeps reporting it, the parse keeps failing.
         self.send_bad_frame()
 
         self.assertEqual(self.server.get_peers(), [])
