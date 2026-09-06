@@ -4048,3 +4048,51 @@ package, per ADR-002. See `README.md` for usage and
   already adopted.
 - **Pending:** #320's last slice, `checks/` (93 blocks measured 2026-09-05,
   worth re-measuring first for the reason above).
+
+## 2026-09-06 -- Close the comment bound, open the freeze (fifth session)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Brought `checks/` inside the comment and docstring bounds, and closed
+    #320 (PR #333).** 93 comment blocks over 2 lines holding 399 lines, and 19
+    module docstrings over 10 prose lines, the worst at 60. Most of the
+    docstring prose was already in PLAYBOOK: every gate has its own section
+    there carrying the incident, the exemptions and the remedy, so the
+    docstrings were restating a document a reader can open. What survives is
+    the contract the module pins plus a pointer to the section.
+  - **Widened `ROOTS` to carry `checks` (PR #333).** Every Python directory in
+    the tree is now under the bound. The corpus grew from 79 modules to 100
+    and the floor moved from 55 to 70, keeping the same margin.
+  - **Corrected PLAYBOOK 3.26's account of its own gate (PR #333).** It said
+    two things are deliberately not blocks; the gate excludes four. The banner
+    and the wire-layout table had been added to the check in later changes
+    that never opened the document.
+  - **Retired the ruff freeze for `__init__.py`, `defines.py` and `logger.py`
+    (PR #335).** 21 findings, five `src/` entries left of eight. Sixteen were
+    ruff's own fixes, four were missing docstrings written rather than
+    exempted, and one is a site-local `# noqa: RUF022` -- `__all__` is grouped
+    by submodule with a comment per group, and sorting strands all six.
+- **PRs merged:** #332, #333, #335.
+- **Issues closed/created:** #320 closed. #334 opened, a spike on whether half
+  of `checks/` belongs in this repository at all.
+- **Lesson:** the re-measure-before-scoping habit paid the other way this
+  time. `checks/` still held exactly the 93 blocks the epic recorded on
+  2026-09-05, where `tests/` had drifted by a quarter -- so the command is
+  worth running for the answer rather than for the correction, and a session
+  that skips it because the last one found drift has learned the wrong half.
+- **Lesson:** a module docstring restating an operational document is a second
+  copy, and the migration is what made it visible. The bound did not shorten
+  the explanations; it relocated them to the one place a reader already goes,
+  and what was left in each module was shorter because it had one job.
+- **Lesson:** half of `checks/` is not about this project. 2302 of its 4460
+  lines enforce rules that come from the pinned templates and name no Modbus
+  concept, and the coupling to the library across those ten modules is four
+  parameters and one import. That is #334 rather than a conclusion.
+- **Upstream:** `braboj/solid-ai-templates#1544` filed, on a document that
+  enumerates what a check exempts being a claim that decays from the check's
+  side. #1524, #1486, #1497 and #1518 are still open.
+- **Pending:** the submodule pin sits at `v2.79.0` against `v2.81.0` upstream,
+  which needs a proposal before the pointer moves; the range touches `docs.md`
+  by 181 lines and `quality.md` by 30, so PLAYBOOK 4.1's divergence re-read is
+  owed with it. #318 is untouched and more visible now: the documented lint
+  and scan commands still do not name `checks/`.
