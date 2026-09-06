@@ -33,9 +33,12 @@ The order here is the order to execute them in.
 
 **After committing, before opening.** Check whether the branch touches an
 off-limits path. A hit is an escalation trigger rather than a failure: it says
-the change needs the proposal `CLAUDE.md` 2.5 describes before it merges, and
-that the summary names the path at the top. The check reads the declared list
-from `CLAUDE.md` rather than restating it, so adding a path is one edit.
+the summary names the path at the top, and that an executable change needs the
+proposal `CLAUDE.md` 2.5 describes before it merges. The check reads path
+names rather than file content, so a diff confined to comments is reported
+like any other and is discharged by the summary saying that is all it is. The
+declared list is read from `CLAUDE.md` rather than restated, so adding a path
+is one edit.
 
 Its subject is committed history, so a branch whose work is staged and
 uncommitted reports exactly what a compliant branch reports. That is the
