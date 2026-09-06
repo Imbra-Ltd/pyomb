@@ -561,6 +561,13 @@ against the whole rule set, an existing one cannot get worse, and shrinking the
 table is the migration. To take a rule family on, delete the entries naming it,
 fix what ruff then reports, and commit both together — the gate holds the gain.
 
+Two entries above the table are exemptions rather than freezes: `tests/**` and
+`checks/**` drop the `D` rules, because a test's name carries its intent and a
+docstring on top of it is the busywork the quality-gates template rules out.
+The gates in `checks/` are tests and only their directory differs; without
+that second entry they report 142 `D` findings — 126 `D202`, 15 `D102` and one
+`D403` — on files whose content never moved.
+
 Never add a file to that table to make the gate pass. Regenerate it only after
 a cleanup, and empty the block before you do: with the entries in place ruff
 suppresses exactly the findings the table has to be rebuilt from, so
@@ -626,8 +633,17 @@ The two rules are the ones the lint freeze carries: never add a module to make
 the gate pass, and never widen an entry. ADR-005 records why. Narrowing is the
 migration, and it has run once: ADR-009 settled the packet operation signatures
 and dropped `override` from `pyomb.packets`, which split that entry away from
-`pyomb.stream`. The findings still frozen that are real defects rather than
-missing annotations are tracked in #45 and #46.
+`pyomb.stream`.
+
+Nothing still frozen is a real defect. The `override` code went with the
+signatures above; `assignment` went when the client's socket attribute took the
+optional type its own teardown always implied. Each is pinned by a test rather
+than by the freeze, which is what stops it returning under a different entry.
+What remains is two codes, both of them annotations the tree does not yet
+carry: 597 findings across six modules measured on 2026-09-01, `no-untyped-call`
+at 327 and `no-untyped-def` at 270. That figure rises as the tree grows —
+re-measure by emptying the override blocks and rerunning the checker rather
+than trusting the number written here.
 
 mypy is pinned to a minor range for the reason ruff is: the freeze records one
 version's error codes, and a release reporting a new one would fail the gate
@@ -676,6 +692,17 @@ python -m bandit -c pyproject.toml -r src scripts tests examples
 The `-c` is not optional. Bandit reads nothing from `pyproject.toml` unless
 pointed at it, so dropping the flag produces a different, noisier run than CI's
 — the exclusions and the test-only assert skip both disappear.
+
+bandit is pinned to a minor range for the reason ruff and mypy are: a release
+reporting a new check would fail the gate on untouched code. It also takes its
+`toml` extra, without which it cannot read `pyproject.toml` at all — the
+standard library gained a TOML parser in 3.11 and this project's floor is 3.10.
+
+The `exclude_dirs` list bounds a contributor's own recursive run; the gate
+names the source directories explicitly. Both of its paths are anchored with
+`./`, because bandit matches an unanchored pattern against every path segment:
+a bare `docs` would also exclude a future `src/pyomb/docs`, dropping a whole
+sub-package from the scan while the gate stayed green.
 
 The tree is clean at every severity, so there is no freeze table and no
 severity floor: any finding fails. Suppress a false positive at the line with
@@ -950,6 +977,12 @@ submodules and the patterns find nothing to select. That is the checkout
 configuration covering for the include list, not a safeguard: populating the
 submodule in that job would ship the leak on the next tag.
 
+`CHANGELOG.md` is deliberately not on the list. The tree each tag names
+carries it, which is what the source archive generated from that tag ships,
+and the release page renders it besides — so a consumer arriving from a
+release already has it. The sdist is a build input, and the standing direction
+is to ship less of the repository in it rather than more.
+
 The check reads `pyproject.toml` rather than building one, because an
 unanchored pattern is the whole of the defect and a build costs tens of
 seconds. It skips on Python 3.10, which has no standard-library TOML parser,
@@ -1192,6 +1225,10 @@ The package's docstring examples run as part of the default suite, so an
 example that stops holding fails a pull request. `testpaths` carries `src` and
 `addopts` carries `--doctest-modules`; neither is optional, and dropping either
 stops every example being collected while the suite reports the same green.
+They are the part of the documentation a reader is most likely to copy and the
+part most able to be checked, and until `src` was added nothing ran them — one
+example had been asserting something its class does not provide, on `main`,
+unnoticed.
 
 A third way is the invocation rather than the configuration, and it is the one
 that was live. `testpaths` applies only when pytest is given no path of its
@@ -1242,6 +1279,14 @@ report exactly what 57 passing tests report.
 Both assertions carry a floor rather than a comparison against each other,
 because an assertion that the default run excludes the tier is satisfied just
 as well by a default run that reached nothing at all.
+
+The two test directories are packaged differently, and both are deliberate.
+The prepend import mode puts a module's own directory on `sys.path`, which is
+what resolves `from changelog import ...` in the flat `checks/` tree. `tests/`
+is tiered, so a module in `tests/integration/` would get that directory rather
+than the one holding the helpers — an `__init__.py` in `tests/` and in each
+subdirectory puts the repository root on the path instead, which is what makes
+`from tests.helpers.stub_socket import ...` resolve from any depth.
 
 The fourth test reads `ci.yml` for a step selecting the tier. That step is the
 only thing that runs those tests where a merge is decided — a contributor's
