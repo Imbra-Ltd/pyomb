@@ -1,24 +1,14 @@
 """Every decision record carries well-formed YAML front matter.
 
-The upstream governance record makes front matter the source of truth for a
-record's status, its date and its supersession links, and lists the smoke check
-that should enforce it: front matter present and well-formed, the id matching
-the filename, status and category drawn from closed sets, and the
-supersedes / superseded_by pair reciprocally consistent. This module is that
-check.
+Front matter is the source of truth for a record's status, its date and its
+supersession links. Before it, a status lived in prose, so a supersession
+updated one side of a pair and nothing noticed the other was stale -- two of
+this project's records supersede an earlier one, and neither of the earlier
+ones pointed forward until the migration wired both directions.
 
-It is worth having for the reason the governance record gives. Before it, a
-record's status lived in prose, so a supersession updated one side of a pair
-and nothing noticed the other was stale. Two of this project's records
-supersede an earlier one, and neither of the earlier ones pointed forward until
-the migration wired both directions.
-
-The parser here is deliberate rather than lazy. The schema is six known scalar
-and list fields on a fixed set of files, and the project ships no runtime
-dependencies at all -- pulling a YAML library into the test extra to read
-`status: Accepted` would cost more than it explains. The parser therefore
-accepts only what the schema allows and refuses anything else, which is
-stricter than a real YAML reader rather than looser.
+The parser accepts only what the schema allows and refuses anything else, which
+is stricter than a real YAML reader rather than looser. PLAYBOOK 3.16 carries
+the schema and this project's category set.
 """
 
 import pathlib
@@ -34,11 +24,8 @@ DECISIONS = "docs/decisions/"
 # Accepted once it does, and Superseded when a later record replaces it.
 STATUSES = {"Proposed", "Accepted", "Superseded"}
 
-# This project's closed set, which is not the upstream one. Those categories
-# name the template repository's own domains -- manifest shape, layer
-# organization, its sync tooling -- and none of them describe a decision about
-# a Modbus wire format. Widening this set is a decision that takes its own
-# record, which is the discipline the closed set exists to impose.
+# This project's closed set, which is not the upstream one. Widening it is a
+# decision that takes its own record, which is the discipline it exists for.
 CATEGORIES = {
     # The wire, the packet API, and the contracts a device sees
     "protocol",
@@ -55,12 +42,7 @@ CATEGORIES = {
 REQUIRED = ("id", "status", "date", "category", "supersedes", "superseded_by")
 
 # What the directory held when this floor was set, less the template this
-# module skips, measured with `git ls-files docs/decisions/*.md`. A record is
-# append-only -- it merges and is never deleted, since a superseded one stays
-# in the tree carrying the link to what replaced it -- so the measured count is
-# a floor that only ever rises. It is a floor rather than a non-empty check
-# because a listing that comes back holding one record satisfies non-emptiness
-# while measuring almost nothing.
+# module skips. Records are append-only, so the count only ever rises.
 RECORDS_AT_LEAST = 22
 
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -80,8 +62,7 @@ def tracked_decisions():
     """
 
     # The argument vector is a list and carries no caller input, so it reaches
-    # the operating system directly rather than through a shell and cannot
-    # become a second command.
+    # the operating system directly rather than through a shell.
     listing = subprocess.run(  # nosec B603 B607
         ["git", "ls-files", "-z", DECISIONS],
         cwd=REPO,
@@ -129,9 +110,8 @@ def front_matter(text):
         if scalar:
             fields[scalar.group(1)] = scalar.group(2).strip()
 
-    # Reaching here means the closing delimiter never arrived, which is a
-    # malformed block rather than an absent one. The caller distinguishes the
-    # two by the missing fields.
+    # Reaching here means the closing delimiter never arrived: a malformed
+    # block rather than an absent one, told apart by the missing fields.
     return fields
 
 

@@ -1,39 +1,14 @@
 """The pipeline's test step collects the package's docstring examples.
 
-`pyproject.toml` declares `testpaths = ["tests", "checks", "src"]`. The `src`
-entry is the only thing that reaches the docstring examples and the `checks`
-entry is the only thing that reaches the repository gates. That list applies
-only when pytest is given no path of its own, so a step naming one silently
-replaces it.
+`testpaths` applies only when pytest is given no path of its own, so a step
+naming one silently replaces it. The pipeline named `tests` for as long as the
+doctest configuration existed: locally a bare `pytest` collected 627 items
+including 37 doctests, and the step collected 590 and none of them.
 
-Both entries fail the same way and neither is visible in a passing run. A
-collection that reaches no `src` item runs no docstring example; one that
-reaches no `checks` item runs no repository gate, and every rule this project
-enforces about its own documents goes unchecked while the suite stays green.
-
-The pipeline named `tests` for as long as the doctest configuration existed.
-Locally a bare `pytest` collected 627 items including 37 doctests; the step
-collected 590 and none of them, so every example ran on a contributor's
-machine and none ran where a merge is decided. The configuration that exists
-to catch a wrong example was added after exactly that -- an example asserting
-something its class does not provide, on main, unnoticed.
-
-`checks/test_doctests_are_gated.py` cannot see this. Its subject is the
-configuration, and the configuration was correct throughout: the list named
-both directories, the exemption machinery was consistent, and the gate reached
-the package. What failed is the invocation, which no test read.
-
-So this module asserts on a collection rather than on text. It takes the paths
-the step passes, runs a collection with exactly those, and asks what came
-back. A check reading the step for the absence of a path argument would pass
-for a step naming the paths some other way and fail for one that is correct in
-a form nobody anticipated -- which is checking the configuration again, one
-level along.
-
-The workflow is read as text rather than parsed as YAML, for the reason
-`checks/test_workflow_downloads_retry.py` gives: the only YAML dependency in
-the test extra's closure is a transitive one, so parsing would stake this
-module on a dependency no manifest here declares.
+So this module asserts on a collection rather than on text -- it takes the
+paths the step passes and asks what came back. Reading the step for the absence
+of a path argument would be checking the configuration again, one level along.
+PLAYBOOK 3.24 carries what each entry reaches.
 """
 
 import pathlib
@@ -44,19 +19,18 @@ import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
+# Read as text rather than parsed as YAML: the only YAML dependency in the test
+# extra's closure is a transitive one, which no manifest here declares.
 WORKFLOW = REPO / ".github" / "workflows" / "ci.yml"
 
 STEP = re.compile(r"^\s*- name: Test\s*$")
 
-# The key opening the folded command, with its indentation captured. The block
-# is every following line indented deeper than the key, which is what ends it:
-# the Test step is the last in its job, so scanning for the next step instead
-# runs off the end and swallows the job below.
+# The key opening the folded command. Indentation is what ends the block: the
+# Test step is the last in its job, so scanning for the next runs off the end.
 RUN = re.compile(r"^(\s*)run:")
 
-# Everything up to and including the runner invocation. What matters is what
-# follows it, so the prefix is discarded rather than asserted on -- the step
-# may reasonably change how it reaches the interpreter.
+# Everything up to and including the runner invocation, discarded rather than
+# asserted on -- the step may change how it reaches the interpreter.
 INVOCATION = re.compile(r".*python -m pytest\b")
 
 
@@ -106,9 +80,8 @@ def collect(paths):
             and how many are repository gates in checks
     """
 
-    # The argument vector is a list, so it reaches the operating system
-    # without a shell. The interpreter is this process's own and every path
-    # comes from the committed workflow, not from a caller.
+    # The argument vector is a list, so it reaches the operating system without
+    # a shell, and every path in it comes from the committed workflow.
     completed = subprocess.run(  # nosec B603
         [sys.executable, "-m", "pytest", "--collect-only", "-q", *paths],
         capture_output=True,

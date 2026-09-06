@@ -1,31 +1,14 @@
 """An action split across sub-actions is bumped by one pull request.
 
-Some actions ship as several sub-actions under one repository -- the CodeQL
-action is init and analyze here -- and the halves refuse to run against each
-other's version. Dependabot names each half as its own dependency, so an
-ungrouped configuration raises one pull request per half. Each moves half the
-pair and fails the very analysis it is updating.
+Some actions ship as several sub-actions under one repository, and the halves
+refuse to run against each other's version. Dependabot names each half as its
+own dependency, so an ungrouped configuration raises one pull request per half
+and each fails the analysis it is updating -- a deadlock no merge order fixes,
+because whichever lands first is red on its own. The pins then stop moving
+silently, which is the cost rather than the two stale versions.
 
-That is a deadlock rather than a slow merge. Whichever pull request goes first
-is red on its own, a required check cannot be satisfied by a branch that has
-not merged, and no ordering exists that fixes it. Two such pull requests sat
-open for a day with every other check green before this was written.
-
-The cost is not the two stale pins. Pinning an action to a commit rather than a
-tag is a supply-chain control that assumes something keeps the pin current, and
-the mechanism meant to keep it current is exactly what cannot complete. So the
-pins stop moving silently, and nothing else reports that they have.
-
-The rule is therefore about the configuration and not about one version: where
-the workflows reference two or more halves of one action, a single Dependabot
-group has to cover all of them, so the halves move together.
-
-Two reading choices. The workflows and the configuration are read as text
-rather than parsed, because no manifest here declares a YAML parser -- the only
-one in the test extra's closure is a transitive dependency of bandit, and this
-module is not worth staking on that. And the corpus is the filesystem rather
-than git's index, matching the workflow gate beside it: a workflow directory is
-not somewhere scratch files accumulate, so the two enumerations agree.
+The rule is about the configuration and not about one version. PLAYBOOK 4.5
+carries the arrangement the pins rest on.
 """
 
 import pathlib
@@ -35,17 +18,18 @@ from fnmatch import fnmatchcase
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
+# Read from the filesystem rather than git's index, matching the workflow gate
+# beside it: a workflow directory is not where scratch files accumulate.
 WORKFLOWS = REPO / ".github" / "workflows"
 
+# Both are read as text rather than parsed, because no manifest here declares
+# a YAML parser and the only one in the closure is bandit's own.
 CONFIG = REPO / ".github" / "dependabot.yml"
 
 ECOSYSTEM = "github-actions"
 
-# `uses: owner/repo/sub@sha`, capturing everything before the pin. That string
-# is what Dependabot names the dependency -- the sub-path included, which is
-# why the halves arrive as separate pull requests in the first place. A local
-# action reference carries no pin and does not match, which is correct: nothing
-# bumps it.
+# `uses: owner/repo/sub@sha`, capturing what Dependabot names the dependency --
+# the sub-path included. A local reference carries no pin and nothing bumps it.
 USES = re.compile(r"^\s*-?\s*uses:\s*([^@\s]+)@")
 
 # The entry that opens one ecosystem's update block.
@@ -58,18 +42,12 @@ GROUPS_KEY = "groups:"
 
 PATTERNS_KEY = "patterns:"
 
-# One nesting level, which .editorconfig fixes at two spaces for YAML. It is
-# what separates a group's name from the fields inside it, so `exclude-patterns`
-# is not read as a group that happens to have no includes.
+# One nesting level, which .editorconfig fixes at two spaces for YAML. It
+# separates a group's name from the fields inside it, such as exclude-patterns.
 NESTING = 2
 
-# What the workflows held when this floor was set: 18 pinned references across
-# the three of them, naming 5 distinct actions. The floor counts references
-# rather than actions and sits at a third of them, because steps churn --
-# dropping a setup action removes several references and is an ordinary edit,
-# which must not fail a control that reports a broken enumeration. Every way
-# this enumeration breaks returns nothing at all, so the margin costs no
-# detection.
+# What the workflows held when this floor was set: 18 pinned references naming
+# 5 distinct actions. Steps churn, so the floor takes a margin below that.
 ACTION_REFERENCES_AT_LEAST = 6
 
 NO_WORKFLOWS = "no workflow directory, so there are no action references to read"
@@ -238,9 +216,8 @@ def covering_group(groups, names):
     """
 
     for group, patterns in groups.items():
-        # Dependabot folds case when it matches a pattern; fnmatchcase does
-        # not, and fnmatch would fold on Windows only. Lowering both sides
-        # keeps this reading the same on either platform.
+        # Dependabot folds case; fnmatchcase does not and fnmatch folds on
+        # Windows only, so lowering both sides reads the same on either.
         if all(any(fnmatchcase(name.lower(), pattern.lower()) for pattern in patterns) for name in names):
             return group
 

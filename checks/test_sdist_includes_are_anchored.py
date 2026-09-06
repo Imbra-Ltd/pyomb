@@ -1,44 +1,14 @@
 """Every sdist include pattern is anchored to the repository root.
 
-A hatchling include pattern with no path separator matches at any depth, not
-just at the top of the tree. `LICENSE` selects this project's licence and the
-templates submodule's licence alike; `tests` selects both this project's suite
-and the submodule's own; `README.md` selects both readmes. `src/pyomb` was the
-one entry that never leaked, because a pattern carrying a separator is already
-read from the root.
+A hatchling pattern with no path separator matches at any depth, so `LICENSE`,
+`tests` and `README.md` each select the templates submodule's file of that name
+as well as this project's. The rule is the leading slash and it holds for every
+pattern, including the one already safe: a rule with an exception for the
+entries that are safe by accident asks a reader which kind each entry is.
 
-The rule this module pins is the leading slash, and it holds for every pattern
-including that one. A rule with an exception for the entries that happen to be
-safe by accident asks a reader to work out which kind each entry is; a rule
-that reads the same for all four does not.
-
-A build from a working checkout shows it. With the submodule populated, the
-source distribution carries 57 files from `docs/solid-ai-templates` -- its
-licence, its readme and the whole of its test suite -- out of 125 in the
-archive. Anchoring the four patterns drops it to 68 and removes the submodule
-entirely, changing nothing else.
-
-The released archives escaped it, and not by design. `release.yml` checks out
-without submodules, so `docs/solid-ai-templates` is an empty directory in CI
-and the unanchored patterns match nothing to select; the v0.2.0 and v0.2.1
-assets are clean. Anything that populates the submodule in that job -- a
-`submodules: recursive`, added for an SBOM or a docs build -- ships the leak
-on the next tag. The anchors are what removes the dependency on that.
-
-The check reads the patterns rather than building a distribution. A build takes
-tens of seconds and needs an isolated environment; the defect is visible in the
-configuration, where an unanchored pattern is the whole of it. What the test
-cannot see is a pattern that is anchored and still wrong, which is a different
-mistake and one a reader of the diff can catch.
-
-`python-lib.md` names this class of defect for the exclude patterns in tool
-configuration -- audit them when the tree grows a directory, and anchor them.
-Includes were left to the same reasoning and nothing checked them.
-
-Reading the manifest needs a TOML parser, and the standard library grew one in
-3.11. This project supports 3.10, where the module skips rather than pull a
-backport in for one meta-test. The rule it pins is a property of a file, not of
-an interpreter, so the 3.13 leg of the matrix checks it for every leg.
+The check reads the patterns rather than building a distribution, and skips on
+3.10, which has no TOML parser. PLAYBOOK 3.17 carries the archive check that
+catches a pattern anchored and still wrong.
 """
 
 import pathlib
@@ -58,8 +28,7 @@ MANIFEST = REPO / "pyproject.toml"
 ANCHOR = "/"
 
 # The directory holding the repository gates. It is absent from the include
-# list rather than excluded from it, which is what keeps this module's reading
-# sufficient -- an exclude pattern would sit somewhere nothing here looks.
+# list rather than excluded, which is what keeps this reading sufficient.
 GATES = "checks"
 
 REMEDY = (

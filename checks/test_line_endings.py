@@ -1,38 +1,14 @@
 """No tracked file reaches the index carrying a carriage return.
 
-`.gitattributes` normalises every text file to LF in the index, so whatever
-`core.autocrlf` does in a working tree never reaches a commit, and
-`.editorconfig` is the editor-side half for editors that read it. Development
-here is Windows and CI is Linux, which is the split the pair exists for.
-
 The rule was documented and unenforced. The playbook carried both commands
 that verify it and their pass conditions, and nothing ran either one, so the
-check fired only when a person opened the section and typed it. Its sibling
-governs which characters may appear in a line and has run as
-`checks/test_source_is_ascii.py` on every pull request since it was written. The
-two rules are the same shape, and a violating tree looks identical to a clean
-one until someone looks.
+check fired only when a person opened the section and typed it.
 
-The second rule here is the one the documented count cannot express. A file
-git classifies as binary reports `-text` rather than a line-ending value, and
-`text=auto` skips normalising it, so its carriage returns go into the index
-unconverted while the count stays at zero. One NUL byte anywhere in a file is
-enough to trigger that classification, which is how this project's journal came
-to be stored with 1127 CRLF endings while the check reported clean. The
-violation and the thing that hides it from the count are the same event.
-
-Which files are legitimately binary is read from git's own attribute column
-rather than named here. The specifications are declared binary in
-`.gitattributes` and report `-text` in both columns; a file that reports it in
-the index alone was detected as binary while the project declared it text,
-which is exactly the incident shape. Reading the declaration means adding a
-binary file is one line in `.gitattributes` rather than an edit to this module,
-and means a file that acquires a stray byte cannot excuse itself by its name.
-
-The guard reads the tree as git tracks it, so a local scratch file cannot fail
-a run that CI would pass, and it checks that it read something before it
-reports that it found nothing: a listing this module could not parse would
-report a clean tree in exactly the same words as a clean tree.
+The second rule reaches what a count of carriage returns cannot. A file git
+classifies as binary is not normalised, so its carriage returns enter the index
+while the count stays at zero -- the violation and the thing that hides it from
+the count are the same event. Which files are legitimately binary is read from
+git's own attribute column. PLAYBOOK 3.12 carries the incident and the fix.
 """
 
 import collections
@@ -46,28 +22,18 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 # attributes are a tuple because a path may carry several.
 Entry = collections.namedtuple("Entry", "path index attributes")
 
-# The index line-ending values that put a carriage return in a commit. `crlf`
-# is a file stored with CRLF throughout, which a plain count of that value
-# reports; `mixed` is one carrying both endings, which the same count misses
-# while it commits the same bytes. The remaining values -- `lf`, `none`, and
-# the empty one a submodule gitlink reports -- carry no carriage return.
+# The index values that put a carriage return in a commit. `mixed` is a file
+# carrying both endings, which a plain count of `crlf` misses.
 CARRIAGE_RETURN = frozenset({"crlf", "mixed"})
 
-# What git reports for a blob it treats as binary, in the index column and the
-# attribute column alike. A path wearing it in both was declared binary; one
-# wearing it in the index alone was detected as binary while the project
-# declared it text, and that is the case that hides a violation.
+# What git reports for a blob it treats as binary, in both columns. Wearing it
+# in the index alone is the case that hides a violation.
 NOT_TEXT = "-text"
 
 NOT_A_CHECKOUT = "not a git checkout, so there is no index to read line endings from"
 
-# What the index held when this floor was set: 136 paths. The floor sits at
-# roughly half, because the tree churns -- a retired module or workflow is an
-# ordinary deletion and must not fail a line-ending rule. Every way this
-# enumeration breaks returns nothing at all, so the margin costs no detection.
-# It is a floor rather than the non-empty check it replaces because a listing
-# that comes back holding one path satisfies non-emptiness while measuring
-# almost nothing.
+# What the index held when this floor was set: 136 paths. The tree churns, so
+# the floor takes a margin below it; a broken enumeration returns nothing.
 TRACKED_AT_LEAST = 64
 
 RENORMALISE = (
@@ -93,11 +59,8 @@ def eol_records():
         list[str] : One record per index entry, in git's own order
     """
 
-    # The two suppressed checks rest on the argument vector being a list, which
-    # hands the arguments to the operating system directly rather than to a
-    # shell, so nothing here can break out and become a second command. It is
-    # also fixed, with no caller input in it. The checks match on call shape
-    # and cannot see either.
+    # The argument vector is a fixed list and carries no caller input, so it
+    # reaches the operating system directly rather than through a shell.
     listing = subprocess.run(  # nosec B603 B607
         ["git", "ls-files", "--eol", "-z"],
         cwd=REPO,
@@ -162,9 +125,8 @@ def read(records):
     entries = []
 
     for record in records:
-        # The three fields are padded to fixed columns and the path follows the
-        # first tab, so the split is on the tab rather than on whitespace. `-z`
-        # does not quote a path, and a path may contain spaces.
+        # The path follows the first tab, so the split is on the tab rather
+        # than on whitespace: `-z` does not quote a path that holds spaces.
         info, _, path = record.partition("\t")
 
         fields = info.split()
@@ -205,20 +167,16 @@ def stored_as_binary_undeclared(entries):
     return [entry.path for entry in entries if entry.index == NOT_TEXT and NOT_TEXT not in entry.attributes]
 
 
-# A record of each kind this module exists to catch, in git's own output shape.
-# The first is what a plain count of `crlf` reports, the second is what such a
-# count misses, and the third is the reclassification that hid 1127 carriage
-# returns from it.
+# A record of each kind this module exists to catch, in git's own output shape:
+# what a count of `crlf` reports, what it misses, and the reclassification.
 PLANTED = (
     "i/crlf  w/crlf  attr/text=auto        \tdocs/planted-crlf.md",
     "i/mixed w/crlf  attr/text=auto        \tdocs/planted-mixed.md",
     "i/-text w/-text attr/text=auto        \tdocs/planted-detected-binary.md",
 )
 
-# The three shapes a clean tree carries: a normalised text file, a file
-# declared binary in `.gitattributes`, and a submodule gitlink, which reports
-# no line endings at all. A control that only plants violations tests half the
-# rule -- a check that flags everything flags each planted record too.
+# The three shapes a clean tree carries. A control that only plants violations
+# tests half the rule -- a check flagging everything flags each plant too.
 CLEAN = (
     "i/lf    w/crlf  attr/text=auto        \tREADME.md",
     "i/-text w/-text attr/-text            \tdocs/specs/PI_MBUS_300.pdf",
@@ -231,9 +189,8 @@ class LineEndings(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Absent a checkout there is no index to read, and no other source
-        # answers the same question. The skip is for that case only; a checkout
-        # whose git call fails is a failure, not a skip.
+        # Absent a checkout there is no index to read. The skip is for that
+        # case only; a checkout whose git call fails is a failure.
         if not (REPO / ".git").exists():
             raise unittest.SkipTest(NOT_A_CHECKOUT)
 

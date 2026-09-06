@@ -1,34 +1,14 @@
 """Every tool a workflow downloads is fetched with a retry.
 
-The secrets gate fetches the gitleaks binary from a release asset before it can
-scan anything. That download is the one step in the pipeline whose failure says
-nothing about the change under review, and it is a required context, so a
-transient network fault there blocks a merge on a verdict no one produced.
+The secrets gate fetches the gitleaks binary before it can scan anything. That
+download is the one step whose failure says nothing about the change under
+review, and it is a required context, so a transient fault blocks a merge on a
+verdict no one produced -- as one connection reset already did.
 
-It has already happened once. The gate failed with
-`curl: (35) Recv failure: Connection reset by peer`, which means the archive
-never arrived and nothing scanned the diff. A single announced re-run passed.
-That re-run is the habit `base-review` warns against -- retry-until-green masks
-an infrastructure problem -- and the fix is to make the download survive the
-fault rather than to make a person judge each red run.
-
-`--retry` alone does not cover it. curl treats a timeout and an HTTP 408, 429
-or 5xx as transient, and a connection reset mid-transfer is none of those;
-`--retry-all-errors` is the flag that reaches it. The cost is that a genuine
-404 is now attempted three times before failing, which is a few seconds spent
-to keep the real fault loud rather than a reason to leave the reset uncovered.
-
-`--fail` is asserted here as well, because it is load-bearing in the same
-command and for a reason that is easy to undo by accident: without it curl
-reports success on a 404 and writes the response body into the archive, so the
-run fails two lines later at tar with a corrupt-archive error standing in for a
-release that is not there. A retry flag added while dropping `--fail` would
-turn one confusing failure into three.
-
-The workflow is read as text rather than parsed as YAML. A parser would hand
-back the same shell string to scan, and the only YAML dependency in the test
-extra's closure is a transitive one of bandit -- so the parse would buy nothing
-and stake this module on a dependency no manifest here declares.
+`--retry` alone does not reach a reset mid-transfer, which curl does not count
+as transient; `--retry-all-errors` is the flag that does. `--fail` is asserted
+beside them because it is load-bearing in the same command. PLAYBOOK 3.7
+carries the run this came from.
 """
 
 import pathlib
@@ -37,18 +17,16 @@ import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
+# Read as text rather than parsed as YAML: a parser would hand back the same
+# shell string, and the only YAML dependency in the closure is bandit's own.
 WORKFLOWS = REPO / ".github" / "workflows"
 
 # A shell line continuation, plus the indentation the next line opens with. A
-# download URL is long enough that the command is always split across several
-# lines, and every flag has to be visible as one string to be checked.
+# download command is always split, and every flag has to be one string here.
 CONTINUATION = re.compile(r"\\\s*\n\s*")
 
-# curl as a command rather than as the word: it opens the line, or follows a
-# shell operator, so a mention of curl in prose does not answer to this. The
-# leading whitespace is not optional in practice -- a run block's commands are
-# indented under the step, so anchoring at the bare start of a line matches
-# nothing at all, which is a mistake the coverage test above catches.
+# curl as a command rather than as the word: it opens the line or follows a
+# shell operator. A run block's commands are indented, so the space matters.
 CURL = re.compile(r"(?:^\s*|[|&;(]\s*)curl\s")
 
 # The count is required rather than a bare --retry, which curl reads as zero

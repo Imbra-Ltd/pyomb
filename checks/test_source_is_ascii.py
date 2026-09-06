@@ -1,29 +1,14 @@
 """Source stays printable ASCII; Markdown carries only what a reader can see.
 
-The rule this replaces held every tracked file to printable ASCII and let
-Markdown past it by exactly one character, the em dash. The printable
-restriction is now lifted off Markdown altogether. A document is written for a
-reader, so a diagram drawn in box-drawing characters, an arrow, or a quotation
-in another script is content rather than drift. `templates/base/core/quality.md`
-reaches the same position from the other side: it scopes its ASCII rule to
-identifiers and says in as many words that documentation carries no charset
-restriction at all.
+The printable restriction was lifted off Markdown altogether. A document is
+written for a reader, so a box-drawing diagram, an arrow or a quotation in
+another script is content rather than drift. What survives the lift is the half
+a reader cannot see: a control character renders as nothing, and one of them is
+load-bearing for a second gate -- a single NUL makes git classify a file as
+binary, which stops line-ending normalisation and blinds that rule.
 
-What survives the lift is the half a reader cannot see. A control character
-renders as nothing, so no amount of reading catches it, and one of them is
-load-bearing for a second gate. A single NUL makes git classify a file as
-binary, which stops `text=auto` normalising its line endings and makes
-`git ls-files --eol` report `-text` where a value belongs. That is how the dev
-journal came to be stored with 1127 CRLF endings while `test_line_endings.py`
-read a clean tree, and this module is what names the byte behind it.
-
-So the two halves are held to two different rules. Source, tests, configuration
-and workflows stay printable ASCII, where `--` substitutes for a dash and the
-extra characters buy nothing that terminals, diff viewers, `grep` and patch
-files do not charge for. Markdown is held to the control-character rule alone.
-
-The guard is one-directional and needs no fixture: it reads the tree as git
-tracks it, so a local scratch file cannot fail a run that CI would pass.
+So the two halves are held to two different rules. PLAYBOOK 3.13 carries the
+incident behind the second and what substitutes for what.
 """
 
 import pathlib
@@ -43,12 +28,7 @@ LEGAL_CONTROL = "\t\n"
 NOT_A_CHECKOUT = "not a git checkout, so there is no tracked-file list to read"
 
 # What each half held when these floors were set: 34 Markdown files and 97
-# other readable ones, out of 136 tracked. Each floor sits at roughly half its
-# half, because the tree churns -- a retired module or workflow is an ordinary
-# deletion and must not fail a character-set rule. Every way this enumeration
-# breaks returns nothing at all, so the margin costs no detection. The two
-# halves are counted separately because the rules below read one each: a floor
-# on the total would pass while the Markdown rule read an empty list.
+# other readable ones. Counted separately, since the rules below read one each.
 MARKDOWN_AT_LEAST = 16
 
 OTHER_AT_LEAST = 48
@@ -96,9 +76,8 @@ def legal_in_markdown(character):
 
     code = ord(character)
 
-    # Everything except the two Unicode control blocks, Cc: U+0000-U+001F and
-    # U+007F-U+009F. Both render as nothing, and the first carries the NUL that
-    # reclassifies a file as binary and blinds the line-ending gate.
+    # Everything except the two Unicode control blocks, U+0000-U+001F and
+    # U+007F-U+009F. The first carries the NUL that blinds the line-ending gate.
     return character in LEGAL_CONTROL or 32 <= code <= 126 or code >= 160
 
 
@@ -109,14 +88,8 @@ def tracked_files():
         list[str] : The tracked paths, in git's own order
     """
 
-    # The two suppressed checks rest on the same property as the one place the
-    # certificate script reaches openssl: the command is a list, which hands the
-    # argument vector to the operating system directly rather than to a shell,
-    # so nothing here can break out and become a second command. It is also a
-    # fixed vector with no caller input in it. The checks match on call shape
-    # and cannot see either. Resolving git's absolute path first would trade a
-    # suppression for a lookup that can fail on a machine where the check is
-    # meaningless anyway.
+    # The argument vector is a fixed list and carries no caller input, so it
+    # reaches the operating system directly rather than through a shell.
     listing = subprocess.run(  # nosec B603 B607
         ["git", "ls-files", "-z"],
         cwd=REPO,
@@ -160,10 +133,8 @@ class SourceIsAscii(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Absent a checkout there is no tracked-file list to read, and a
-        # filesystem walk would pick up ignored artifacts CI never sees. The
-        # skip is for that case only; a checkout whose git call fails is a
-        # failure, not a skip.
+        # Absent a checkout there is no tracked-file list, and a filesystem
+        # walk would pick up ignored artifacts CI never sees.
         if not (REPO / ".git").exists():
             raise unittest.SkipTest(NOT_A_CHECKOUT)
 
@@ -189,10 +160,8 @@ class SourceIsAscii(unittest.TestCase):
 
             text = path.read_text(encoding="utf-8")
 
-            # split() rather than splitlines(), which also breaks on the
-            # vertical tab, the form feed and the Unicode line separators --
-            # so every one of those would be consumed as a line boundary and
-            # never appear within a line for this loop to see.
+            # split() rather than splitlines(), which breaks on the vertical
+            # tab and form feed -- consuming the characters this rule looks for.
             for row, line in enumerate(text.split("\n"), start=1):
                 for column, character in enumerate(line, start=1):
                     if not is_legal(character):

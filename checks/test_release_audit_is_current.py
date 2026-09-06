@@ -1,74 +1,14 @@
 """A minor or major release carries an audit run since the release before it.
 
-The release procedure's step 2 says to run a 360-degree audit and not to ship
-with critical findings open. Four releases were cut without one -- v0.2.0,
-v0.2.1, v0.3.0 and v0.3.1 -- and only the fourth skip was written down
-anywhere. The first three left no trace at all, which is what makes this worth
-a gate rather than a reminder.
+Four releases were cut without one, and only the fourth skip was written down
+anywhere. Nothing about the omission was visible while it happened: the steps
+either side of it are gated and pass, so an operator running the sequence top
+to bottom feels the procedure checking work it never checked. Enforcement does
+not carry across adjacent steps, however the sequence reads.
 
-Nothing about the omission was visible while it happened. The steps either side
-of step 2 are gated and pass: one fails until the changelog entry is cut, the
-next until the README names the new wheel. An operator running the sequence top
-to bottom feels the procedure checking the work, and the ungated step in the
-middle is simply not done. Enforcement does not carry across adjacent steps,
-however the sequence reads.
-
-The rule is that the newest audit is not older than the release before the one
-being cut. An audit run before that release shipped says nothing about the
-changes since, so it fails; an audit dated the same day passes.
-
-It applies to a minor or major release only. A patch release owes no audit and
-returns before any of the comparison below runs. Until 2026-08-31 every release
-owed one, and what that produced was two consecutive declines: v0.4.2 wrote a
-skip record and v0.4.3 reused it, leaving three releases resting on one report.
-A patch fixes a defect and changes no interface, so the half-day review has
-nothing new to review, and an obligation discharged by writing a document is
-not an obligation. Tying it to the version number also replaces the condition
-that briefly stood in its place -- the next audit when the backlog reaches zero
--- which nothing watched and nothing would have raised.
-
-A version the gate cannot read is a finding rather than a pass. Not knowing
-whether an audit is owed is not the same as none being owed, and the quiet
-reading would turn a typo in the version literal into a silent exemption.
-
-Same-day was refused until 2026-08-31 and is now accepted, which is a decision
-about cost rather than a sharpening of the rule. Dates carry no time, so an
-audit written the morning before a release and one written the evening after it
-are the same string, and refusing both was the safe reading. What that reading
-also did was make two releases on one calendar day impossible: the second is
-compared against the first, no record can be dated later than today, and the
-release is blocked with no honest way to clear it. The audit step is declinable
-by design, so a rule that cannot be satisfied at all is a worse failure than a
-same-day audit that covers less than it appears to.
-
-What the rule still catches is unchanged and is what it was written for: an
-audit predating the previous release, and no audit at all. Four releases were
-cut with neither, and none of them would pass this gate in either form.
-
-Skipping the audit stays available, because it is a judgement call and
-sometimes the right one. What is no longer available is skipping it in silence:
-a dated `-skipped` record naming the release and the reason clears this gate,
-and it lands in the release pull request where a reviewer reads it. The four
-releases that skipped the step wrote nothing, and three of them left no trace
-anywhere.
-
-Two things are read rather than one, and neither is git. The reports are
-enumerated from git's index like every other document gate here, and the
-releases are read from the changelog's dated entries. Tags would be the obvious
-source and are not available: CI checks out shallow and fetches none, so a
-tag-based rule would find nothing and report a clean tree from it.
-
-The gate reads the version and nothing else about the branch. It does not
-detect a release branch and does not need to -- its comparison only tightens
-when a new dated entry appears, which is step 4 of the same procedure, so it is
-silent between releases and fails on the branch that is cutting a minor or a
-major one.
-
-One consequence is worth stating, because it is invisible in a green run: while
-the package reports a patch version, the live assertion below passes without
-comparing anything. What keeps the rule honest in that state is the fixture
-tests, which is why they name a minor version and why the patch case is pinned
-rather than left to follow from the absence of a failure.
+Two sources are read and neither is git -- the reports from git's index, the
+releases from the changelog's dated entries. PLAYBOOK 3.23 carries the
+narrowings, what each gives up, and the two ways to clear the gate.
 """
 
 import datetime
@@ -87,39 +27,20 @@ CHANGELOG = REPO / "CHANGELOG.md"
 
 AUDITS = "docs/audits/"
 
-# A dated 360 report, or a dated record that the step was deliberately skipped.
-# Both satisfy the rule, because what it exists to catch is a step passed over
-# in silence rather than a step declined. A skip record is one paragraph naming
-# the release and the reason, and it arrives in the release pull request where
-# a reviewer reads it; omitting the step arrived as nothing at all.
-#
-# The character classes are spelled out rather than written as a shorthand
-# escape, which can be lost on the way into a file while still compiling.
+# A dated 360 report, or a dated record that the step was declined. The
+# character classes are spelled out: a shorthand escape can be lost into a file.
 REPORT = re.compile(r"^(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})-360(-skipped)?[.]md$")
 
-# The version the package reports, read as far as the patch component. Anything
-# after it is a pre-release suffix, which says when a release ships rather than
-# what it carries, so it does not change what the release owes. The character
-# classes are spelled out for the same reason as above.
+# The version the package reports, read as far as the patch component. What
+# follows is a pre-release suffix, which says when a release ships not what.
 VERSION = re.compile(r"^(?P<major>[0-9]+)[.](?P<minor>[0-9]+)[.](?P<patch>[0-9]+)")
 
-# What the tree held on 2026-09-01: the 2026-08-18 and 2026-08-29 reports and
-# the 2026-08-31 skip record. A dated report is immutable once merged, so this
-# corpus only ever grows and the floor takes the measured count rather than a
-# margin below it. A listing that comes back short means the enumeration broke,
-# not that a report was retired.
-#
-# Raise it when a report lands. It sat at 2 while the corpus reached 3, which
-# is the failure this floor exists to catch, one level up: the assertion passed
-# and measured less than it claimed to.
+# What the tree held on 2026-09-01. A dated report is immutable once merged, so
+# the floor takes the measured count rather than a margin below it.
 REPORTS_AT_LEAST = 3
 
-# The nine releases the changelog recorded on 2026-09-01, 0.1.0 through 0.4.3.
-# Append-only for the same reason, and sized the same way.
-#
-# Nine and not ten. The reader this is compared against drops the `Unreleased`
-# section, so counting the file's `## [` headings overstates it by exactly one
-# and would fail this gate on a correct tree.
+# The releases the changelog recorded on 2026-09-01, and append-only for the
+# same reason. Nine and not ten -- the reader drops the `Unreleased` section.
 RELEASES_AT_LEAST = 9
 
 NOT_A_CHECKOUT = "not a git checkout, so there is no tracked-file list to read"
@@ -142,9 +63,7 @@ def tracked_reports():
     """
 
     # The argument vector is a list and carries no caller input, so it reaches
-    # the operating system directly rather than through a shell and cannot
-    # become a second command. The checks match on call shape and cannot see
-    # that.
+    # the operating system directly rather than through a shell.
     listing = subprocess.run(  # nosec B603 B607
         ["git", "ls-files", "-z", AUDITS + "*.md"],
         cwd=REPO,
@@ -254,21 +173,16 @@ def stale_audit(dates, sections, version):
 
     newest = dates[-1]
 
-    # Not older, rather than strictly newer. A same-day audit passes; see the
-    # module docstring for what that trade buys and what it gives up.
+    # Not older, rather than strictly newer, so a same-day audit passes.
+    # PLAYBOOK 3.23 carries what that trade buys and what it gives up.
     if datetime.date.fromisoformat(newest) >= shipped:
         return []
 
     return [f"the newest audit is dated {newest}, before {previous.version} shipped on {previous.date}"]
 
 
-# A tree satisfying the rule: two releases, and a report dated after the older
-# of them. The version under consideration is the newer entry, so the report has
-# to postdate the older one.
-#
-# It names a minor release, because a patch owes no audit and the rule returns
-# before reading any of this. Fixtures naming a patch would retire every break
-# below while the suite stayed green.
+# A tree satisfying the rule: two releases, and a report dated after the older.
+# It names a minor -- fixtures naming a patch would retire every break below.
 CLEAN_VERSION = "9.10.0"
 
 CLEAN_SECTIONS = read_sections("## [Unreleased]\n\n## [9.10.0] - 2026-01-10\n\n## [9.9.8] - 2026-01-01\n")
@@ -276,8 +190,7 @@ CLEAN_SECTIONS = read_sections("## [Unreleased]\n\n## [9.10.0] - 2026-01-10\n\n#
 CLEAN_DATES = ["2026-01-05"]
 
 # One break per way the rule is reached. The first is the release this gate was
-# written for: an audit exists, it predates the last four releases, and every
-# other documented check passed.
+# written for: an audit exists, and it predates the last four releases.
 BREAKS = (
     (
         "the audit predates the release before this one",
@@ -305,24 +218,18 @@ BREAKS = (
     ),
 )
 
-# An unreadable version on a tree that is otherwise spotless: the report
-# postdates every entry, so the comparison has nothing to complain about and the
-# only finding available is the version itself. A tree that failed for a second
-# reason would report this case green whether or not the guard exists.
+# An unreadable version on a tree that is otherwise spotless, so the only
+# finding available is the version itself and nothing else could raise one.
 UNREADABLE_VERSION = "not-a-version"
 
 FRESH_DATES = ["2026-12-31"]
 
-# The case the comparison was loosened to admit, asserted rather than left to
-# follow from the absence of a break above. A loosening that nothing pins reads
-# as an oversight to the next person tightening the rule back up.
+# The case the comparison was loosened to admit. A loosening that nothing pins
+# reads as an oversight to the next person tightening the rule back up.
 SAME_DAY_DATES = ["2026-01-01"]
 
-# The case the rule was narrowed to admit, pinned for the same reason. This tree
-# is stale by the old standard and passes only because a patch owes no audit:
-# 9.10.1 follows 9.10.0, which shipped on 2026-01-10, and the newest report is
-# dated 2026-01-05. Swap the version for a minor and it becomes the first break
-# above.
+# The case the rule was narrowed to admit, pinned for the same reason. This
+# tree is stale by the old standard and passes only because a patch owes none.
 PATCH_VERSION = "9.10.1"
 
 PATCH_SECTIONS = read_sections("## [Unreleased]\n\n## [9.10.1] - 2026-02-01\n\n## [9.10.0] - 2026-01-10\n")

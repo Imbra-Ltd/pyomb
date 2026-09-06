@@ -1,30 +1,14 @@
 """The pipeline's path-listing steps name the directory holding the gates.
 
-Three steps in `ci.yml` enumerate the directories they read: the linter, the
-formatter and the static analyser. Each takes its scope from a path list
-written into the step, so a directory absent from that list is a directory the
-step never opens.
+Three steps in `ci.yml` take their scope from a path list written into the
+step, so a directory absent from that list is one the step never opens. The
+gates moved from `tests/` to `checks/`, and nothing about a missing entry is
+visible afterwards: the step runs, exits zero and reports on the paths it was
+given, which is the collapsed-scope failure.
 
-The gates moved from `tests/` to `checks/` so the source archive stops carrying
-them. `tests` was already in all three lists; `checks` had to be added, and
-nothing about a missing entry is visible afterwards. The step runs, exits zero
-and reports on the paths it was given, which is the collapsed-scope failure --
-a gate that ran, went green, and covered less than it claims.
-
-This is the sibling of `checks/test_ci_collects_the_doctests.py`, which covers
-the fourth step. That one passes no path at all, deliberately, so its subject
-is the absence of an argument and a collection is what settles it. These three
-pass paths on purpose, so their subject is the presence of one, and reading the
-list is what settles it.
-
-Neither module can be derived from the other, and the two failures are
-independent: the test step can collect every gate while the linter never reads
-the directory, and the linter can read it while the collection misses it.
-
-The workflow is read as text rather than parsed as YAML, for the reason
-`checks/test_workflow_downloads_retry.py` gives: the only YAML dependency in
-the test extra's closure is a transitive one, so parsing would stake this
-module on a dependency no manifest here declares.
+The sibling module covering the fourth step passes no path at all, so its
+subject is the absence of an argument and a collection settles it. These three
+pass paths on purpose, so reading the list is what settles them.
 """
 
 import pathlib
@@ -33,15 +17,15 @@ import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
+# Read as text rather than parsed as YAML: the only YAML dependency in the test
+# extra's closure is a transitive one, which no manifest here declares.
 WORKFLOW = REPO / ".github" / "workflows" / "ci.yml"
 
 # The directory the gates live in, as the steps spell it.
 GATES = "checks"
 
 # The steps that take their scope from a path list. Named rather than
-# discovered: a step that stops naming paths is exactly the change this module
-# exists to fail on, so discovering the set from the file would let the subject
-# delete itself and report a clean run.
+# discovered, or the subject could delete itself and report a clean run.
 SCOPED_STEPS = ("Lint", "Format", "Static analysis")
 
 STEP = re.compile(r"^\s*- name: (?P<name>.+?)\s*$")

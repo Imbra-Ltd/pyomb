@@ -1,38 +1,14 @@
 """An entry point states its output encoding; a library module never does.
 
 A program that writes text and says nothing about its encoding takes whatever
-the console hands it. That is what turns a correct string into mojibake on
-someone else's machine, and the boundary is the thing to fix rather than every
-string that crosses it.
+the console hands it, and the boundary is what to fix rather than every string
+crossing it. The half that is a real defect is where the call goes:
+`sys.stdout` belongs to the process, so a library module reconfiguring it at
+import reaches into an application that only wanted to send a Modbus frame.
 
-Nothing in this tree could produce mojibake today, because the character-set
-rule holds every non-Markdown file to ASCII, so every literal these programs
-print already sits in the intersection of every encoding a console is likely to
-use. That is a property of the strings, not of the boundary: an exception
-message carrying bytes off the wire is formatted at runtime and no source rule
-reaches it. Fixing the boundary is what makes the guarantee hold regardless.
-
-The half of this that is a real defect rather than a tidy-up is where the call
-goes. `sys.stdout` belongs to the process, not to the module that imports last.
-A library module that reconfigures it at import reaches into an application
-that only wanted to send a Modbus frame, and changes how every other writer in
-that process behaves. So the rule has two directions, and this module asserts
-both: an entry point sets the encoding inside its `__main__` guard, and nothing
-under `src/` sets it anywhere else. The second assertion is the one worth
-having, since the first only omits a line while the second corrupts a stream.
-
-`src/pyomb/logger.py` is the case that looks like an exception and is not. It
-builds a handler on `sys.stdout` and deliberately sets no encoding on it, for
-the same reason its docstring already gives for not touching the root logger: a
-library takes the stream it is handed.
-
-Three roots are read: the package, the operational scripts, and the examples.
-The last was added after the argument above was turned on it. Every example
-prints values formatted at run time -- a packet's repr, an exception the
-library raised -- so the character-set rule reaches them no further than it
-reaches the wire bytes in that exception message, while the console they land
-on is the least predictable of the three, being a stranger's rather than a
-maintainer's.
+So the rule has two directions and this module asserts both -- the second being
+the one worth having, since the first omits a line and the second corrupts a
+stream. PLAYBOOK 3.19 carries the three roots it reads.
 """
 
 import ast
@@ -46,19 +22,15 @@ PACKAGE = REPO / "src" / "pyomb"
 SCRIPTS = REPO / "scripts"
 
 # The third root, and the one with the weakest console guarantee: a maintainer
-# runs the other two, a stranger runs these. It was outside the rule until the
-# character-set argument above was read against it -- every example prints
-# values formatted at run time, so the source rule reaches them no further
-# than it reaches an exception message in the package.
+# runs the other two, a stranger runs these.
 EXAMPLES = REPO / "examples"
 
 # The standard streams a program may reconfigure. stderr is included so the
 # import-scope rule cannot be satisfied by moving the call one stream over.
 STREAMS = ("stdout", "stderr")
 
-# What makes a module an entry point that writes text, rather than one that
-# merely runs. A module with a guard that prints nothing is not required to
-# state an encoding it never uses.
+# What makes a module an entry point that writes text rather than one that
+# merely runs. A guard that prints nothing owes no encoding it never uses.
 WRITERS = ("print", "Logger")
 
 GUARD_REMEDY = "Add sys.stdout.reconfigure(encoding='utf-8') inside the __main__ guard, above the call the guard makes."

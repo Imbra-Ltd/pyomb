@@ -1,36 +1,14 @@
 """Markdown prose wraps at the width the project declares.
 
-The documents already do this. Every governance and reference file the project
-maintains -- the agent context file, the README, CONTRIBUTING, PLAYBOOK,
-ONBOARDING, the journal, the audits and the decision records -- holds its prose
-to 80 columns, and did so before anything checked. What was missing was the
-rule: nothing declared a width for Markdown at all, and CONTRIBUTING states 120
-with 80 recommended under a heading that reads Code style. So the convention
-was real, unwritten, and held by hand.
+The documents already did this before anything checked, and what was missing
+was the rule: nothing declared a width for Markdown at all. So the convention
+was real, unwritten and held by hand -- and already slipping, because a
+98-column heading reached a green pipeline.
 
-It was also already slipping. A 98-column heading reached a green pipeline,
-because no gate in the project read the width of a Markdown line.
-
-The width is declared once, in `.editorconfig` under the Markdown section, and
-this module reads it from there rather than restating it. A number written in
-both places is one fact represented twice, and two copies drift with nothing to
-say which one won. A tree that declares no width fails here rather than falling
-back to a default, because an unstated width is the defect itself and not a gap
-for the check to fill in.
-
-Three kinds of line are exempt, and each is exempt because it cannot be wrapped
-rather than because it is inconvenient:
-
-A table row carries its columns on one line; a newline inside it ends the row.
-A fenced block holds commands and output, where a break changes what the reader
-is meant to copy or would misrepresent what a tool printed. A line carrying a
-URL cannot be split at all, since no Markdown break survives inside one, and a
-badge line is two long URLs and almost no prose.
-
-The width is counted in characters, not bytes. Prose may carry any visible
-character, and the ones it reaches for -- an em dash, a box-drawing corner, an
-arrow -- are three bytes each in UTF-8, so counting bytes would charge a
-document three columns for one glyph and shorten every line that uses one.
+The width is declared once, in `.editorconfig`, and read from there rather than
+restated. A tree declaring none fails here rather than falling back to a
+default, since an unstated width is the defect itself. PLAYBOOK 3.15 carries
+the exemptions and why none of them can be wrapped.
 """
 
 import pathlib
@@ -40,31 +18,22 @@ import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
-# The one place the width is written down. Reading it here rather than
-# restating it keeps the number to a single copy, so an edit to the declaration
-# moves the gate with it instead of leaving the two disagreeing.
+# The one place the width is written down, so an edit to the declaration moves
+# the gate with it rather than leaving the two disagreeing.
 EDITORCONFIG = REPO / ".editorconfig"
 
-# An EditorConfig section header naming Markdown, whether on its own or inside
-# a brace list of extensions. Matched against the bracketed line so the closing
-# bracket is available as a delimiter, which keeps a section such as [*.cmd]
-# from answering to it.
+# A section header naming Markdown, alone or in a brace list. Matched against
+# the bracketed line, so a section such as [*.cmd] cannot answer to it.
 MARKDOWN_SECTION = re.compile(r"[.{,]md[},\]]")
 
 WIDTH_KEY = "max_line_length"
 
-# Imported with the v0.1.0 tree rather than written to this convention, and
-# wrapped at about 96 throughout: its prose sits at a median of 35 columns and a
-# 90th percentile of 94. It is protocol reference material, internally
-# consistent at its own width, and rewrapping 160 lines of it would bury a
-# change nobody asked for. The exclusion is the rule's scope, not a suppression
-# of findings inside it -- a document this project authored has no such escape.
+# Imported with the v0.1.0 tree at its own width. The exclusion is the rule's
+# scope; a document this project authored has no such escape.
 IMPORTED = {"docs/specs/Open_Modbus_Tutorial.md"}
 
 # A URL survives no line break, so a line carrying one is measured by nothing
-# the author can act on. This covers the badge block at the top of the README,
-# which is two long links and a label. A relative link is not exempt: it is
-# short, and the prose around it wraps like any other.
+# the author can act on. A relative link is short and is not exempt.
 URL = re.compile(r"https?://")
 
 REMEDY = (
@@ -75,13 +44,8 @@ REMEDY = (
 
 NOT_A_CHECKOUT = "not a git checkout, so there is no tracked-file list to read"
 
-# What the tree held when this floor was set: 33 documents inside the rule, out
-# of 34 tracked. The floor sits at roughly half, because Markdown churns -- a
-# retired guide is an ordinary deletion and must not fail a width rule. Every
-# way this enumeration breaks returns nothing at all, so the margin costs no
-# detection. The stale-exclusion test below happens to fail on an empty listing
-# too, but it reports a renamed tutorial rather than a broken enumeration, and
-# those are different failures wanting different fixes.
+# What the tree held when this floor was set: 33 documents inside the rule.
+# Markdown churns, so the floor takes a margin below the measured count.
 DOCUMENTS_AT_LEAST = 16
 
 UNDECLARED = (
@@ -113,8 +77,7 @@ def configured_width():
             continue
 
         # EditorConfig has no continuations and no interpolation, so a key is
-        # whatever precedes the first '=' on its own line. A full parser would
-        # be a dependency bought for one integer.
+        # whatever precedes the first '=' on its own line.
         if in_markdown and stripped.startswith(WIDTH_KEY):
             key, sep, value = stripped.partition("=")
 
@@ -132,9 +95,7 @@ def tracked_markdown():
     """
 
     # The argument vector is a list and carries no caller input, so it reaches
-    # the operating system directly rather than through a shell and cannot
-    # become a second command. The checks match on call shape and cannot see
-    # that.
+    # the operating system directly rather than through a shell.
     listing = subprocess.run(  # nosec B603 B607
         ["git", "ls-files", "-z", "*.md"],
         cwd=REPO,
@@ -186,9 +147,8 @@ class MarkdownLineWidth(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Absent a checkout there is no tracked-file list to read, and a
-        # directory walk would pick up scratch files CI never sees. The skip is
-        # for that case only; a checkout whose git call fails is a failure.
+        # Absent a checkout there is no tracked-file list, and a directory walk
+        # would pick up scratch files CI never sees.
         if not (REPO / ".git").exists():
             raise unittest.SkipTest(NOT_A_CHECKOUT)
 

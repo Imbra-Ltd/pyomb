@@ -1,44 +1,15 @@
 """The startup block is the chain the pin resolves, not a list kept by hand.
 
-CLAUDE.md opens with a block naming every template file that must be read
-before the first response. That list cannot live anywhere else: the rule
-requiring it exists because the file carrying it is the only one loaded before
-an agent does anything, so every other document is unreachable until something
-names it. What the list can be is checked, and until now only half of it was.
+CLAUDE.md opens with a block naming every template that must be read before the
+first response, and that list cannot live anywhere else -- the file carrying it
+is the only one loaded before an agent does anything. Both ways it goes wrong
+are silent and neither shows in a diff, so the guard names which side each
+difference sits on rather than reporting that the sets differ.
 
-The maintenance recipe states both ways the block goes wrong. It ships a
-command for one of them -- a block naming a file the pin does not carry, which
-is a startup instruction that cannot be followed -- and leaves the other as
-prose telling the reader to resolve the chain and compare. That second
-direction is the one that has already fired. Upstream moved a template into the
-chain, the block stayed short, and nothing reported it; a person noticed, and
-the reconciliation became a ticket.
-
-Both directions are silent, and neither shows up in a diff, because the change
-that causes them happens in another repository. A short block reads as this
-project maintaining a convention upstream already owns. A long one reads as
-this project enforcing rules it never adopted. The two failures need opposite
-responses and look identical from here, which is why the guard names which side
-each difference sits on rather than reporting that the sets differ.
-
-The resolution is the manifest's, not this module's. Two axes select the roots
--- what the project is built with and where it is hosted -- and the manifest's
-own core set and dependency edges close over them. Only four facts are written
-down here: the two axis selections, which are what this repository is, and the
-two session-protocol templates no stack declares, which the decision record on
-the startup block explains. Everything else is derived, so an upstream file
-that joins or leaves the chain changes the expected set without an edit here.
-
-The manifest is read at the pinned revision rather than from the working tree
-or the upstream default branch. Those describe a future state of this
-repository, and a rule read from one and quoted as governing does not govern
-until the pin moves.
-
-Reading it needs no YAML parser, which would be a dependency this project does
-not carry, so a small reader takes the four shapes the manifest actually uses.
-It is checked before it is trusted: a reader that silently dropped an edge
-would resolve short and blame the block, so the first test fails on an
-unresolvable id instead of letting the second report a difference it caused.
+The resolution is the manifest's. Only the two axis selections and the three
+templates no stack declares are written here; the rest is derived, so an
+upstream file joining the chain changes the expected set without an edit.
+PLAYBOOK 4.1 carries the reconciliation a bump owes.
 """
 
 import pathlib
@@ -52,18 +23,12 @@ SUBMODULE = REPO / "docs" / "solid-ai-templates"
 
 MANIFEST = "templates/manifest.yaml"
 
-# What this repository is, on the two independent axes the manifest selects
-# layers along. Neither is derivable: a stack is what the project is built
-# with, a platform is where it is hosted, and nothing in the tree states
-# either. These two are the whole hand-written input to the resolution.
+# What this repository is, on the two axes the manifest selects layers along.
+# Neither is derivable, and the pair is the whole hand-written input here.
 AXES = ("stack-python-lib", "platform-github")
 
-# No stack declares these, so the chain never reaches them and each is added
-# deliberately. The decision record covering the startup block carries why
-# they are added rather than resolved. The first two are what the session
-# protocol needs; communication states how the agent answers, which binds
-# every turn and so is worthless unresolved -- it went unread for the whole
-# life of the block because nothing listed it.
+# No stack declares these, so the chain never reaches them. The session
+# protocol needs the first two; communication states how the agent answers.
 UNDECLARED = frozenset(
     {
         "templates/base/workflow/scope.md",
@@ -72,9 +37,8 @@ UNDECLARED = frozenset(
     }
 )
 
-# The four shapes the manifest uses for the fields this resolution reads. An
-# entry opens at two spaces of indent and its fields sit at four; dependencies
-# appear either inline in brackets or as a block list at six.
+# The shapes the manifest uses for the fields this resolution reads. An entry
+# opens at two spaces, its fields sit at four, and a block list at six.
 ENTRY_ID = re.compile(r"^ {2}- id: (\S+)\s*$")
 ENTRY_FILE = re.compile(r"^ {4}file: (\S+)\s*$")
 INLINE_DEPENDS = re.compile(r"^ {4}depends_on: \[(.*)\]\s*$")
@@ -85,9 +49,8 @@ BLOCK_ITEM = re.compile(r"^ {6}- (\S+)\s*$")
 # single inline list at the top of the manifest.
 CORE = re.compile(r"^core: \[(.*)\]\s*$", re.M)
 
-# The startup block's entries, each a list item naming one template path in a
-# code span. Scoped to the block itself so a path mentioned in prose elsewhere
-# in the file cannot join the set being checked.
+# The block's entries, each a list item naming one template path in a code
+# span. Scoped to the block, so a path in prose elsewhere cannot join the set.
 BLOCK_ENTRY = re.compile(r"^- `(templates/[^`]+)`", re.M)
 
 STARTUP_HEADING = "## Mandatory startup"
@@ -108,10 +71,8 @@ def manifest_at_pin():
         str : The manifest's full text
     """
 
-    # The suppressed checks rest on the argument vector being a list, which
-    # goes to the operating system directly rather than through a shell, so
-    # nothing in it can become a second command. It is fixed, with no caller
-    # input anywhere in it. The checks match on call shape and see neither.
+    # The argument vector is a fixed list and carries no caller input, so it
+    # reaches the operating system directly rather than through a shell.
     return subprocess.run(  # nosec B603 B607
         ["git", "-C", str(SUBMODULE), "show", f"HEAD:{MANIFEST}"],
         capture_output=True,
@@ -173,8 +134,7 @@ def read_entries(manifest):
                 in_block = False
 
     # An entry is built as a mutable pair because its two fields arrive on
-    # separate lines. Freezing them on the way out keeps a caller from
-    # editing the table it was handed.
+    # separate lines. Freezing on the way out keeps a caller from editing it.
     return {name: (file, tuple(edges)) for name, (file, edges) in entries.items()}
 
 
@@ -262,9 +222,8 @@ def startup_block():
     if opened < 0:
         return set()
 
-    # The block runs to the next heading of the same level. Bounding it stops
-    # a template path written in prose further down the file from counting as
-    # an instruction to read that file.
+    # The block runs to the next heading of the same level, so a template path
+    # written in prose further down does not count as an instruction.
     closed = text.find("\n## ", opened + len(STARTUP_HEADING))
 
     return set(BLOCK_ENTRY.findall(text[opened : closed if closed > 0 else len(text)]))
@@ -276,9 +235,7 @@ class StartupBlockResolvesTheChain(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Without a checkout there is no pinned manifest, and resolving
-        # anything else would answer about a revision this repository does not
-        # pin. The skip is for that case only; a checkout whose git call fails
-        # is a failure, not a skip.
+        # anything else answers about a revision this repository does not pin.
         if not (SUBMODULE / ".git").exists():
             raise unittest.SkipTest(NOT_A_CHECKOUT)
 

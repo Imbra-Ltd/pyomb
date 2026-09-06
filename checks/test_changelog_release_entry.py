@@ -1,41 +1,15 @@
 """The changelog records the release the package reports, and its links agree.
 
-Cutting a release is a procedure of eight steps, and two adjacent ones write
-the version into a document. One points the README quick start at the wheel the
-new tag will carry; the other cuts the `Unreleased` block into a dated entry
-and adds its compare link. The first has been gated since it was written and
-cannot be missed. The second was gated by nothing.
+Two adjacent steps of the release procedure write the version into a document.
+One was gated since it was written; the other was gated by nothing, so it was
+missed -- v0.3.0 was tagged with no `[0.3.0]` section and with `[Unreleased]`
+still comparing against v0.2.1. A tag points at one commit, and re-tagging a
+published release to repair it is worse than the gap, which is the argument for
+catching this before the tag rather than after.
 
-So it was missed. `v0.3.0` was tagged and published with no `[0.3.0]` section
-and with `[Unreleased]` still comparing against `v0.2.1`; the entry and the
-links were written afterwards, which corrects `main` and cannot correct what
-the tag names. A tag points at one commit, and the changelog in that commit's
-tree is the one every source archive the host generates from the tag carries.
-Re-tagging a published release to repair it is worse than the gap, so the
-v0.3.0 tree keeps a changelog that does not mention the release it is part of.
-That asymmetry is the whole argument for catching this before the tag rather
-than after.
-
-The artifact is the tag's tree, not the sdist. The sdist has never carried
-`CHANGELOG.md` -- the include list names four anchored paths and the changelog
-is not among them -- so a reason phrased around it is falsifiable in one
-command, and a reader who checks it could conclude the step is unnecessary.
-The step is necessary; only the artifact was misnamed.
-
-Nothing about the omission was visible at the time. Its neighbour passed, every
-documented pre-release check ran and reported clean, and a procedure whose
-gated steps pass reads as a procedure that was followed. Enforcement does not
-carry across adjacent steps, and the step worth gating first is the one whose
-omission cannot be corrected afterwards.
-
-`src/pyomb/__init__.py` is the source of truth for the version, as it is for
-the README's wheel URL, and every rule here is one-directional: a failure means
-the changelog needs the edit, never that the version does.
-
-The rules run over a parsed changelog rather than over its text, so the same
-readers that examine the real file examine a planted one. A check that has
-never failed is a check nothing has tested, and the last test here is where
-each rule is made to fail on the break it exists to catch.
+`src/pyomb/__init__.py` is the source of truth, so every rule here is
+one-directional: a failure means the changelog needs the edit. PLAYBOOK 5
+carries the procedure and where in it each step sits.
 """
 
 import collections
@@ -60,9 +34,8 @@ Findings = collections.namedtuple(
 # it names is the version the package reports.
 COMPARE_HEAD = re.compile(r"/compare/v(?P<base>.+?)\.\.\.HEAD$")
 
-# A version link is a comparison against its predecessor, except the first
-# release, which has nothing to compare against and points at its own tag.
-# Either way the version it names is its right-hand side.
+# A version link compares against its predecessor, except the first release,
+# which points at its own tag. Either way the version is its right-hand side.
 VERSION_TARGET = re.compile(r"/(?:compare/v.+?\.\.\.v|releases/tag/v)(?P<version>.+)$")
 
 CUT_THE_BLOCK = (
@@ -205,9 +178,8 @@ def findings(text, version):
     )
 
 
-# A changelog satisfying every rule, in the shape this project's own file uses:
-# an unreleased block, two dated entries, and a link apiece -- the older one
-# pointing at its own tag, having nothing to compare against.
+# A changelog satisfying every rule, in the shape this project's file uses: an
+# unreleased block, two dated entries, and a link apiece.
 CLEAN_VERSION = "9.9.9"
 
 CLEAN = """# Changelog
@@ -232,8 +204,7 @@ CLEAN = """# Changelog
 """
 
 # One break per rule, each an edit to the clean file above. The first is the
-# release this gate was written for: the version bumped, the block was never
-# cut, and every other check passed.
+# release this gate was written for: bumped, and the block never cut.
 BREAKS = (
     (
         "release_entry",

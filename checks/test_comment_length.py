@@ -1,26 +1,14 @@
 """Comments and docstrings stay within the length CLAUDE.md 2.2 sets.
 
-Length here is a proxy for placement. A comment that needs a paragraph is
-usually explaining something that belongs in PLAYBOOK or a decision record,
-where a reader can find it without opening the source; left in place it grows
-by imitation, because the next author copies the neighbours rather than the
-rule.
+Length is a proxy for placement. A comment that needs a paragraph is usually
+explaining something that belongs in PLAYBOOK or a decision record, where a
+reader finds it without opening the source; left in place it grows by
+imitation, because the next author copies the neighbours rather than the rule.
 
-Configuration is held to the comment bound as well as source. A manifest and a
-workflow carry no docstrings, so only the first bound reaches them.
-
-The bound is on prose, not on the contract: a docstring's `Args:`, `Returns:`
-and `Raises:` sections are excluded, so annotating a wide signature never
-costs anything here.
-
-Four other things are excluded for one reason -- none of them states any
-reasoning the bound could relocate. A licence header is a legal notice. A
-comment trailing code is one label on one line. A banner ruled top and bottom
-is navigation. A wire-layout table's rows are the frame's length rather than
-the author's.
-
-Whether a comment was needed at all is a judgement this cannot reach, and
-review keeps it.
+The bound is on prose rather than on the contract, and four other things are
+excluded because none of them states reasoning the bound could relocate.
+PLAYBOOK 3.26 names each. Whether a comment was needed at all is a judgement
+this cannot reach, and review keeps it.
 """
 
 import ast
@@ -32,9 +20,9 @@ import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
-# The directories under the bound. Each migration slice adds one as it cleans
-# it, so the gate and the tree widen together.
-ROOTS = ("src", "scripts", "examples", "tests")
+# The directories under the bound. Each migration slice added one as it cleaned
+# it, so the gate and the tree widened together; this is every one of them.
+ROOTS = ("src", "scripts", "examples", "tests", "checks")
 
 # The configuration under the bound, selected by suffix rather than directory:
 # a manifest sits at the repository root and a workflow does not.
@@ -71,9 +59,9 @@ RULE = "#####"
 # between. Spelled without a shorthand escape, which can be lost into a file.
 LAYOUT_ROW = re.compile(r"^-[ ]+(Byte(?![A-Za-z0-9])|[.]{3}$)")
 
-# What the roots held when this floor was set: 79 modules on 2026-09-06.
+# What the roots held when this floor was set: 100 modules on 2026-09-06.
 # Files churn, so the floor takes a margin below the measured count.
-FILES_AT_LEAST = 55
+FILES_AT_LEAST = 70
 
 # What the suffixes reached when this floor was set: 6 files on 2026-09-06 --
 # the manifest, the hook config, the Dependabot config and three workflows.

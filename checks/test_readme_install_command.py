@@ -18,9 +18,8 @@ import unittest
 
 import pyomb
 
-# Both places the version appears inside the install command. Capturing them
-# separately means a half-finished edit fails rather than passing on whichever
-# occurrence was updated.
+# Both places the version appears inside the install command, captured
+# separately so a half-finished edit fails rather than passing on one of them.
 WHEEL_URL = re.compile(r"/releases/download/v(?P<tag_path>[^/]+)/pyomb-(?P<filename>[^-]+)-py3-none-any\.whl")
 
 README = pathlib.Path(__file__).resolve().parents[1] / "README.md"
