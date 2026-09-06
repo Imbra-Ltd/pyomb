@@ -3961,3 +3961,49 @@ package, per ADR-002. See `README.md` for usage and
   (93). The templates pin is at `v2.75.0` against `v2.79.0` upstream; ADR-045
   does not reach it, because a pointer bump is a revision change and revisions
   execute, so the bump still needs its own proposal.
+
+## 2026-09-06 -- File the upstream candidate, bump the pin (third session)
+
+- **Tool:** Claude Code (Opus 5, 1M context). A continuation of the entry
+  above, whose Upstream and Pending lines this one answers.
+- **Key changes:**
+  - **Filed the candidate ADR-045 carried (PR #328).** The record merged
+    saying the upstream candidate was not yet filed, which was true then. It
+    is `braboj/solid-ai-templates#1524`, asking `templates/base/core/git.md`
+    to say which content inside an off-limits path is restricted, and the
+    `Upstream:` line now names it. That line is the verdict-capture the
+    session protocol asks for and sits outside the four sections a record
+    makes claims in, so completing it moved no claim and owed no supersession.
+  - **Bumped the templates pin from `v2.75.0` to `v2.79.0` (PR #329).** An
+    off-limits path, proposed and approved before the change: the rollback is
+    checking the submodule back out at `82e5266` and staging it, and the
+    coverage is the startup-block gate plus the suite. `manifest.yaml` does
+    not move in the range, so the resolved chain is identical and the block
+    needed no edit -- the gate is what established that rather than a reading
+    of the diff.
+  - **Re-read the divergences against the new pin (PR #329).** ADR-029 stands
+    a third time: both `quality.md` hunks near the character set are the
+    output-encoding rule and the line-ending gate, and neither reaches the
+    ASCII identifier rule. `git.md` moved for the first time in a while, and
+    moved the release-proposal wording and the milestone check rather than the
+    off-limits section, so ADR-023 and ADR-045 are unrefuted and #1524 stays
+    open. PLAYBOOK 4.1 carries the range so the next bump costs one question
+    rather than a re-reading.
+- **PRs merged:** #328, #329.
+- **Issues closed/created:** none here. Created
+  `braboj/solid-ai-templates#1524` upstream.
+- **Lesson:** a wrap can be complete and still leave the two items that need
+  the owner. Both pending lines in the entry above were outward-facing -- an
+  issue on another repository, and a change to an off-limits path -- and
+  neither is work an agent should take on its own. Naming them as pending is
+  what got them done in the same sitting rather than a week later.
+- **Lesson:** the range that moves a file without moving the rule stayed the
+  common case. `quality.md` moved 53 lines and `git.md` 29, and no record
+  bound by either changed state. Reading the diff to the record's own subject
+  is what separates a named file from a moved rule, and it is cheaper than it
+  looks: the character-set question was three hunks and the off-limits
+  question one.
+- **Upstream:** `braboj/solid-ai-templates#1524` filed and open. #1486, #1497
+  and #1518 are still open.
+- **Pending:** #320's two remaining slices, `tests/` (81 blocks) and `checks/`
+  (93). Nothing else from this session.
