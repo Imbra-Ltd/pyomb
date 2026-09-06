@@ -1347,6 +1347,14 @@ review keeps it.
 adds one per slice, cleaning the directory and widening the list in the same
 change, so no slice merges unverified.
 
+`CONFIG` names the corpus beside it: every tracked `.toml`, `.yml` and `.yaml`
+file, selected by suffix because a manifest sits at the repository root and a
+workflow does not. Those carry no docstrings, so only the comment bound
+reaches them, and the reader is line-wise rather than a parser — a `#` opening
+a line is a comment in both formats, including inside a YAML block scalar
+where the shell is the one reading it. Each corpus carries its own floor, so a
+listing that stops reaching one fails separately from the rule.
+
 
 ## 4. Maintenance
 
