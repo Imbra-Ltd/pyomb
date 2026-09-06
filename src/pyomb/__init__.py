@@ -13,24 +13,25 @@ UNSET travels with them. It is what every optional TLS setting carries until a
 caller chooses one, so comparing against it tells a choice from a default.
 """
 
+import warnings
 from importlib import import_module
 from typing import TYPE_CHECKING
 
 from .errors import (
-    ModbusAcknowledge,
+    ModbusAcknowledgeError,
     ModbusBaseError,
-    ModbusGatewayPathUnavailable,
-    ModbusGatewayTargetDeviceFailedToRespond,
-    ModbusIllegalDataAddress,
-    ModbusIllegalDataValue,
-    ModbusIllegalFunction,
+    ModbusGatewayPathUnavailableError,
+    ModbusGatewayTargetDeviceFailedToRespondError,
+    ModbusIllegalDataAddressError,
+    ModbusIllegalDataValueError,
+    ModbusIllegalFunctionError,
     ModbusMemoryParityError,
     ModbusModeError,
     ModbusNetworkError,
     ModbusPacketError,
     ModbusProtocolError,
-    ModbusSlaveDeviceBusy,
-    ModbusSlaveDeviceFailure,
+    ModbusSlaveDeviceBusyError,
+    ModbusSlaveDeviceFailureError,
 )
 from .logger import Logger
 from .packets import (
@@ -64,6 +65,19 @@ _DEFERRED = {
     "UNSET": "tls",
 }
 
+# The spelling each protocol error carried before it took the Error suffix
+# PEP 8 asks of an exception. Both spellings resolve until 2.0 removes these.
+_RENAMED = {
+    "ModbusIllegalFunction": "ModbusIllegalFunctionError",
+    "ModbusIllegalDataAddress": "ModbusIllegalDataAddressError",
+    "ModbusIllegalDataValue": "ModbusIllegalDataValueError",
+    "ModbusSlaveDeviceFailure": "ModbusSlaveDeviceFailureError",
+    "ModbusAcknowledge": "ModbusAcknowledgeError",
+    "ModbusSlaveDeviceBusy": "ModbusSlaveDeviceBusyError",
+    "ModbusGatewayPathUnavailable": "ModbusGatewayPathUnavailableError",
+    "ModbusGatewayTargetDeviceFailedToRespond": "ModbusGatewayTargetDeviceFailedToRespondError",
+}
+
 __version__ = "0.6.0"
 
 # Grouped by the submodule each name comes from. Sorting interleaves the
@@ -92,15 +106,15 @@ __all__ = [  # noqa: RUF022
     "ModbusNetworkError",
     "ModbusPacketError",
     "ModbusModeError",
-    "ModbusIllegalFunction",
-    "ModbusIllegalDataAddress",
-    "ModbusIllegalDataValue",
-    "ModbusSlaveDeviceFailure",
-    "ModbusAcknowledge",
-    "ModbusSlaveDeviceBusy",
+    "ModbusIllegalFunctionError",
+    "ModbusIllegalDataAddressError",
+    "ModbusIllegalDataValueError",
+    "ModbusSlaveDeviceFailureError",
+    "ModbusAcknowledgeError",
+    "ModbusSlaveDeviceBusyError",
     "ModbusMemoryParityError",
-    "ModbusGatewayPathUnavailable",
-    "ModbusGatewayTargetDeviceFailedToRespond",
+    "ModbusGatewayPathUnavailableError",
+    "ModbusGatewayTargetDeviceFailedToRespondError",
     # Logging
     "Logger",
     # Simulators
@@ -125,6 +139,19 @@ def __getattr__(name: str) -> object:
     Raises:
         AttributeError : The name is not one this module exports
     """
+    # A retired spelling resolves to its replacement, which is bound eagerly
+    # above. Nothing is deferred here, so the lookup below would not find it.
+    renamed = _RENAMED.get(name)
+
+    if renamed is not None:
+        warnings.warn(
+            f"{name} is renamed to {renamed} and is removed in 2.0",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+        return globals()[renamed]
+
     submodule = _DEFERRED.get(name)
 
     if submodule is None:

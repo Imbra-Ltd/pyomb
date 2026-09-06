@@ -1,7 +1,6 @@
-# coding: utf-8
-"""
-One :class:`Exception` class per scenario a caller may want to react to, so a
-caller catches the branch it cares about rather than matching on a message.
+"""One exception class per scenario a caller may want to react to.
+
+A caller catches the branch it cares about rather than matching on a message.
 
 Three branches sit under ModbusBaseError, separating where the failure came
 from: the network, a frame that will not parse, and a peer answering with a
@@ -11,14 +10,9 @@ codes.
 The tree is in the exception hierarchy section of docs/PLAYBOOK.md.
 """
 
-from __future__ import print_function
-from __future__ import unicode_literals
-
-# Recommendations accodrding to chatGPT
-
 
 class ModbusBaseError(Exception):
-    """Generic Modbus error
+    """Generic Modbus error.
 
     The base class for all Modbus errors. This class should not be used
     directly to raise exceptions. Instead, use one of the more specific
@@ -32,7 +26,6 @@ class ModbusBaseError(Exception):
         extended_info   (unicode)   : Additional information (e.g. error code)
 
     Example:
-
         try:
             # code that may raise Modbus errors
         except ModbusError as e:
@@ -40,29 +33,21 @@ class ModbusBaseError(Exception):
 
     """
 
-    def __init__(self, message, extended_info=""):
-        """Initialize the ModbusError object"""
-
-        # Set the error message and extended information
+    def __init__(self, message: str, extended_info: str = "") -> None:
+        """Record the message and the extended information beside it."""
         self.message = message
         self.extended_info = extended_info
 
-    def __str__(self):
-
-        # Add the extended information if available
+    def __str__(self) -> str:
+        """The message, with the extended information appended when present."""
         if self.extended_info:
-            result = self.message + " (" + self.extended_info + ")"
+            return self.message + " (" + self.extended_info + ")"
 
-        # Otherwise, just return the error message
-        else:
-            result = self.message
-
-        # Return the formatted error message
-        return result
+        return self.message
 
 
 class ModbusProtocolError(ModbusBaseError):
-    """Generic Modbus protocol error
+    """Generic Modbus protocol error.
 
     This error is raised when the server (or slave) returns an error code in
     response to a query. The error code is a single byte that indicates the
@@ -84,17 +69,15 @@ class ModbusProtocolError(ModbusBaseError):
 
     """
 
-    def __init__(self, message, error_code):
-        """Initialize the ModbusProtocolError object"""
-
-        # Define the error message and code
-        error_code = "Protocol Error Code 0x{0:X}".format(error_code)
-
-        # Call the parent class constructor
-        super(ModbusProtocolError, self).__init__(message=message, extended_info=error_code)
+    def __init__(self, message: str, error_code: int) -> None:
+        """Render the exception code the peer returned into the message."""
+        super().__init__(
+            message=message,
+            extended_info=f"Protocol Error Code 0x{error_code:X}",
+        )
 
 
-class ModbusIllegalFunction(ModbusProtocolError):
+class ModbusIllegalFunctionError(ModbusProtocolError):
     """The function code is not valid.
 
     The function code received in the query is not an allowable action for the
@@ -111,23 +94,19 @@ class ModbusIllegalFunction(ModbusProtocolError):
     Example:
         try:
             # Code that may raise Modbus illegal function errors
-            raise ModbusIllegalFunction(0x01)
+            raise ModbusIllegalFunctionError(0x01)
 
         # Catch the error and print the error message
-        except ModbusIllegalFunction as e:
+        except ModbusIllegalFunctionError as e:
             print("Modbus illegal function error: {0}".format(e))
     """
 
-    def __init__(self, fc):
-        """Initialize the ModbusIllegalFunction object"""
-
-        # Call the parent class constructor
-        super(ModbusIllegalFunction, self).__init__(
-            message="The function code {0} is not valid".format(fc), error_code=0x01
-        )
+    def __init__(self, fc: object) -> None:
+        """Name the function code the peer refused."""
+        super().__init__(message=f"The function code {fc} is not valid", error_code=0x01)
 
 
-class ModbusIllegalDataAddress(ModbusProtocolError):
+class ModbusIllegalDataAddressError(ModbusProtocolError):
     """The data address is not valid.
 
     It is the combination of address and length that has to be allowable, not
@@ -143,20 +122,19 @@ class ModbusIllegalDataAddress(ModbusProtocolError):
     Example:
         try:
             # Code that may raise Modbus illegal data address errors
-            raise ModbusIllegalDataAddress(0x02)
+            raise ModbusIllegalDataAddressError(0x02)
 
         # Catch the error and print the error message
-        except ModbusIllegalDataAddress as e:
+        except ModbusIllegalDataAddressError as e:
             print("Modbus illegal data address error: {0}".format(e))
     """
 
-    def __init__(self, address):
-        super(ModbusIllegalDataAddress, self).__init__(
-            message="The data address {0} is not valid".format(address), error_code=0x02
-        )
+    def __init__(self, address: object) -> None:
+        """Name the address, or address-and-length pair, that was refused."""
+        super().__init__(message=f"The data address {address} is not valid", error_code=0x02)
 
 
-class ModbusIllegalDataValue(ModbusProtocolError):
+class ModbusIllegalDataValueError(ModbusProtocolError):
     """The data value is not valid.
 
     A value contained in the query data field is not an allowable value for
@@ -173,20 +151,19 @@ class ModbusIllegalDataValue(ModbusProtocolError):
     Example:
         try:
             # Code that may raise Modbus illegal data value errors
-            raise ModbusIllegalDataValue(0x03)
+            raise ModbusIllegalDataValueError(0x03)
 
         # Catch the error and print the error message
-        except ModbusIllegalDataValue as e:
+        except ModbusIllegalDataValueError as e:
             print("Modbus illegal data value error: {0}".format(e))
     """
 
-    def __init__(self, data_value):
-        super(ModbusIllegalDataValue, self).__init__(
-            message="The data value {0} is not valid".format(data_value), error_code=0x03
-        )
+    def __init__(self, data_value: object) -> None:
+        """Name the value the peer refused."""
+        super().__init__(message=f"The data value {data_value} is not valid", error_code=0x03)
 
 
-class ModbusSlaveDeviceFailure(ModbusProtocolError):
+class ModbusSlaveDeviceFailureError(ModbusProtocolError):
     """The slave device failed to perform the requested action.
 
     An unrecoverable error occurred while the server (or slave) was attempting
@@ -195,20 +172,19 @@ class ModbusSlaveDeviceFailure(ModbusProtocolError):
     Example:
         try:
             # Code that may raise Modbus slave device failure errors
-            raise ModbusSlaveDeviceFailure()
+            raise ModbusSlaveDeviceFailureError()
 
         # Catch the error and print the error message
-        except ModbusSlaveDeviceFailure as e:
+        except ModbusSlaveDeviceFailureError as e:
             print("Modbus slave device failure error: {0}".format(e))
     """
 
-    def __init__(self):
-        super(ModbusSlaveDeviceFailure, self).__init__(
-            message="The slave device failed to perform the requested action", error_code=0x04
-        )
+    def __init__(self) -> None:
+        """Report exception code 0x04, an unrecoverable failure on the peer."""
+        super().__init__(message="The slave device failed to perform the requested action", error_code=0x04)
 
 
-class ModbusAcknowledge(ModbusProtocolError):
+class ModbusAcknowledgeError(ModbusProtocolError):
     """The slave device acknowledged the request but is processing it.
 
     Specialized use in conjunction with programming commands.
@@ -222,20 +198,19 @@ class ModbusAcknowledge(ModbusProtocolError):
     Example:
         try:
             # Code that may raise Modbus slave device failure errors
-            raise ModbusAcknowledge()
+            raise ModbusAcknowledgeError()
 
         # Catch the error and print the error message
-        except ModbusAcknowledge as e:
+        except ModbusAcknowledgeError as e:
             print("Modbus slave device failure error: {0}".format(e))
     """
 
-    def __init__(self):
-        super(ModbusAcknowledge, self).__init__(
-            message="The slave device acknowledged the request but is processing it", error_code=0x05
-        )
+    def __init__(self) -> None:
+        """Report exception code 0x05, a request accepted and still running."""
+        super().__init__(message="The slave device acknowledged the request but is processing it", error_code=0x05)
 
 
-class ModbusSlaveDeviceBusy(ModbusProtocolError):
+class ModbusSlaveDeviceBusyError(ModbusProtocolError):
     """The slave device is busy processing a long-duration command.
 
     Specialized use in conjunction with programming commands. The server
@@ -246,17 +221,16 @@ class ModbusSlaveDeviceBusy(ModbusProtocolError):
     Example:
         try:
             # Code that may raise Modbus slave device busy errors
-            raise ModbusSlaveDeviceBusy()
+            raise ModbusSlaveDeviceBusyError()
 
         # Catch the error and print the error message
-        except ModbusSlaveDeviceBusy as e:
+        except ModbusSlaveDeviceBusyError as e:
             print("Modbus slave device busy error: {0}".format(e))
     """
 
-    def __init__(self):
-        super(ModbusSlaveDeviceBusy, self).__init__(
-            message="The slave device is busy processing a long-duration command", error_code=0x06
-        )
+    def __init__(self) -> None:
+        """Report exception code 0x06, a peer that wants the request retried."""
+        super().__init__(message="The slave device is busy processing a long-duration command", error_code=0x06)
 
 
 class ModbusMemoryParityError(ModbusProtocolError):
@@ -280,13 +254,12 @@ class ModbusMemoryParityError(ModbusProtocolError):
             print("Modbus memory parity error: {0}".format(e))
     """
 
-    def __init__(self):
-        super(ModbusMemoryParityError, self).__init__(
-            message="The slave device detected a parity error in memory", error_code=0x08
-        )
+    def __init__(self) -> None:
+        """Report exception code 0x08, a consistency check the peer failed."""
+        super().__init__(message="The slave device detected a parity error in memory", error_code=0x08)
 
 
-class ModbusGatewayPathUnavailable(ModbusProtocolError):
+class ModbusGatewayPathUnavailableError(ModbusProtocolError):
     """The gateway could not find the path to the target device.
 
     Specialized use in conjunction with gateways, indicates that the gateway
@@ -297,20 +270,19 @@ class ModbusGatewayPathUnavailable(ModbusProtocolError):
     Example:
         try:
             # Code that may raise Modbus gateway path unavailable errors
-            raise ModbusGatewayPathUnavailable()
+            raise ModbusGatewayPathUnavailableError()
 
         # Catch the error and print the error message
-        except ModbusGatewayPathUnavailable as e:
+        except ModbusGatewayPathUnavailableError as e:
             print("Modbus gateway path unavailable error: {0}".format(e))
     """
 
-    def __init__(self):
-        super(ModbusGatewayPathUnavailable, self).__init__(
-            message="The gateway could not find the path to the target device", error_code=0x0A
-        )
+    def __init__(self) -> None:
+        """Report exception code 0x0A, a gateway with no path to allocate."""
+        super().__init__(message="The gateway could not find the path to the target device", error_code=0x0A)
 
 
-class ModbusGatewayTargetDeviceFailedToRespond(ModbusProtocolError):
+class ModbusGatewayTargetDeviceFailedToRespondError(ModbusProtocolError):
     """The gateway received no response from the target device.
 
     Specialized use in conjunction with gateways, indicates that no response
@@ -320,21 +292,20 @@ class ModbusGatewayTargetDeviceFailedToRespond(ModbusProtocolError):
     Example:
         try:
             # Code that may raise an error
-            raise ModbusGatewayTargetDeviceFailedToRespond()
+            raise ModbusGatewayTargetDeviceFailedToRespondError()
 
         # Catch the error and print the error message
-        except ModbusGatewayTargetDeviceFailedToRespond as e:
+        except ModbusGatewayTargetDeviceFailedToRespondError as e:
             print("Modbus Error: {0}".format(e))
     """
 
-    def __init__(self):
-        super(ModbusGatewayTargetDeviceFailedToRespond, self).__init__(
-            message="The gateway received no response from the target device", error_code=0x0B
-        )
+    def __init__(self) -> None:
+        """Report exception code 0x0B, a target that never answered the gateway."""
+        super().__init__(message="The gateway received no response from the target device", error_code=0x0B)
 
 
 class ModbusNetworkError(ModbusBaseError):
-    """Generic Modbus network error
+    """Generic Modbus network error.
 
     Possible causes of this error include:
 
@@ -357,15 +328,13 @@ class ModbusNetworkError(ModbusBaseError):
             print("Modbus network error: {0}".format(e))
     """
 
-    def __init__(self, message, extended_info=""):
-        """Initialize the ModbusNetworkError object"""
-
-        # Call the parent class constructor
-        super(ModbusNetworkError, self).__init__(message=message, extended_info=extended_info)
+    def __init__(self, message: str, extended_info: str = "") -> None:
+        """Forward the caller's message and extended information unchanged."""
+        super().__init__(message=message, extended_info=extended_info)
 
 
 class ModbusPacketError(ModbusBaseError):
-    """Generic Modbus Packet Error
+    """Generic Modbus packet error.
 
     Possible causes of this error include:
 
@@ -388,15 +357,13 @@ class ModbusPacketError(ModbusBaseError):
             print("Modbus packet error: {0}".format(e))
     """
 
-    def __init__(self, message, extended_info=""):
-        """Initialize the ModbusPacketError object"""
-
-        # Call the parent class constructor
-        super(ModbusPacketError, self).__init__(message=message, extended_info=extended_info)
+    def __init__(self, message: str, extended_info: str = "") -> None:
+        """Forward the caller's message and extended information unchanged."""
+        super().__init__(message=message, extended_info=extended_info)
 
 
 class ModbusModeError(ModbusBaseError):
-    """The operation is not valid in the component's current mode
+    """The operation is not valid in the component's current mode.
 
     A component that owns a resource refuses the operations that would hand
     that resource to a caller. Nothing reached the wire, so this is neither a
@@ -422,8 +389,6 @@ class ModbusModeError(ModbusBaseError):
             print("Modbus mode error: {0}".format(e))
     """
 
-    def __init__(self, message, extended_info=""):
-        """Initialize the ModbusModeError object"""
-
-        # Call the parent class constructor
+    def __init__(self, message: str, extended_info: str = "") -> None:
+        """Forward the caller's message and extended information unchanged."""
         super().__init__(message=message, extended_info=extended_info)

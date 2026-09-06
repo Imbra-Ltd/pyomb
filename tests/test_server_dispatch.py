@@ -14,7 +14,7 @@ listener, no certificates and no timing.
 import unittest
 from unittest import mock
 
-from pyomb.errors import ModbusSlaveDeviceFailure
+from pyomb.errors import ModbusSlaveDeviceFailureError
 from pyomb.packets import (
     ModbusError,
     ModbusHeader,
@@ -181,7 +181,7 @@ class TestFailureSimulation(ServerUnderTest):
         self.assertEqual(response.pdu.exc_code, 0x04)
 
     def test_unreachable_peer_surfaces_as_slave_device_failure(self):
-        with self.assertRaises(ModbusSlaveDeviceFailure):
+        with self.assertRaises(ModbusSlaveDeviceFailureError):
             self.dispatch(ModbusRequestFC1(start_addr=0, quantity=8), conn=FailingConnection())
 
 

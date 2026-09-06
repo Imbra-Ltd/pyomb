@@ -89,7 +89,6 @@ convention = "google"
 
 # Everything below freezes the violations that existed when ruff replaced
 # flake8. Shrinking it is the migration; PLAYBOOK 3.4 carries the procedure.
-"src/pyomb/errors.py" = ["D105", "D107", "D202", "D205", "D212", "D412", "D415", "I001", "N818", "SIM108", "UP008", "UP009", "UP010", "UP030", "UP032"]
 "src/pyomb/server_simulator.py" = ["B904", "BLE001", "D100", "D102", "D107", "D202", "D415", "N806", "RUF059", "SIM105", "SIM300", "TRY003", "UP004", "UP008", "UP009", "UP010", "UP018", "UP024", "UP030", "UP032"]
 "src/pyomb/packets.py" = ["B904", "BLE001", "D105", "D107", "D202", "D214", "D415", "RUF005", "RUF012", "UP008", "UP009", "UP010", "UP030", "UP032"]
 "src/pyomb/stream.py" = ["B008", "BLE001", "D107", "D202", "D415", "I001", "TRY300", "TRY301", "UP009", "UP010", "UP030", "UP032"]
@@ -102,7 +101,7 @@ strict = true
 files = ["src"]
 
 [[tool.mypy.overrides]]
-module = ["pyomb.errors", "pyomb.server_simulator"]
+module = ["pyomb.server_simulator"]
 disable_error_code = ["no-untyped-call", "no-untyped-def"]
 
 [[tool.mypy.overrides]]

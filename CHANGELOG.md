@@ -8,6 +8,10 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The eight protocol exception classes take an `Error` suffix, so
+  `ModbusIllegalDataValue` is now `ModbusIllegalDataValueError`. The old
+  spellings still resolve and warn; they are removed in 2.0. See #170, ADR-046
+
 - The source archive no longer carries this project's own convention gates.
   Running `pytest` against an unpacked sdist previously ran the Markdown width
   rule, the decision-record schema and the changelog rules over the consumer's

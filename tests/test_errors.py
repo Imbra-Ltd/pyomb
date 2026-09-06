@@ -1,19 +1,19 @@
 import unittest
 
 from pyomb.errors import (
-    ModbusAcknowledge,
+    ModbusAcknowledgeError,
     ModbusBaseError,
-    ModbusGatewayPathUnavailable,
-    ModbusGatewayTargetDeviceFailedToRespond,
-    ModbusIllegalDataAddress,
-    ModbusIllegalDataValue,
-    ModbusIllegalFunction,
+    ModbusGatewayPathUnavailableError,
+    ModbusGatewayTargetDeviceFailedToRespondError,
+    ModbusIllegalDataAddressError,
+    ModbusIllegalDataValueError,
+    ModbusIllegalFunctionError,
     ModbusMemoryParityError,
     ModbusNetworkError,
     ModbusPacketError,
     ModbusProtocolError,
-    ModbusSlaveDeviceBusy,
-    ModbusSlaveDeviceFailure,
+    ModbusSlaveDeviceBusyError,
+    ModbusSlaveDeviceFailureError,
 )
 
 
@@ -27,32 +27,32 @@ class TestErrors(unittest.TestCase):
         self.assertEqual("Test protocol error (Protocol Error Code 0x1)", str(e))
 
     def test_modbus_illegal_function(self):
-        e = ModbusIllegalFunction(0x01)
+        e = ModbusIllegalFunctionError(0x01)
         self.assertEqual("The function code 1 is not valid (Protocol Error Code 0x1)", str(e))
 
     def test_modbus_illegal_data_address(self):
-        e = ModbusIllegalDataAddress(0x02)
+        e = ModbusIllegalDataAddressError(0x02)
         self.assertEqual("The data address 2 is not valid (Protocol Error Code 0x2)", str(e))
 
     def test_modbus_illegal_data_value(self):
-        e = ModbusIllegalDataValue(0x03)
+        e = ModbusIllegalDataValueError(0x03)
         self.assertEqual("The data value 3 is not valid (Protocol Error Code 0x3)", str(e))
 
     def test_modbus_slave_device_failure(self):
-        e = ModbusSlaveDeviceFailure()
+        e = ModbusSlaveDeviceFailureError()
         self.assertEqual(
             "The slave device failed to perform the requested action (Protocol Error Code 0x4)",
             str(e),
         )
 
     def test_modbus_acknowledge(self):
-        e = ModbusAcknowledge()
+        e = ModbusAcknowledgeError()
         self.assertEqual(
             "The slave device acknowledged the request but is processing it (Protocol Error Code 0x5)", str(e)
         )
 
     def test_modbus_slave_device_busy(self):
-        e = ModbusSlaveDeviceBusy()
+        e = ModbusSlaveDeviceBusyError()
         self.assertEqual(
             "The slave device is busy processing a long-duration command (Protocol Error Code 0x6)", str(e)
         )
@@ -62,11 +62,11 @@ class TestErrors(unittest.TestCase):
         self.assertEqual("The slave device detected a parity error in memory (Protocol Error Code 0x8)", str(e))
 
     def test_modbus_gateway_path_unavailable(self):
-        e = ModbusGatewayPathUnavailable()
+        e = ModbusGatewayPathUnavailableError()
         self.assertEqual("The gateway could not find the path to the target device (Protocol Error Code 0xA)", str(e))
 
     def test_modbus_gateway_target_device_failed_to_respond(self):
-        e = ModbusGatewayTargetDeviceFailedToRespond()
+        e = ModbusGatewayTargetDeviceFailedToRespondError()
         self.assertEqual("The gateway received no response from the target device (Protocol Error Code 0xB)", str(e))
 
     def test_modbus_network_error(self):
