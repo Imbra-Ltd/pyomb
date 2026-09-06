@@ -1,5 +1,8 @@
-# coding=utf-8
-from __future__ import print_function, unicode_literals
+"""A scriptable Modbus TCP server, for exercising a client implementation.
+
+The server runs in a thread of its own, multiplexes its clients with select,
+and answers each request from a factory with one method per function code.
+"""
 
 import logging
 import select
@@ -91,12 +94,12 @@ class ModbusServerSimulator(threading.Thread):
         daemon=False,
         tls=None,
     ):
-
+        """Bind the listener settings, the response timing and the TLS material."""
         # Initialize the thread
         threading.Thread.__init__(self)
 
         # Set the thread name and logger
-        self.name = str("ModbusServerSimulator")
+        self.name = "ModbusServerSimulator"
         self.log = log or Logger(self.name)
         self.log.addHandler(logging.NullHandler())
 
@@ -170,7 +173,7 @@ class ModbusServerSimulator(threading.Thread):
     ############################################################################
 
     def set_fail(self, fail):
-        """Set fail flag for modbus server to return an exception as response
+        """Set fail flag for modbus server to return an exception as response.
 
         Args:
             fail (bool): The flag to simulate a failure.
@@ -195,7 +198,6 @@ class ModbusServerSimulator(threading.Thread):
         Args:
             sock (socket.socket): The socket to disconnect.
         """
-
         try:
             if isinstance(sock, ssl.SSLSocket):
                 sock = sock.unwrap()
@@ -204,7 +206,7 @@ class ModbusServerSimulator(threading.Thread):
             # ENOTCONN where Windows is silent. Ordinary here, not a fault.
             sock.shutdown(socket.SHUT_RDWR)
 
-        except socket.error:
+        except OSError:
             self.log.info("The client doesn't respond with NOTIFY ALERT")
 
         finally:
@@ -224,7 +226,6 @@ class ModbusServerSimulator(threading.Thread):
             conn (socket.socket)    : The client connection to close.
             registers (dict)        : Per-connection dictionaries to clear.
         """
-
         self.disconnect(conn)
 
         if conn in self.read_list:
@@ -245,7 +246,6 @@ class ModbusServerSimulator(threading.Thread):
 
     def run(self):
         """Run the Modbus server until stopped."""
-
         self.log.info("Server starting")
 
         # An empty host binds every interface, deliberately: the device
@@ -275,11 +275,13 @@ class ModbusServerSimulator(threading.Thread):
         while not self.quit_event.is_set():
             # Wait for incoming connections or data from clients
             select_timeout = 1
-            (readyReadList, readyWriteList, errorList) = select.select(self.read_list, [], [], select_timeout)
+            # Nothing is ever put on the write or error lists, so select can
+            # only ever report readability back.
+            ready_to_read, _, _ = select.select(self.read_list, [], [], select_timeout)
 
             # Check if the server socket is ready to accept a new connection
             current_time = time.time()
-            if srv in readyReadList:
+            if srv in ready_to_read:
                 # The read list holds the listening socket plus one entry per
                 # client, so the client count is one short of its length.
                 client_count = len(self.read_list) - 1
@@ -288,16 +290,14 @@ class ModbusServerSimulator(threading.Thread):
                 # let any peer stop the server by exceeding the limit.
                 if client_count >= self.connection_limit:
                     refused, refused_addr = srv.accept()
-                    self.log.info(
-                        "Connection limit of {0} reached. Refusing {1}.".format(self.connection_limit, refused_addr)
-                    )
+                    self.log.info(f"Connection limit of {self.connection_limit} reached. Refusing {refused_addr}.")
                     refused.close()
 
                 # Wait for a new connection
                 else:
                     # Accept the new connection after 3-way handshake
                     conn, addr = srv.accept()
-                    self.log.info("Connection request from {0}".format(addr))
+                    self.log.info(f"Connection request from {addr}")
                     # conn.setblocking(False)
 
                     # If the server is secure, wrap the connection in an SSL context
@@ -324,11 +324,11 @@ class ModbusServerSimulator(threading.Thread):
                     self.new_connection_event.set()
 
             # Process the incoming data from the clients
-            for conn in readyReadList:
+            for conn in ready_to_read:
                 # Only client connections are processed
                 if conn is not srv:
                     try:
-                        self.log.info("Connection.recv() - {0}.".format(self.peer_names.get(conn)))
+                        self.log.info(f"Connection.recv() - {self.peer_names.get(conn)}.")
 
                         # Create a Modbus TCP stream
                         stream = ModbusTcpStream(sock=conn, frag_delay=self.frag_delay, frag_size=self.frag_size)
@@ -337,10 +337,10 @@ class ModbusServerSimulator(threading.Thread):
                         data = stream.receive()
 
                     # receive() wraps every transport failure in a
-                    # ModbusBaseError, which is not a socket.error.
-                    except (socket.error, ModbusBaseError) as e:
+                    # ModbusBaseError, which is not an OSError.
+                    except (OSError, ModbusBaseError) as e:
                         self.forget(conn, last_activity_time)
-                        self.log.info("Socket Error - {0}.".format(e))
+                        self.log.info(f"Socket Error - {e}.")
 
                     # If no exception occurred, process the data
                     else:
@@ -369,28 +369,22 @@ class ModbusServerSimulator(threading.Thread):
 
                 # Check if the connection is inactive for the specified timeout
                 if (last_seen + self.inactive_timeout) < current_time:
-                    self.log.info(
-                        "{0} inactive for {1} seconds. Closing.".format(
-                            self.peer_names.get(conn), self.inactive_timeout
-                        )
-                    )
+                    self.log.info(f"{self.peer_names.get(conn)} inactive for {self.inactive_timeout} seconds. Closing.")
                     self.forget(conn, last_activity_time)
 
             # Print the connections status once in a while
             if (last_print_time + 1 < current_time) and self.process_connections:
-                self.log.info(
-                    "{0}: Clients connected {1}".format(list(self.peer_names.values()), len(self.get_peers()))
-                )
+                self.log.info(f"{list(self.peer_names.values())}: Clients connected {len(self.get_peers())}")
                 last_print_time = current_time
 
         # After the server is stopped, close all client connections
         for conn in self.read_list:
             if conn is not srv:
-                self.log.info("Closing client socket {0}.".format(conn.getsockname()))
+                self.log.info(f"Closing client socket {conn.getsockname()}.")
                 self.disconnect(conn)
 
         # Close the server socket
-        self.log.info("Closing server socket {0}.".format(srv.getsockname()))
+        self.log.info(f"Closing server socket {srv.getsockname()}.")
         srv.close()
 
         self.started_event.clear()
@@ -414,7 +408,6 @@ class ModbusServerSimulator(threading.Thread):
         Raises:
             ModbusSlaveDeviceFailureError: If an error occurs while processing the request.
         """
-
         # Deserialize the incoming data
         request = ModbusTcpRequest.deserialize(data)
         self.log.info(request)
@@ -502,10 +495,11 @@ class ModbusServerSimulator(threading.Thread):
             # Send the response
             sender.send(response.serialize())
 
-        # Handle any exceptions that occur during processing
+        # Any failure building or sending the response becomes exception code
+        # 0x04, which is what that code means. The cause travels with it.
         except Exception as e:
-            self.log.info("Error: {0}".format(e))
-            raise ModbusSlaveDeviceFailureError()
+            self.log.info(f"Error: {e}")
+            raise ModbusSlaveDeviceFailureError() from e
 
     ############################################################################
 
@@ -526,12 +520,11 @@ class ModbusServerSimulator(threading.Thread):
             ModbusNetworkError : If the listener does not come up, which a
                                  port already in use is the usual cause of.
         """
-
         # Set the processing mode
         self.process_connections = process_connections
 
         # Start the server thread
-        super(ModbusServerSimulator, self).start()
+        super().start()
 
         # Bounded, with a liveness check. Unbounded, a port already in use
         # hung the caller for good with the reason only on stderr.
@@ -540,11 +533,11 @@ class ModbusServerSimulator(threading.Thread):
 
         while not self.started_event.is_set():
             if not self.is_alive():
-                message = ("The server thread ended before the listener on port {0} came up").format(self.port)
+                message = f"The server thread ended before the listener on port {self.port} came up"
                 raise ModbusNetworkError(message=message)
 
             if time.time() >= deadline:
-                message = ("The listener on port {0} did not come up within {1} second(s)").format(self.port, timeout)
+                message = f"The listener on port {self.port} did not come up within {timeout} second(s)"
                 raise ModbusNetworkError(message=message)
 
             time.sleep(0.05)
@@ -553,7 +546,6 @@ class ModbusServerSimulator(threading.Thread):
 
     def reset(self):
         """Reset the Modbus server."""
-
         for sock in list(self.clients):
             self.log.info("Reset the client connection...")
 
@@ -581,7 +573,6 @@ class ModbusServerSimulator(threading.Thread):
             tuple: The connection and its peer address, or (None, None) if no
                    client arrived within the timeout.
         """
-
         # The server owns the connections in this mode, so handing one out
         # would give a single socket two owners.
         if self.process_connections:
@@ -609,7 +600,7 @@ class ModbusServerSimulator(threading.Thread):
     ############################################################################
 
 
-class ResponseFactory(object):
+class ResponseFactory:
     """Factory class for generating Modbus Response PDUs.
 
     This class provides static methods for generating Modbus Response PDUs for
@@ -635,7 +626,6 @@ class ResponseFactory(object):
         Returns:
             ModbusResponseFC1(): The Modbus Response PDU for Function Code 1.
         """
-
         # Calculate the byte count by ensuring that the byte count is rounded up
         byte_count = (request_pdu.quantity + 7) // 8
 
@@ -663,7 +653,6 @@ class ResponseFactory(object):
         Returns:
             ModbusResponseFC2(): The Modbus Response PDU for Function Code 2.
         """
-
         # Calculate the byte count by ensuring that the byte count is rounded up
         byte_count = (request_pdu.quantity + 7) // 8
 
@@ -693,7 +682,6 @@ class ResponseFactory(object):
         Returns:
             ModbusResponseFC3(): The Modbus Response PDU for Function Code 3.
         """
-
         # Get the quantity of registers to read from the request PDU
         quantity = request_pdu.quantity
 
@@ -725,7 +713,6 @@ class ResponseFactory(object):
         Returns:
             ModbusResponseFC4(): The Modbus Response PDU for Function Code 4.
         """
-
         # Get the quantity of registers to read from the request PDU
         quantity = request_pdu.quantity
 
@@ -754,7 +741,6 @@ class ResponseFactory(object):
         Returns:
             ModbusResponseFC5(): The Modbus Response PDU for Function Code 5.
         """
-
         # Get the address and value of the coil to write from the request PDU
         address = request_pdu.output_address
         coil_value = request_pdu.output_value
@@ -778,7 +764,6 @@ class ResponseFactory(object):
         Returns:
             ModbusResponseFC6(): The Modbus Response PDU for Function Code 6.
         """
-
         # Get the address and value of the register to write from the request PDU
         address = request_pdu.output_address
         register_value = request_pdu.output_value
@@ -802,7 +787,6 @@ class ResponseFactory(object):
         Returns:
             ModbusResponseFC7(): The Modbus Response PDU for Function Code 7.
         """
-
         # Create the Modbus Response PDU
         pdu = ModbusResponseFC7(status=status_code)
         return pdu
@@ -822,7 +806,6 @@ class ResponseFactory(object):
         Returns:
             ModbusResponseFC15(): The Modbus Response PDU for Function Code 15.
         """
-
         # Get the address and quantity of coils to write from the request PDU
         address = request_pdu.start_addr
         coils_quantity = request_pdu.quantity
@@ -847,7 +830,6 @@ class ResponseFactory(object):
         Returns:
             ModbusResponseFC16(): The Modbus Response PDU for Function Code 16.
         """
-
         # Get the address and quantity of registers to write from the request PDU
         address = request_pdu.start_addr
         registers_quantity = request_pdu.quantity
@@ -871,7 +853,6 @@ class ResponseFactory(object):
         Returns:
             ModbusResponseFC22(): The Modbus Response PDU for Function Code 22.
         """
-
         # Get the reference address, and mask, and or mask from the request PDU
         ref_address = request_pdu.ref_addr
         and_mask = request_pdu.and_mask
@@ -899,7 +880,6 @@ class ResponseFactory(object):
         Returns:
             ModbusResponseFC23(): The Modbus Response PDU for Function Code 23.
         """
-
         # Get the number of registers to read/write
         read_count = request_pdu.read_quantity
 
@@ -926,7 +906,6 @@ class ResponseFactory(object):
         Returns:
             ModbusResponseFC43(): The Modbus Response PDU for Function Code 43.
         """
-
         # Get the MEI type and MEI data from the request PDU
         mei_type = request_pdu.mei_type
         mei_data = request_pdu.mei_data
@@ -937,7 +916,14 @@ class ResponseFactory(object):
 
     @staticmethod
     def create_err_rsp(request_fc):
-        # response_pdu = ExcRes(req.fc | 0x80, OMB_EXCEPTION_SLAVE_DEVICE_FAILURE)
+        """Creates the exception response a failed request is answered with.
+
+        Args:
+            request_fc (int): The function code the request carried.
+
+        Returns:
+            ModbusError(): The exception PDU, carrying code 0x04.
+        """
         response_pdu = ModbusError(fc=request_fc, exc_code=OMB_EXCEPTION_SLAVE_DEVICE_FAILURE)
 
         return response_pdu
@@ -945,7 +931,6 @@ class ResponseFactory(object):
 
 def run_server():
     """Run the Modbus server to simulate a Modbus device."""
-
     log = Logger("ModbusServerSimulator")
     server_thread = ModbusServerSimulator(
         log=log,
@@ -957,10 +942,9 @@ def run_server():
     )
     server_thread.start()
 
-    try:
-        input("Press enter to continue")
-    except SyntaxError:
-        pass
+    # Python 2's input() evaluated what it read and could raise SyntaxError.
+    # Python 3's returns the string, so the guard that stood here never fired.
+    input("Press enter to continue")
 
     server_thread.stop()
     server_thread.join()
