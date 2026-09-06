@@ -106,9 +106,9 @@ pre-commit install               # run the gates before every commit
 pytest                           # run the fast tier
 pytest -m integration            # run the tier that opens sockets
 mypy                             # type check; settings in pyproject.toml
-bandit -c pyproject.toml -r src scripts tests examples   # static analysis
-ruff check src tests scripts examples     # lint
-ruff format src tests scripts examples    # format
+bandit -c pyproject.toml -r src tests checks scripts examples   # static analysis
+ruff check src tests checks scripts examples     # lint
+ruff format src tests checks scripts examples    # format
 python -m build                  # build distribution
 twine check dist/*               # validate wheel and sdist metadata
 cyclonedx-py environment <venv>  # SBOM; the release workflow runs it

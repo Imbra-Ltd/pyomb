@@ -105,9 +105,9 @@ The count is deliberately not written down here. It changes with every branch,
 and a number in a setup document is wrong more often than it is right.
 
 ```bash
-uv run --no-sync python -m ruff check src tests scripts examples
+uv run --no-sync python -m ruff check src tests checks scripts examples
 uv run --no-sync python -m mypy
-uv run --no-sync python -m bandit -c pyproject.toml -r src scripts tests examples
+uv run --no-sync python -m bandit -c pyproject.toml -r src tests checks scripts examples
 ```
 
 Expect `All checks passed!` from the first and a `Success:` line from the
