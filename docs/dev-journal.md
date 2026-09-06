@@ -3816,3 +3816,87 @@ package, per ADR-002. See `README.md` for usage and
   with this one, since ADR-044's fourth rule is what replaces it. #304 is still
   unresolved. Cognitive complexity is ungated, #149. The templates pin is at
   `v2.75.0` against `v2.78.0`, held by ADR-034.
+
+## 2026-09-06 -- Tier the suite, bound the comments
+
+- **Tool:** Claude Code (Opus 5, 1M context). The session ran across the
+  evening of 2026-09-05 and the morning of 2026-09-06.
+- **Key changes:**
+  - **Tiered the test suite by directory (PR #317).** `tests/` became a
+    package, the three shared doubles moved to `tests/helpers/` and are
+    imported by dotted path, and the seven modules that bind sockets or start
+    threads moved to `tests/integration/`. A hook in `tests/conftest.py` marks
+    every item under that directory and the manifest deselects the marker, so
+    a bare `pytest` is 579 tests in 8s where the whole suite was 627 in 38s,
+    and opens no socket. The seven were classified on what each does --
+    `socket()`, `bind()`, `listen()`, `accept()`, `start()` -- never on what
+    each imports, and they total 1192 lines, which is what ADR-044's table
+    records. `conftest.py` stayed at the root of the suite rather than moving
+    into `helpers/`, because its location is what scopes the leak guard to
+    every tier; ADR-044's third rule was written when a fifth helper still
+    existed that has since moved to `checks/`.
+  - **Added a second test step to the pipeline (PR #317).** An off-limits
+    path, proposed with a rollback strategy and approved before the change was
+    made. The existing step runs the fast tier; the new one runs
+    `pytest -m integration` with `--cov-append`, and the 80% floor moved onto
+    it so it is read against both tiers rather than the fraction the fast tier
+    reaches. Two steps rather than one flag re-selecting everything, because a
+    tier the pipeline does not name is a tier that can stop existing with
+    nothing going red. Combined coverage 95.9%.
+  - **Bounded comment and docstring length (PR #321).** A comment block is at
+    most 2 lines, a docstring at most 10 lines of prose, and `Args:`,
+    `Returns:`, `Raises:` and `Example:` do not count -- annotating a wide
+    signature costs nothing. `checks/test_comment_length.py` enforces both,
+    scoped by `ROOTS` to the directories the migration has reached, so each
+    slice cleans a directory and widens that list in the same change and no
+    slice merges unverified.
+  - **Brought the library inside the bound (PR #322).** 82 comment blocks and
+    12 docstrings in `src/`. Most were restatement and were trimmed; twelve in
+    `packets.py` were the same format-string boilerplate repeated and collapsed
+    to one line each. Four moved whole, because each was the only place its
+    reasoning was written: the exception tree to PLAYBOOK 2.5, the TLS 1.2
+    floor to 2.4, the `py/bind-socket-all-network-interfaces` dismissal to 3.8,
+    and the RTU checksum derivation to 2.3. A fifth turned out to be a second
+    copy of what PLAYBOOK already said about deferred imports.
+  - **Repaired a heading collision the two appends created.** PLAYBOOK ran to
+    3.24 and both slices appended a new gate section without reading the tail,
+    so `main` carried two 3.21s and two 3.22s -- and ADR-022 cites 3.22, which
+    started resolving to the wrong section rather than to a missing one. The
+    two sections are now 3.25 and 3.26 and sit inside section 3 rather than
+    after section 5.
+- **PRs merged:** #317, #321, #322.
+- **Issues closed/created:** closed #172. Created #318 (the documented ruff and
+  bandit commands never name `checks/`), #319 (ADR-044's four subject buckets),
+  #320 (the comment-length migration, 2 of 5 slices done).
+- **Lesson:** the exemptions to a length bound cannot be predicted and are
+  found by running it. Four turned up in two slices -- a licence header, labels
+  trailing consecutive lines of code, a section banner, a wire-layout table --
+  and all four share one property that works as the test: the line count is set
+  by something other than the author's prose. That also gives the narrowing
+  property directly. A banner is exempt on being ruled on **both** sides, so
+  underlining a paragraph does not exempt it.
+- **Lesson:** appending to a numbered document is not a safe edit. Both
+  appends were individually correct, both merged green, and nothing in the
+  project reads heading ordinals -- so the collision survived two pull requests
+  and was found only by grepping for what cites PLAYBOOK sections. The
+  ordered-document check `base-git` carries is written for two branches editing
+  one document; it catches this too, and nothing was running it.
+- **Lesson:** a classification that is derivable to the line and one that takes
+  judgement do not belong in the same change. The integration tier's seven
+  modules reproduced ADR-044's 1192-line figure exactly, so the move needed no
+  argument. The other four buckets have counts in the record but no per-module
+  assignment, and the record warns that two classifiers written for it
+  disagreed on seven modules in both directions. Splitting them into #319 kept
+  the tier move free of a judgement pass.
+- **Upstream:** filed braboj/solid-ai-templates#1518, carrying two patterns --
+  a retrofit gate that widens its scope with each migration slice, which is the
+  inverse of the per-file ratchet and suits a gate with no ignore mechanism,
+  and the test above for a length bound's exemptions.
+  braboj/solid-ai-templates#1486 and #1497 are both still open.
+- **Pending:** #320's three remaining slices -- `tests/` (81 blocks), `checks/`
+  (93) and the configuration files, two of which are off-limits. The templates
+  pin is at `v2.75.0` against `v2.79.0` upstream, and the pointer is off-limits
+  so the bump needs its own proposal. #318, #319 and #324 are open from this
+  session, the last of them for the gap that let the collision above ship --
+  nothing here reads heading ordinals, and the check `base-git` carries for
+  this shape has never been run.

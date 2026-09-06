@@ -204,7 +204,7 @@ meaningful.
 
 TLS. Both simulators support it, and a working example would need a
 certificate chain — which `scripts/gen_test_certs.py` mints, and which no
-reader should be handed pre-made in a repository. The secure path is covered by
-`tests/test_tls_integration.py` and documented in the project README's
-configuration reference, which is where a capability that cannot be
+reader should be handed pre-made in a repository. The secure path is covered
+by `tests/integration/test_tls_integration.py` and documented in the project
+README's configuration reference, which is where a capability that cannot be
 demonstrated safely belongs.

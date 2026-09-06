@@ -1226,6 +1226,60 @@ package path leaves the manifest, when a frozen name no longer matches an
 example that exists, and when the manifest and the test disagree about which
 examples are exempt.
 
+### 3.25 Test tiering (pytest)
+
+```bash
+pytest checks/test_default_run_is_the_fast_tier.py
+```
+
+Both directions of the tier filter, plus the pipeline step that depends on it.
+A bare `pytest` must reach no module under `tests/integration/`, and
+`pytest -m integration` must still reach the tier the bare run deselects. The
+second is the one worth having: a marker that stopped matching leaves the fast
+tier green and the heavy tier running nowhere, and 57 tests that no longer run
+report exactly what 57 passing tests report.
+
+Both assertions carry a floor rather than a comparison against each other,
+because an assertion that the default run excludes the tier is satisfied just
+as well by a default run that reached nothing at all.
+
+The fourth test reads `ci.yml` for a step selecting the tier. That step is the
+only thing that runs those tests where a merge is decided — a contributor's
+suite was never going to, by design — so deleting it is otherwise silent.
+Restoring it needs the proposal an off-limits path requires.
+
+### 3.26 Comment and docstring length (pytest)
+
+```bash
+pytest checks/test_comment_length.py
+```
+
+A comment block is at most 2 lines and a docstring at most 10 lines of prose.
+`Args:`, `Returns:`, `Raises:` and `Example:` sections are the contract rather
+than explanation and do not count, so annotating a wide signature costs
+nothing here.
+
+Two things are deliberately not blocks. A licence header opens a file and is a
+legal notice, not an explanation. A comment trailing code is one label on one
+line however many stack up — the hex vector in
+`examples/round_trip_a_packet.py` labels each field that way, and the seven
+labels are seven comments rather than a seven-line block.
+
+Length is a proxy for placement. A comment needing a paragraph is usually
+explaining something that belongs in this document or in a decision record,
+where a reader finds it without opening the source. So the fix is to read the
+block and choose: delete it if it restates the code, move it here if it is
+operational, move it to a record if it is design reasoning that has to stay
+fixed. Compressing it in place satisfies the count and fails the reader.
+
+Whether a comment was needed at all is a judgement this cannot reach, and
+review keeps it.
+
+`ROOTS` in the check names the directories the bound covers. The migration
+adds one per slice, cleaning the directory and widening the list in the same
+change, so no slice merges unverified.
+
+
 ## 4. Maintenance
 
 ### 4.1 Bump the templates submodule
@@ -1579,56 +1633,3 @@ Before any publish to a package index: claim the name per ADR-002, and publish
 from CI only, never from a local machine. #70 carries the acceptance criteria
 for that work, including Trusted Publishing over a long-lived token; it is
 closed rather than open, so nothing surfaces it until someone reopens it.
-
-### 3.21 Test tiering (pytest)
-
-```bash
-pytest checks/test_default_run_is_the_fast_tier.py
-```
-
-Both directions of the tier filter, plus the pipeline step that depends on it.
-A bare `pytest` must reach no module under `tests/integration/`, and
-`pytest -m integration` must still reach the tier the bare run deselects. The
-second is the one worth having: a marker that stopped matching leaves the fast
-tier green and the heavy tier running nowhere, and 57 tests that no longer run
-report exactly what 57 passing tests report.
-
-Both assertions carry a floor rather than a comparison against each other,
-because an assertion that the default run excludes the tier is satisfied just
-as well by a default run that reached nothing at all.
-
-The fourth test reads `ci.yml` for a step selecting the tier. That step is the
-only thing that runs those tests where a merge is decided — a contributor's
-suite was never going to, by design — so deleting it is otherwise silent.
-Restoring it needs the proposal an off-limits path requires.
-
-### 3.22 Comment and docstring length (pytest)
-
-```bash
-pytest checks/test_comment_length.py
-```
-
-A comment block is at most 2 lines and a docstring at most 10 lines of prose.
-`Args:`, `Returns:`, `Raises:` and `Example:` sections are the contract rather
-than explanation and do not count, so annotating a wide signature costs
-nothing here.
-
-Two things are deliberately not blocks. A licence header opens a file and is a
-legal notice, not an explanation. A comment trailing code is one label on one
-line however many stack up — the hex vector in
-`examples/round_trip_a_packet.py` labels each field that way, and the seven
-labels are seven comments rather than a seven-line block.
-
-Length is a proxy for placement. A comment needing a paragraph is usually
-explaining something that belongs in this document or in a decision record,
-where a reader finds it without opening the source. So the fix is to read the
-block and choose: delete it if it restates the code, move it here if it is
-operational, move it to a record if it is design reasoning that has to stay
-fixed. Compressing it in place satisfies the count and fails the reader.
-
-Whether a comment was needed at all is a judgement this cannot reach, and
-review keeps it.
-
-`ROOTS` in the check names the directories the bound covers. The migration
-adds one per slice, cleaning the directory and widening the list in the same
-change, so no slice merges unverified.
