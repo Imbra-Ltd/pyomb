@@ -1,39 +1,14 @@
 """A bare pytest runs the fast tier, and the pipeline runs the other one.
 
-The suite is tiered by directory. `tests/conftest.py` marks every item under
-`tests/integration/`, the manifest deselects that marker, and a bare `pytest`
-therefore opens no socket. Two halves of that arrangement fail silently, in
-opposite directions, and neither is visible in a passing run.
+Two halves of the arrangement fail silently, in opposite directions. The filter
+can stop excluding, which puts the heavy tier back into every editor save with
+nothing going red. Or it can stop including, which is worse: 57 tests that no
+longer run anywhere report exactly what 57 passing tests report.
 
-**The filter can stop excluding.** A hook that stops marking, a marker renamed
-on one side only, a `-m` dropped from `addopts` -- each puts the heavy tier
-back into every editor save and every pre-commit run. Nothing goes red,
-because the tests pass either way; the suite just costs seven times what it
-should and binds loopback sockets to do it.
-
-**The filter can stop including.** This is the worse one. A `-m` expression
-that matches nothing leaves the default run collecting the fast tier and the
-pipeline's integration step collecting zero -- and 57 tests that no longer run
-anywhere report exactly what 57 passing tests report. So the two collections
-are asserted against floors rather than against each other: an assertion that
-the default run excludes the heavy tier passes just as well when the default
-run reaches nothing at all.
-
-The third assertion is about the pipeline. A tier the default run deselects is
-a tier something else has to select, and the only thing that does is a step in
-`ci.yml`. Delete that step and the integration tests stop running where a
-merge is decided, with no local signal of any kind: a contributor's `pytest`
-was never going to run them, which is the whole point of the tier.
-
-This is the sibling of `checks/test_ci_collects_the_doctests.py`, which asks
-whether the pipeline's own test step reaches the docstring examples and the
-repository gates. That one is about a step passing no path; this one is about
-a step that must exist at all.
-
-The workflow is read as text rather than parsed as YAML, for the reason
-`checks/test_workflow_downloads_retry.py` gives: the only YAML dependency in
-the test extra's closure is a transitive one, so parsing would stake this
-module on a dependency no manifest here declares.
+So both collections are asserted against floors rather than against each other,
+and the third assertion is the pipeline step that selects the tier -- deleting
+it stops those tests running where a merge is decided, with no local signal.
+PLAYBOOK 3.25 carries how the two test directories are packaged.
 """
 
 import pathlib
@@ -43,6 +18,8 @@ import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
+# Read as text rather than parsed as YAML: the only YAML dependency in the test
+# extra's closure is a transitive one, which no manifest here declares.
 WORKFLOW = REPO / ".github" / "workflows" / "ci.yml"
 
 # The directory whose contents are the heavy tier, spelled as a collected item
@@ -50,16 +27,11 @@ WORKFLOW = REPO / ".github" / "workflows" / "ci.yml"
 TIER = "tests/integration/"
 
 # The selection the pipeline has to make somewhere. Matched on the expression
-# rather than on a step name, so renaming the step is not a failure and
-# deleting it is.
+# rather than the step name, so renaming the step is not a failure.
 SELECTS_THE_TIER = "-m integration"
 
-# What each collection held when these floors were set: 575 in the fast tier
-# and 57 in the heavy one, on 2026-09-05. Both corpora churn -- retiring a test
-# is an ordinary deletion -- so each floor takes a stated margin below the
-# measured count rather than the count itself. The margin costs no detection:
-# every way a selection breaks returns nothing at all rather than a fraction,
-# so any floor above zero catches all of them.
+# What each collection held when these floors were set on 2026-09-05: 575 fast
+# and 57 heavy. Tests churn, so each floor takes a margin below its count.
 FAST_TIER_AT_LEAST = 400
 
 HEAVY_TIER_AT_LEAST = 30
@@ -75,9 +47,8 @@ def collect(arguments):
         list[str] : One line per collected item, in collection order
     """
 
-    # The argument vector is a list, so it reaches the operating system
-    # without a shell. The interpreter is this process's own and every
-    # argument is a literal from this module.
+    # The argument vector is a list, so it reaches the operating system without
+    # a shell, and every argument in it is a literal from this module.
     completed = subprocess.run(  # nosec B603
         [sys.executable, "-m", "pytest", "--collect-only", "-q", *arguments],
         capture_output=True,

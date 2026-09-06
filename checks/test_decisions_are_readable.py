@@ -1,31 +1,14 @@
 """Decision records stay readable: bounded sentences, bounded paragraphs.
 
-A decision record is read once, months later, by someone deciding whether the
-decision still holds. The prose that costs them is not long prose -- it is a
-single sentence carrying an enumeration, where three reasons are chained on
-semicolons and the reader has to hold all of the first one while parsing the
-third. The records here reached a seventy-three-word sentence of exactly that
-shape before anything measured them.
+A record is read once, months later, by someone deciding whether the decision
+still holds. What costs that reader is not long prose but a single sentence
+carrying an enumeration -- three reasons chained on semicolons, the first of
+which has to be held intact while the third is parsed. The records reached a
+seventy-three-word sentence of that shape before anything measured them.
 
-The two limits below are one rule: a sentence is the unit a reader holds at
-once, and a paragraph may hold two of them. Both are calibrated rather than
-chosen -- see the constants for the distribution each came from and the
-command that re-measures it.
-
-What the check deliberately does not read:
-
-Fenced blocks carry the ASCII diagrams the decision format asks for, and a
-diagram has no sentences. Tables are the format the decision template asks for
-under Alternatives considered and Consequences, and a cell is already a short
-unit. Headings are titles. Block quotes are verbatim quotations of the pinned
-templates: they are the rule a record is measured against, they are not this
-project's prose, and rewriting one to fit a limit would falsify the quotation.
-
-The limits apply to list items too, because a sentence is a sentence wherever
-it sits. Without that the rule would be trivially satisfied by moving a
-sixty-word sentence under a bullet, which moves the reader's problem rather
-than fixing it. Only the paragraph limit is scoped to paragraphs: a list item
-is already a structural break, so bounding its sentences is enough.
+Both limits reach list items as well as paragraphs, or the rule would be
+satisfied by putting a bullet in front of a long sentence. PLAYBOOK 3.14
+carries what the check reads past and why.
 """
 
 import pathlib
@@ -35,48 +18,24 @@ import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
-# The records this rule governs. Prose elsewhere in the tree is not held to it:
-# the journal is a session log written at speed, and the README and the agent
-# context file already measure well inside these limits without a gate.
+# The records this rule governs. The journal is a session log written at speed,
+# and the README and the context file already measure inside these limits.
 DECISIONS = "docs/decisions/"
 
-# Calibrated against the prose the project is measured by rather than picked as
-# a round number. Across the seventy-one pinned template files the 99th
-# percentile sentence is 42 words, and the two documents this project keeps
-# tightest -- the README and the agent context file -- top out at 41. Forty is
-# where that prose already sits, so the gate refuses what those authors would
-# not have written. It is not a style preference: below about 35 the limit
-# falls under the templates' own 99th percentile and the gate would be stricter
-# than the prose it inherits, which is a gate the project would fight.
+# Calibrated rather than chosen: the pinned templates' 99th-percentile sentence
+# is 42 words, and this project's tightest prose tops out at 41.
 MAX_SENTENCE_WORDS = 40
 
-# Two maximum-length sentences. The relation is the point -- a paragraph that
-# runs past two full sentences is where a reader loses the thread, and deriving
-# the bound from the sentence limit keeps the two from drifting apart when one
-# is re-measured.
+# Two maximum-length sentences, derived from the limit above so re-measuring
+# one cannot leave the pair drifting apart.
 MAX_PARAGRAPH_WORDS = 2 * MAX_SENTENCE_WORDS
 
-# The gate itself is `pytest checks/test_decisions_are_readable.py`, and it
-# passes when both lists below come back empty. Re-calibrating is the separate
-# job: it needs the word-length distribution of the current corpus against the
-# pinned templates, and the run that set these two numbers is recorded in the
-# decision record that introduced this module, under its measurement heading.
-
-# What the directory held when this floor was set, template included, measured
-# with `git ls-files docs/decisions/*.md`. A record is append-only -- it merges
-# and is never deleted, since a superseded one stays in the tree carrying the
-# link to what replaced it -- so the measured count is a floor that only ever
-# rises. It is a floor rather than a non-empty check because a listing holding
-# one record satisfies non-emptiness while measuring almost nothing.
+# What the directory held when this floor was set, template included. A record
+# is append-only, so the measured count is a floor that only ever rises.
 RECORDS_AT_LEAST = 23
 
-# The corpus reached 967 sentences across 501 units on the day this was set,
-# and the floor sits at roughly half of that. The file list being right does
-# not mean the prose was read: a parser that returns no units, or a sentence
-# split that returns no sentences, leaves both limits below asserting over an
-# empty set. Every break mode of that kind returns nothing at all, so the
-# margin costs no detection -- it is there for a parser correction that
-# legitimately reads past less of a record, not for the failure this catches.
+# The corpus reached 967 sentences across 501 units when this was set. The
+# margin is for a parser correction, not for the failure this catches.
 SENTENCES_AT_LEAST = 450
 
 NOT_A_CHECKOUT = "not a git checkout, so there is no tracked-file list to read"
@@ -90,16 +49,12 @@ REMEDY = (
     "rather than an edit."
 )
 
-# A period ends a sentence only where what follows starts a new one. Requiring
-# an opening character keeps a version number, an ellipsis and an abbreviation
-# from splitting one sentence into two. The backtick is in the set because a
-# record routinely opens a sentence with an identifier, and missing that
-# boundary would join two sentences and report a length neither has.
+# A period ends a sentence only where what follows opens one, so a version
+# number, an ellipsis and an abbreviation do not split one. A backtick opens.
 SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+(?=[A-Z(\[\"'`])")
 
-# A code span is one unit to a reader regardless of what it holds, and a period
-# inside one is never a sentence boundary. Collapsing each to a single token
-# before splitting removes both problems at once.
+# A code span is one unit to a reader, and a period inside one is never a
+# boundary. Collapsing each to a token before splitting removes both problems.
 CODE_SPAN = re.compile(r"`[^`]*`")
 
 BULLET = re.compile(r"^([-*]|\d+\.)\s+")
@@ -113,10 +68,7 @@ def tracked_decisions():
     """
 
     # The argument vector is a list and carries no caller input, so it reaches
-    # the operating system directly rather than through a shell and cannot
-    # become a second command. The checks match on call shape and cannot see
-    # that. Resolving git's absolute path first would trade a suppression for a
-    # lookup that fails on a machine where the check is meaningless anyway.
+    # the operating system directly rather than through a shell.
     listing = subprocess.run(  # nosec B603 B607
         ["git", "ls-files", "-z", DECISIONS],
         cwd=REPO,
@@ -144,9 +96,8 @@ def units(text):
     opened = 0
     fenced = False
 
-    # The record's YAML front matter is metadata rather than prose: it holds
-    # fields, not sentences, so measuring it as a paragraph asks a question it
-    # has no answer to. Its width is still the width gate's business.
+    # Front matter holds fields rather than sentences, so measuring it as a
+    # paragraph asks a question it has no answer to.
     front_matter = False
 
     def flush():
@@ -159,7 +110,7 @@ def units(text):
         line = raw.strip()
 
         # Only a delimiter on the very first line opens front matter, so a
-        # thematic break further down the document is not mistaken for one.
+        # thematic break further down is not mistaken for one.
         if line == "---" and (number == 1 or front_matter):
             front_matter = number == 1
             continue
@@ -177,16 +128,14 @@ def units(text):
         if fenced:
             continue
 
-        # Each of these ends whatever paragraph was accumulating: a blank line
-        # and a heading by definition, a table row and a block quote because
-        # the unit that follows is not the one that preceded it.
+        # Each of these ends whatever paragraph was accumulating, because the
+        # unit that follows is not the one that preceded it.
         if not line or line.startswith(("#", "|", ">")):
             flush()
             continue
 
         # The metadata the decision format puts above the first heading. These
-        # are fields rather than prose, and the value of one is a date or a
-        # status word.
+        # are fields, and the value of one is a date or a status word.
         if line.startswith(("**Status:**", "**Date:**")):
             flush()
             continue
@@ -196,9 +145,8 @@ def units(text):
             found.append(("list item", number, BULLET.sub("", line)))
             continue
 
-        # An indented continuation belongs to the list item above it, not to a
-        # new paragraph. Without this a wrapped bullet would be measured twice:
-        # once short as the item, once short as a paragraph.
+        # An indented continuation belongs to the item above it. Without this a
+        # wrapped bullet would be measured twice, short both times.
         if raw.startswith((" ", "\t")) and found and found[-1][0] == "list item":
             kind, line_number, prose = found[-1]
             found[-1] = (kind, line_number, prose + " " + line)
@@ -234,9 +182,8 @@ class DecisionsAreReadable(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Absent a checkout there is no tracked-file list to read, and a
-        # directory walk would pick up scratch files CI never sees. The skip is
-        # for that case only; a checkout whose git call fails is a failure.
+        # Absent a checkout there is no tracked-file list, and a directory walk
+        # would pick up scratch files CI never sees.
         if not (REPO / ".git").exists():
             raise unittest.SkipTest(NOT_A_CHECKOUT)
 

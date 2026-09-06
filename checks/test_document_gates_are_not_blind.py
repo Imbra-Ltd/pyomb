@@ -1,27 +1,14 @@
 """No document gate reports a clean tree when it has read nothing.
 
-Seven modules here assert that a list of violations is empty. Each reads its
-corpus from a tracked-file listing, and an assertion that nothing was found
-passes identically when nothing was examined -- so a gate whose enumeration
-breaks goes on reporting success while measuring an empty set.
+Every gate here asserts that a list of violations is empty, reading its corpus
+from a tracked-file listing -- and an assertion that nothing was found passes
+identically when nothing was examined. Three were measured blind, and those
+three enforced three divergences this project recorded.
 
-That is not a hypothetical. Three of the six were measured blind: patching the
-enumeration to return nothing left the character-set rule, the readability
-limits and the frontmatter schema all green, and those three are the
-enforcement mechanisms of three divergences this project recorded. Each now
-carries a coverage assertion of its own, and this module is what keeps them
-carrying one.
-
-The control it runs is the measurement itself rather than a description of it.
-Every gate reads its listing through `subprocess`, so replacing that one call
-with an empty result blinds all six at once, whatever each names its own
-enumeration. A gate that still passes under that has no coverage assertion.
-
-Two properties make the control honest. It discovers the gates rather than
-listing them, so a seventh added later is covered without editing this file.
-And the ordinary suite run is the other half: this module proves each gate
-fails on an empty corpus, and the run that fails on nothing proves each one
-passes on the real one.
+The control is the measurement rather than a description of it: every gate
+reads its listing through `subprocess`, so replacing that one call blinds them
+all at once. It discovers the gates rather than listing them, so one added
+later is covered without editing this file. PLAYBOOK 3.22 carries the rest.
 """
 
 import importlib
@@ -35,23 +22,14 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 
 CHECKS = "checks/"
 
-# What makes a module a document gate: it reads its corpus from git's index
-# rather than from the filesystem. Every one of them spells it this way, and
-# the string appears in this module too, which is why the discovery below drops
-# itself by name rather than by content.
+# What makes a module a document gate: it reads its corpus from git's index.
+# The string appears here too, so the discovery drops itself by name.
 MARKER = "ls-files"
 
 SELF = pathlib.Path(__file__).stem
 
-# What the tree held when this floor was set: 6 gates -- the character set, the
-# line endings, the Markdown width, and the three over the decision records.
-# The floor sits at roughly half, because test modules churn -- retiring a gate
-# is an ordinary deletion, and so is dropping one whose rule went away
-# upstream, and neither must fail a control that reports a broken discovery.
-# Every way this enumeration breaks returns nothing at all, so the margin costs
-# no detection. It is a floor rather than a non-empty check for the same reason
-# each of those gates now carries one -- a discovery that returns a single
-# module satisfies non-emptiness while leaving five gates unmeasured.
+# What the tree held when this floor was set: 6 gates. Modules churn, so the
+# floor takes a margin below the measured count rather than the count.
 GATES_AT_LEAST = 3
 
 NOT_A_CHECKOUT = "not a git checkout, so there is no tracked-file list to read"
@@ -74,9 +52,7 @@ def tracked_gate_modules():
     """
 
     # The argument vector is a list and carries no caller input, so it reaches
-    # the operating system directly rather than through a shell and cannot
-    # become a second command. The checks match on call shape and cannot see
-    # that.
+    # the operating system directly rather than through a shell.
     listing = subprocess.run(  # nosec B603 B607
         ["git", "ls-files", "-z", CHECKS + "test_*.py"],
         cwd=REPO,
@@ -125,14 +101,12 @@ def blinded(name):
     module = importlib.import_module(name)
     suite = unittest.defaultTestLoader.loadTestsFromModule(module)
 
-    # An empty listing rather than a failing call: a gate whose git call raises
-    # would fail for the wrong reason, and what is under test is the gate that
-    # reads a successful, empty result and reports a clean tree from it.
+    # An empty listing rather than a failing call: what is under test is the
+    # gate that reads a successful, empty result and reports a clean tree.
     empty = subprocess.CompletedProcess(args=(), returncode=0, stdout="", stderr="")
 
-    # Patching the call rather than each module's own enumeration is what lets
-    # this cover a gate nobody has written yet. The patch has to wrap the run
-    # rather than the load, because a gate reads its corpus in setUpClass.
+    # Patching the call rather than each module's enumeration covers a gate
+    # nobody has written yet. It wraps the run, since a gate reads in setUpClass.
     with mock.patch.object(subprocess, "run", return_value=empty):
         return unittest.TextTestRunner(stream=io.StringIO(), verbosity=0).run(suite)
 

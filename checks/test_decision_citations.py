@@ -1,27 +1,13 @@
 """A decision record links to another through its front matter, not its prose.
 
-`templates/base/core/docs.md` requires that the only record-to-record links be
-the `supersedes` and `superseded_by` fields, because those are the only ones a
-check can validate. A prose reference rots silently: the record it names gets
-superseded, or its reasoning is withdrawn, and the sentence pointing at it goes
-on reading exactly as it did.
+`supersedes` and `superseded_by` are the only record-to-record links a check
+can validate. A prose reference rots silently: the record it names gets
+superseded, and the sentence pointing at it goes on reading exactly as it did.
 
-The rule arrived at `v2.46.0`, after nineteen records had already merged, and
-the same file declares a merged record immutable. Fourteen of the nineteen cite
-another record in a prose body and eight of those do it inside a Decision
-section, where the citation is usually the decision rather than a pointer
-beside it -- so rewriting them is not the content-preserving format migration
-the immutability rule permits. ADR-020 settles it: the prohibition binds
-records numbered 020 and above, and the ones below keep their prose as merged.
-
-That makes the boundary the whole content of this module, and the reason it is
-a constant with this comment beside it rather than a number inline.
-
-Two things are deliberately not read. A fenced block is skipped, so a record
-may quote the rule or the command that measures compliance without failing
-itself -- ADR-020 does both. The closing pointers section is skipped, because
-the template permits context-only links there; what it may not carry is
-decision-bearing text, which no check can judge and review has to.
+The rule arrived after nineteen records had merged, and the same file declares
+a merged record immutable, so it binds records numbered 020 and above. That
+boundary is the whole content of this module, and the reason it is a constant
+rather than a number inline. PLAYBOOK 3.21 carries what is deliberately unread.
 """
 
 import pathlib
@@ -33,10 +19,8 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 
 DECISIONS = "docs/decisions/"
 
-# The first record the rule covers. Records below it merged before the rule
-# existed, and the immutability rule protects their prose from being rewritten
-# to satisfy it. Raising this number would exempt a record that was authored
-# under the rule, which is the one edit this constant must never take.
+# The first record the rule covers. Raising this number exempts a record
+# authored under the rule, which is the one edit this constant must never take.
 FIRST_GATED = 20
 
 # A record's file name opens with its zero-padded number, which is also its
@@ -60,12 +44,8 @@ REMEDY = (
 
 NOT_A_CHECKOUT = "not a git checkout, so there is no tracked-file list to read"
 
-# What the directory held when these floors were set: twenty-two numbered
-# records, of which three sit at or above the boundary. A record is append-only
-# -- it merges and is never deleted, since a superseded one stays in the tree
-# carrying the link to what replaced it -- so both counts only ever rise. They
-# are floors rather than non-empty checks because a listing that comes back
-# holding one record satisfies non-emptiness while measuring almost nothing.
+# What the directory held when these floors were set: 22 numbered records, 3
+# at or above the boundary. Records are append-only, so both counts only rise.
 RECORDS_AT_LEAST = 22
 
 GATED_AT_LEAST = 3
@@ -79,8 +59,7 @@ def tracked_decisions():
     """
 
     # The argument vector is a list carrying no caller input, so it reaches the
-    # operating system directly rather than through a shell. The checks match
-    # on call shape and cannot see that.
+    # operating system directly rather than through a shell.
     listing = subprocess.run(  # nosec B603 B607
         ["git", "ls-files", "-z", DECISIONS],
         cwd=REPO,
@@ -195,8 +174,7 @@ class DecisionCitations(unittest.TestCase):
         """A boundary pointing past the last record would gate nothing."""
 
         # The default keeps an empty listing reporting the boundary rather than
-        # raising on an empty max(), so the coverage test above is what names
-        # a broken enumeration and this one keeps naming a stale boundary.
+        # raising, so this test keeps naming a stale boundary and not a listing.
         highest = max((number(name) for name in self.records), default=0)
 
         self.assertLessEqual(

@@ -14,14 +14,12 @@ gates would notice.
 import collections
 import re
 
-# The label Keep a Changelog reserves for the block that has not shipped. It is
-# a section and a link like any version, and it is the one whose link has to
-# move on every release.
+# The label Keep a Changelog reserves for the block that has not shipped, and
+# the one whose link has to move on every release.
 UNRELEASED = "Unreleased"
 
-# One version section: the version it records and the date beside it. The date
-# is optional in the pattern so a half-cut entry parses and is reported, rather
-# than failing to match and reading as an entry that is not there at all.
+# One version section. The date is optional in the pattern, so a half-cut entry
+# parses and is reported rather than reading as an entry that is not there.
 Section = collections.namedtuple("Section", "version date")
 
 SECTION = re.compile(r"^## \[(?P<label>[^\]]+)\](?:\s*-\s*(?P<date>\S+))?\s*$")
@@ -44,8 +42,7 @@ def read_sections(text):
 
     for line in text.split("\n"):
         # A fence toggles rather than nests, so a heading quoted inside a block
-        # is read past. Nothing here fences today; a changelog that starts
-        # showing a command should not start reporting the headings in it.
+        # is read past rather than reported as a section.
         if line.lstrip().startswith("```"):
             fenced = not fenced
             continue

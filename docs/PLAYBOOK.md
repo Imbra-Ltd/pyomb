@@ -1387,11 +1387,17 @@ A comment block is at most 2 lines and a docstring at most 10 lines of prose.
 than explanation and do not count, so annotating a wide signature costs
 nothing here.
 
-Two things are deliberately not blocks. A licence header opens a file and is a
-legal notice, not an explanation. A comment trailing code is one label on one
-line however many stack up — the hex vector in
+Four things are deliberately not measured, and for one reason: none of them
+states any reasoning the bound could relocate. A licence header opens a file
+and is a legal notice, not an explanation. A comment trailing code is one label
+on one line however many stack up — the hex vector in
 `examples/round_trip_a_packet.py` labels each field that way, and the seven
-labels are seven comments rather than a seven-line block.
+labels are seven comments rather than a seven-line block. A banner ruled top
+and bottom is navigation through a long module, and it is recognised by being
+ruled at both ends rather than by containing a rule — a paragraph an author
+underlined is still a paragraph. A wire-layout table's rows inside a docstring
+name byte offsets from a published specification, so how many there are is the
+frame's length rather than the author's.
 
 Length is a proxy for placement. A comment needing a paragraph is usually
 explaining something that belongs in this document or in a decision record,
@@ -1404,9 +1410,9 @@ Whether a comment was needed at all is a judgement this cannot reach, and
 review keeps it.
 
 `ROOTS` in the check names the directories the bound covers: `src`, `scripts`,
-`examples` and `tests`. The migration adds one per slice, cleaning the
-directory and widening the list in the same change, so no slice merges
-unverified. `checks/` is the one still outside it.
+`examples`, `tests` and `checks`. The migration added one per slice, cleaning
+the directory and widening the list in the same change, so no slice merged
+unverified. Every Python directory in the tree is now inside it.
 
 `CONFIG` names the corpus beside it: every tracked `.toml`, `.yml` and `.yaml`
 file, selected by suffix because a manifest sits at the repository root and a
