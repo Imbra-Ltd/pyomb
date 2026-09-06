@@ -87,9 +87,8 @@ convention = "google"
 "tests/**" = ["D"]
 "checks/**" = ["D"]
 
-# Everything below freezes the violations that existed when ruff replaced
-# flake8. Shrinking it is the migration; PLAYBOOK 3.4 carries the procedure.
-"src/pyomb/packets.py" = ["B904", "BLE001"]
+# Both entries above are exemptions. The freeze that stood here is retired,
+# so a src/ module is measured against the whole rule set; see ADR-047.
 
 [tool.mypy]
 

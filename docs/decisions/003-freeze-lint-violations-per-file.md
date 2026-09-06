@@ -1,10 +1,10 @@
 ---
 id: "003"
-status: Accepted
-date: 2026-08-17
+status: Superseded
+date: 2026-09-06
 category: tooling
 supersedes: []
-superseded_by: []
+superseded_by: ["047"]
 ---
 
 # ADR-003: Freeze existing lint violations per file
