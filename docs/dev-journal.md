@@ -4007,3 +4007,44 @@ package, per ADR-002. See `README.md` for usage and
   and #1518 are still open.
 - **Pending:** #320's two remaining slices, `tests/` (81 blocks) and `checks/`
   (93). Nothing else from this session.
+
+## 2026-09-06 -- Bring the suite inside the bound (fourth session)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Brought `tests/` inside the comment and docstring bounds (PR #331).**
+    56 comment blocks and 16 module docstrings over, across 31 of 62 modules
+    and holding 229 lines of comment. Most compressed in place: a test's
+    comment states what the assertion below pins, and the version that did not
+    fit was usually restating the mechanism a second time. The long module
+    docstrings were the larger half of the work -- each states the defect its
+    module pins, which is the contract and stays, while the history around it
+    moved or went.
+  - **Widened `ROOTS` to carry `tests` (PR #331).** 79 modules are now under
+    the bound where 17 were, and the floor moved from 11 to 55 with the same
+    margin. `checks/` is the one directory still outside it.
+  - **Moved four things to the document that owns them (PR #331).** PLAYBOOK
+    3.10 gains asserting what an object does rather than what the runtime says
+    it is, with the four platform and interpreter combinations that made both
+    natural inspections of a missing `Lock()` vary, and asserting that a guard
+    is taken rather than that it exists, with the four tests that passed
+    against a lock nothing acquired. 3.1 gains the integration fixtures' port 0
+    and join-rather-than-sleep; 2.4 the cipher absence and the floor's write
+    ordering; 3.8 the blocker socket's wildcard bind beside the simulator's.
+- **PRs merged:** #331.
+- **Issues closed/created:** none. #320 moved to 4 of 5 slices ticked.
+- **Lesson:** the epic's own measurement had gone stale in the direction that
+  reads as more work. It recorded 81 blocks for `tests/` on 2026-09-05, and the
+  directory held 56 -- the gates had moved to `checks/` in between and taken
+  their share with them. Re-measuring before scoping cost one command and moved
+  a quarter of the slice off the estimate.
+- **Lesson:** a length bound on a test docstring is a question about what the
+  docstring is for. The ones over the limit were narrating a defect's history,
+  which is what a reader wants once and a maintainer wants never; what belongs
+  there is the contract the module pins. Cutting to that left every one of them
+  shorter and none of them thinner.
+- **Upstream:** none. The two properties moved into PLAYBOOK 3.10 are already
+  upstream rules, so there was nothing to file beyond what this project had
+  already adopted.
+- **Pending:** #320's last slice, `checks/` (93 blocks measured 2026-09-05,
+  worth re-measuring first for the reason above).
