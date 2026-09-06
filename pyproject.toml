@@ -92,17 +92,10 @@ convention = "google"
 
 [tool.mypy]
 
-# strict is on globally, so a module added from here is held to it from its
-# first commit. The overrides below freeze the modules that predate the gate.
+# strict is on globally and no module is exempt from it. The freeze that
+# stood here for the four that predate the gate is retired; see ADR-048.
 strict = true
 files = ["src"]
-
-
-[[tool.mypy.overrides]]
-module = ["pyomb.client_simulator"]
-disable_error_code = ["no-untyped-call", "no-untyped-def"]
-
-
 
 [tool.bandit]
 

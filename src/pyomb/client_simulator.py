@@ -4,17 +4,22 @@ The client owns a socket, matches every response to its request by
 transaction identifier, and exposes one method per function code.
 """
 
+from __future__ import annotations
+
 import contextlib
 import logging
 import socket
 import ssl
 import struct
 import sys
+from collections.abc import Iterable
+from typing import cast
 
 from .errors import ModbusIllegalDataValueError, ModbusIllegalFunctionError, ModbusNetworkError
 from .logger import Logger
 from .packets import (
     ModbusHeader,
+    ModbusPdu,
     ModbusRequestFC1,
     ModbusRequestFC2,
     ModbusRequestFC3,
@@ -31,7 +36,7 @@ from .packets import (
     ModbusTcpResponse,
 )
 from .stream import ModbusTcpStream
-from .tls import TlsRole
+from .tls import TlsRole, TlsSettings
 
 
 class ModbusClientSimulator:
@@ -85,15 +90,15 @@ class ModbusClientSimulator:
 
     def __init__(
         self,
-        log=None,
-        host="localhost",
-        port=PLAINTEXT_PORT,
-        unit_id=1,
-        frag_size=0,
-        frag_delay=0,
-        tls=None,
-        timeout=DEFAULT_TIMEOUT,
-    ):
+        log: Logger | None = None,
+        host: str = "localhost",
+        port: int = PLAINTEXT_PORT,
+        unit_id: int = 1,
+        frag_size: int = 0,
+        frag_delay: float = 0,
+        tls: TlsSettings | None = None,
+        timeout: float | None = DEFAULT_TIMEOUT,
+    ) -> None:
         """Build a client. The class docstring documents every argument."""
         # Initialize the logger
         self.log = log or Logger(name="ModbusClientSimulator")
@@ -111,7 +116,7 @@ class ModbusClientSimulator:
         # The identifier the next request will carry, and the one in flight.
         # They differ while a request is outstanding, which is what matches it.
         self._next_trans_id = 0
-        self._pending_trans_id = None
+        self._pending_trans_id: int | None = None
 
         # The TLS settings, or None for plaintext. One object rather than a
         # flag, so certificates cannot be handed over and silently unused.
@@ -155,12 +160,12 @@ class ModbusClientSimulator:
     ############################################################################
 
     @property
-    def recvbuf_size(self):
+    def recvbuf_size(self) -> int:
         """Get the receive buffer size of the socket."""
         return self._require_socket().getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
 
     @recvbuf_size.setter
-    def recvbuf_size(self, value):
+    def recvbuf_size(self, value: int) -> None:
         """Set the receive buffer size of the socket.
 
         Args:
@@ -170,7 +175,7 @@ class ModbusClientSimulator:
 
     ############################################################################
 
-    def connect(self, host=None, port=None):
+    def connect(self, host: str | None = None, port: int | None = None) -> None:
         """Connects the client to the specified host and port.
 
         This method establishes a connection to the remote Modbus server. It
@@ -203,7 +208,7 @@ class ModbusClientSimulator:
 
     ############################################################################
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """Disconnects the client from the Modbus server and closes the socket.
 
         This method gracefully disconnects the client from the server and closes
@@ -245,7 +250,7 @@ class ModbusClientSimulator:
         self.log.info("Client socket closed")
 
     ############################################################################
-    def reset(self):
+    def reset(self) -> None:
         """Close the socket with SO_LINGER at zero, so the peer sees a reset.
 
         A linger time of zero tells the kernel not to wait for unsent data to
@@ -270,7 +275,7 @@ class ModbusClientSimulator:
 
     ############################################################################
 
-    def _take_trans_id(self):
+    def _take_trans_id(self) -> int:
         """Claims the next transaction identifier for a request.
 
         The identifier is recorded as pending so that wait_response() can tell
@@ -289,15 +294,15 @@ class ModbusClientSimulator:
     ############################################################################
     def send_request(
         self,
-        fc,
-        read_address=0,
-        read_count=1,
-        write_address=0,
-        write_count=1,
-        values=(0,),
-        and_mask=0xFFFF,
-        or_mask=0,
-    ):
+        fc: int,
+        read_address: int = 0,
+        read_count: int = 1,
+        write_address: int = 0,
+        write_count: int = 1,
+        values: Iterable[int] | int = (0,),
+        and_mask: int = 0xFFFF,
+        or_mask: int = 0,
+    ) -> None:
         """Sends a Modbus request to the server.
 
         This method creates a Modbus request based on the provided function
@@ -309,16 +314,18 @@ class ModbusClientSimulator:
         request to the server, including read and write operations, and
         various other Modbus functions in a burst fashion.
         """
+        pdu: ModbusPdu
+
         # Handle values based on function code and data type
         try:
             # Check if values is iterable (list, tuple)
-            iter(values)
+            iter(cast("Iterable[int]", values))
 
             # For FC5 and FC6, take the first value only (single value)
             if fc in (5, 6):
                 # A list rather than a subscript: an empty sequence becomes a
                 # value to decide about, and len() is never asked of a generator.
-                selected = list(values)[:1]
+                selected = list(cast("Iterable[int]", values))[:1]
 
                 # A write of nothing has no correct reading, so it is refused
                 # here rather than sent as whatever the PDU makes of it.
@@ -331,9 +338,7 @@ class ModbusClientSimulator:
         except TypeError:
             # For FC15, FC16, and FC23, wrap the value in a list
             if fc in (15, 16, 23):
-                values = [
-                    values,
-                ]
+                values = [cast("int", values)]
 
         # Read Coils (FC1)
         if fc == 1:
@@ -353,11 +358,11 @@ class ModbusClientSimulator:
 
         # Write Single Coil (FC5)
         elif fc == 5:
-            pdu = RequestFactory.create_fc5_req(write_address=write_address, value=values)
+            pdu = RequestFactory.create_fc5_req(write_address=write_address, value=cast("int", values))
 
         # Write Single Register (FC6)
         elif fc == 6:
-            pdu = RequestFactory.create_fc6_req(write_address=write_address, value=values)
+            pdu = RequestFactory.create_fc6_req(write_address=write_address, value=cast("int", values))
 
         # Read Exception Status (FC7)
         elif fc == 7:
@@ -365,11 +370,15 @@ class ModbusClientSimulator:
 
         # Write Multiple Coils (FC15)
         elif fc == 15:
-            pdu = RequestFactory.create_fc15_req(write_address=write_address, write_count=write_count, values=values)
+            pdu = RequestFactory.create_fc15_req(
+                write_address=write_address, write_count=write_count, values=cast("Iterable[int]", values)
+            )
 
         # Write Multiple Registers (FC16)
         elif fc == 16:
-            pdu = RequestFactory.create_fc16_req(write_address=write_address, write_count=write_count, values=values)
+            pdu = RequestFactory.create_fc16_req(
+                write_address=write_address, write_count=write_count, values=cast("Iterable[int]", values)
+            )
 
         # Mask Write Register (FC22)
         elif fc == 22:
@@ -382,7 +391,7 @@ class ModbusClientSimulator:
                 read_count=read_count,
                 write_addr=write_address,
                 write_count=write_count,
-                write_values=values,
+                write_values=cast("Iterable[int]", values),
             )
 
         # Read Device Identification (FC43)
@@ -407,7 +416,7 @@ class ModbusClientSimulator:
         sender.send(request.serialize())
 
     ############################################################################
-    def wait_response(self):
+    def wait_response(self) -> tuple[ModbusHeader | None, ModbusPdu | None]:
         """Waits for the response to the pending request and parses it.
 
         A response is accepted only when its transaction identifier matches the
@@ -462,8 +471,16 @@ class ModbusClientSimulator:
     ############################################################################
 
     def request(
-        self, fc, read_address=0, read_count=1, write_address=0, write_count=1, values=(0,), and_mask=0xFFFF, or_mask=0
-    ):
+        self,
+        fc: int,
+        read_address: int = 0,
+        read_count: int = 1,
+        write_address: int = 0,
+        write_count: int = 1,
+        values: Iterable[int] | int = (0,),
+        and_mask: int = 0xFFFF,
+        or_mask: int = 0,
+    ) -> tuple[ModbusHeader | None, ModbusPdu | None]:
         """Sends a Modbus request and waits for the response.
 
         This methods wraps the `send_request` and `wait_response` methods to send
@@ -502,7 +519,7 @@ class ModbusClientSimulator:
 
     ############################################################################
 
-    def send_raw(self, data=()):
+    def send_raw(self, data: bytes = b"") -> None:
         """Sends raw bytes of data over the established socket connection.
 
         This method provides a way to send arbitrary byte data directly through
@@ -515,7 +532,7 @@ class ModbusClientSimulator:
 
     ############################################################################
 
-    def recv_raw(self, buffer_size=1024):
+    def recv_raw(self, buffer_size: int = 1024) -> bytes:
         """Receives raw bytes of data from the socket connection.
 
         This method receives a specified number of bytes from the socket and
@@ -531,7 +548,7 @@ class ModbusClientSimulator:
 
     ############################################################################
 
-    def set_socket_timeout(self, timeout=None):
+    def set_socket_timeout(self, timeout: float | None = None) -> None:
         """Sets the timeout value for socket operations.
 
         This method configures the timeout (in seconds) for socket operations
@@ -548,7 +565,7 @@ class ModbusClientSimulator:
 
     ############################################################################
 
-    def set_socket_options(self, level, optname, value):
+    def set_socket_options(self, level: int, optname: int, value: int | bytes) -> None:
         """Sets specific options on the underlying socket.
 
         This method allows fine-grained control over socket behavior by
@@ -569,7 +586,7 @@ class ModbusClientSimulator:
 
     ############################################################################
 
-    def test(self, addr=0, count=16):
+    def test(self, addr: int = 0, count: int = 16) -> None:
         """Quick test of the client."""
         self.connect()
 
@@ -600,7 +617,7 @@ class RequestFactory:
     """
 
     @staticmethod
-    def create_fc1_req(read_address, read_count):
+    def create_fc1_req(read_address: int, read_count: int) -> ModbusRequestFC1:
         """Create a Modbus FC1 request PDU.
 
         Args:
@@ -611,7 +628,7 @@ class RequestFactory:
         return pdu
 
     @staticmethod
-    def create_fc2_req(read_address, read_count):
+    def create_fc2_req(read_address: int, read_count: int) -> ModbusRequestFC2:
         """Create a Modbus FC2 request PDU.
 
         Args:
@@ -622,7 +639,7 @@ class RequestFactory:
         return pdu
 
     @staticmethod
-    def create_fc3_req(read_address, read_count):
+    def create_fc3_req(read_address: int, read_count: int) -> ModbusRequestFC3:
         """Create a Modbus FC3 request PDU.
 
         Args:
@@ -633,7 +650,7 @@ class RequestFactory:
         return pdu
 
     @staticmethod
-    def create_fc4_req(read_address, read_count):
+    def create_fc4_req(read_address: int, read_count: int) -> ModbusRequestFC4:
         """Create a Modbus FC4 request PDU.
 
         Args:
@@ -644,7 +661,7 @@ class RequestFactory:
         return pdu
 
     @staticmethod
-    def create_fc5_req(write_address, value):
+    def create_fc5_req(write_address: int, value: int) -> ModbusRequestFC5:
         """Create a Modbus FC5 request PDU.
 
         Args:
@@ -655,7 +672,7 @@ class RequestFactory:
         return pdu
 
     @staticmethod
-    def create_fc6_req(write_address, value):
+    def create_fc6_req(write_address: int, value: int) -> ModbusRequestFC6:
         """Create a Modbus FC6 request PDU.
 
         Args:
@@ -666,13 +683,13 @@ class RequestFactory:
         return pdu
 
     @staticmethod
-    def create_fc7_req():
+    def create_fc7_req() -> ModbusRequestFC7:
         """Create a Modbus FC7 request PDU."""
         pdu = ModbusRequestFC7()
         return pdu
 
     @staticmethod
-    def create_fc15_req(write_address, write_count, values):
+    def create_fc15_req(write_address: int, write_count: int, values: Iterable[int]) -> ModbusRequestFC15:
         """Create a Modbus FC15 request PDU.
 
         Args:
@@ -683,6 +700,10 @@ class RequestFactory:
         # Eight coils to the byte, rounded up: a count that is not a whole
         # number of bytes takes one more, whose spare bits are sent as zero.
         byte_count = (write_count + 7) // 8
+
+        # Read by index below, so a generator is consumed once here
+        # rather than half-read by the loop.
+        values = tuple(values)
 
         # Construct the output values and take only the required number of bytes
         output_values = []
@@ -697,7 +718,7 @@ class RequestFactory:
         return pdu
 
     @staticmethod
-    def create_fc16_req(write_address, write_count, values):
+    def create_fc16_req(write_address: int, write_count: int, values: Iterable[int]) -> ModbusRequestFC16:
         """Create a Modbus FC16 request PDU.
 
         Args:
@@ -711,13 +732,13 @@ class RequestFactory:
             start_addr=write_address,
             quantity=write_count,
             byte_count=byte_count,
-            values=values,
+            values=tuple(values),
         )
 
         return pdu
 
     @staticmethod
-    def create_fc22_req(write_address, and_mask, or_mask):
+    def create_fc22_req(write_address: int, and_mask: int, or_mask: int) -> ModbusRequestFC22:
         """Create a Modbus FC22 request PDU.
 
         Args:
@@ -730,7 +751,9 @@ class RequestFactory:
         return pdu
 
     @staticmethod
-    def create_fc23_req(read_addr, read_count, write_addr, write_count, write_values):
+    def create_fc23_req(
+        read_addr: int, read_count: int, write_addr: int, write_count: int, write_values: Iterable[int]
+    ) -> ModbusRequestFC23:
         """Create a Modbus FC23 request PDU.
 
         Args:
@@ -748,24 +771,24 @@ class RequestFactory:
             write_start_addr=write_addr,
             write_quantity=write_count,
             write_byte_count=byte_count,
-            write_values=write_values,
+            write_values=tuple(write_values),
         )
 
         return pdu
 
     @staticmethod
-    def create_fc43_req(mei_type, mei_data):
+    def create_fc43_req(mei_type: int, mei_data: Iterable[int]) -> ModbusRequestFC43:
         """Create a Modbus FC43 request PDU.
 
         Args:
             mei_type (int)  : The MEI type.
             mei_data (bytes): The MEI data.
         """
-        pdu = ModbusRequestFC43(mei_type=mei_type, mei_data=mei_data)
+        pdu = ModbusRequestFC43(mei_type=mei_type, mei_data=tuple(mei_data))
         return pdu
 
 
-def run_client():
+def run_client() -> None:
     """Run the built-in exercise against a server on the loopback interface."""
     logger = Logger(name="ModbusClientSimulator")
     client = ModbusClientSimulator(

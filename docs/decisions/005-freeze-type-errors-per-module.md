@@ -1,10 +1,10 @@
 ---
 id: "005"
-status: Accepted
-date: 2026-08-18
+status: Superseded
+date: 2026-09-06
 category: tooling
 supersedes: []
-superseded_by: []
+superseded_by: ["048"]
 ---
 
 # ADR-005: Freeze existing type errors per module
