@@ -11,7 +11,7 @@ import ssl
 import struct
 import sys
 
-from .errors import ModbusIllegalDataValue, ModbusIllegalFunction, ModbusNetworkError
+from .errors import ModbusIllegalDataValueError, ModbusIllegalFunctionError, ModbusNetworkError
 from .logger import Logger
 from .packets import (
     ModbusHeader,
@@ -323,7 +323,7 @@ class ModbusClientSimulator:
                 # A write of nothing has no correct reading, so it is refused
                 # here rather than sent as whatever the PDU makes of it.
                 if not selected:
-                    raise ModbusIllegalDataValue(values)
+                    raise ModbusIllegalDataValueError(values)
 
                 values = selected[0]
 
@@ -391,7 +391,7 @@ class ModbusClientSimulator:
 
         # Function code not recognized
         else:
-            raise ModbusIllegalFunction(fc)
+            raise ModbusIllegalFunctionError(fc)
 
         # Create Modbus TCP request
         header = ModbusHeader(trans_id=self._take_trans_id(), prot_id=0, length=len(pdu) + 1, unit_id=self.unit_id)

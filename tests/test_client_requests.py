@@ -12,7 +12,7 @@ TypeError from iter().
 import unittest
 
 from pyomb.client_simulator import ModbusClientSimulator
-from pyomb.errors import ModbusIllegalFunction
+from pyomb.errors import ModbusIllegalFunctionError
 from pyomb.packets import (
     ModbusHeader,
     ModbusRequestFC1,
@@ -96,7 +96,7 @@ class TestFunctionCodeCoverage(ClientOnAStubSocket):
                 self.assertEqual(len(frame), ModbusHeader.SIZE + header.length - 1)
 
     def test_unsupported_function_code_is_refused(self):
-        with self.assertRaises(ModbusIllegalFunction):
+        with self.assertRaises(ModbusIllegalFunctionError):
             self.send(99, read_address=0, read_count=1)
 
 

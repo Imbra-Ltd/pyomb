@@ -15,6 +15,7 @@ suite has already imported both submodules and would always say yes.
 import subprocess  # nosec B404
 import sys
 import unittest
+import warnings
 
 import pyomb
 
@@ -95,6 +96,40 @@ class PackageExportsWhatItNames(unittest.TestCase):
         """__getattr__ answers for two names and must not swallow the rest."""
 
         self.assertRaises(AttributeError, getattr, pyomb, "NoSuchName")
+
+
+class TheRenamedProtocolErrorsStillResolve(unittest.TestCase):
+    """Pins the alias table the Error-suffix rename left behind.
+
+    The eight names below were dropped from `__all__` when they took the
+    suffix, so the walk above cannot see them and nothing else would fail if
+    the alias branch were deleted before 2.0. Both halves are pinned: that the
+    old spelling hands back the very class the new one names, and that reading
+    it says so out loud rather than resolving silently.
+    """
+
+    def test_each_retired_spelling_is_the_class_it_was_renamed_to(self):
+        """An alias returning a copy would break `except` on the new name."""
+
+        for old, new in pyomb._RENAMED.items():
+            with self.subTest(old=old), warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+
+                self.assertIs(getattr(pyomb, old), getattr(pyomb, new))
+
+    def test_reading_a_retired_spelling_warns_and_names_both(self):
+        """A caller who never reads the changelog meets the rename here."""
+
+        for old, new in pyomb._RENAMED.items():
+            with self.subTest(old=old):
+                with warnings.catch_warnings(record=True) as caught:
+                    warnings.simplefilter("always")
+                    getattr(pyomb, old)
+
+                self.assertEqual(len(caught), 1)
+                self.assertIs(caught[0].category, DeprecationWarning)
+                self.assertIn(old, str(caught[0].message))
+                self.assertIn(new, str(caught[0].message))
 
 
 class TheRetiredSpellingsAreGone(unittest.TestCase):

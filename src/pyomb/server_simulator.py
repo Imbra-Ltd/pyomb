@@ -11,7 +11,7 @@ import threading
 import time
 
 from .defines import OMB_EXCEPTION_SLAVE_DEVICE_FAILURE
-from .errors import ModbusBaseError, ModbusModeError, ModbusNetworkError, ModbusSlaveDeviceFailure
+from .errors import ModbusBaseError, ModbusModeError, ModbusNetworkError, ModbusSlaveDeviceFailureError
 from .logger import Logger
 from .packets import (
     ModbusError,
@@ -412,7 +412,7 @@ class ModbusServerSimulator(threading.Thread):
             None
 
         Raises:
-            ModbusSlaveDeviceFailure: If an error occurs while processing the request.
+            ModbusSlaveDeviceFailureError: If an error occurs while processing the request.
         """
 
         # Deserialize the incoming data
@@ -505,7 +505,7 @@ class ModbusServerSimulator(threading.Thread):
         # Handle any exceptions that occur during processing
         except Exception as e:
             self.log.info("Error: {0}".format(e))
-            raise ModbusSlaveDeviceFailure()
+            raise ModbusSlaveDeviceFailureError()
 
     ############################################################################
 

@@ -10,7 +10,7 @@ as something other than a ModbusProtocolError.
 import unittest
 
 from pyomb.client_simulator import ModbusClientSimulator
-from pyomb.errors import ModbusIllegalDataValue, ModbusProtocolError
+from pyomb.errors import ModbusIllegalDataValueError, ModbusProtocolError
 from pyomb.packets import ModbusTcpRequest
 from tests.helpers.stub_socket import LoopbackSocket
 
@@ -36,7 +36,7 @@ class TestEmptyWriteValues(ClientOnAStubSocket):
                 with self.subTest(fc=fc, empty=type(empty).__name__):
                     client = self.make_client()
 
-                    with self.assertRaises(ModbusIllegalDataValue):
+                    with self.assertRaises(ModbusIllegalDataValueError):
                         client.send_request(fc=fc, write_address=0, values=empty)
 
     def test_the_error_is_a_protocol_error(self):
@@ -49,7 +49,7 @@ class TestEmptyWriteValues(ClientOnAStubSocket):
     def test_nothing_is_sent_when_the_value_is_refused(self):
         client = self.make_client()
 
-        with self.assertRaises(ModbusIllegalDataValue):
+        with self.assertRaises(ModbusIllegalDataValueError):
             client.send_request(fc=6, write_address=0, values=[])
 
         self.assertEqual(client.sock.sent, [])
@@ -59,7 +59,7 @@ class TestEmptyWriteValues(ClientOnAStubSocket):
         # should still be the first identifier.
         client = self.make_client()
 
-        with self.assertRaises(ModbusIllegalDataValue):
+        with self.assertRaises(ModbusIllegalDataValueError):
             client.send_request(fc=5, write_address=0, values=())
 
         client.send_request(fc=1, read_address=0, read_count=1)
@@ -101,7 +101,7 @@ class TestValuesStillAccepted(ClientOnAStubSocket):
     def test_empty_generator_is_refused_like_an_empty_sequence(self):
         client = self.make_client()
 
-        with self.assertRaises(ModbusIllegalDataValue):
+        with self.assertRaises(ModbusIllegalDataValueError):
             client.send_request(fc=6, write_address=1, values=(v for v in []))
 
     def test_multiple_write_codes_are_untouched(self):

@@ -471,15 +471,15 @@ Exception (Python standard library)
      +-- ModbusNetworkError
      +-- ModbusPacketError
      +-- ModbusProtocolError
-        +-- ModbusIllegalFunction
-        +-- ModbusIllegalDataAddress
-        +-- ModbusIllegalDataValue
-        +-- ModbusSlaveDeviceFailure
-        +-- ModbusAcknowledge
-        +-- ModbusSlaveDeviceBusy
+        +-- ModbusIllegalFunctionError
+        +-- ModbusIllegalDataAddressError
+        +-- ModbusIllegalDataValueError
+        +-- ModbusSlaveDeviceFailureError
+        +-- ModbusAcknowledgeError
+        +-- ModbusSlaveDeviceBusyError
         +-- ModbusMemoryParityError
-        +-- ModbusGatewayPathUnavailable
-        +-- ModbusGatewayTargetDeviceFailedToRespond
+        +-- ModbusGatewayPathUnavailableError
+        +-- ModbusGatewayTargetDeviceFailedToRespondError
 ```
 
 The three under `ModbusBaseError` separate where the failure came from: the
