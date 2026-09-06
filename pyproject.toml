@@ -89,7 +89,6 @@ convention = "google"
 
 # Everything below freezes the violations that existed when ruff replaced
 # flake8. Shrinking it is the migration; PLAYBOOK 3.4 carries the procedure.
-"src/pyomb/server_simulator.py" = ["B904", "BLE001", "D100", "D102", "D107", "D202", "D415", "N806", "RUF059", "SIM105", "SIM300", "TRY003", "UP004", "UP008", "UP009", "UP010", "UP018", "UP024", "UP030", "UP032"]
 "src/pyomb/packets.py" = ["B904", "BLE001"]
 
 [tool.mypy]
