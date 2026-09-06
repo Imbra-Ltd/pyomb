@@ -1,11 +1,7 @@
 name: CodeQL
 
-# Its own workflow rather than a job in ci.yml. This is the only analysis here
-# that needs security-events: write, and isolating it keeps that scope off the
-# lint, test, build and secret-scan jobs, so a compromised step in any of them
-# cannot write findings. platform/github.md asks both for that separation and
-# for a committed file over the repository's default-setup toggle, which is
-# what keeps the scoped permission reviewed and version controlled.
+# Its own workflow rather than a job in ci.yml: this is the only analysis that
+# needs security-events: write, and isolating it keeps that scope off the rest.
 on:
   push:
     branches: [main]
@@ -20,9 +16,8 @@ on:
 permissions:
   contents: read
 
-# Every action reference is pinned to a full commit SHA with the release in a
-# trailing comment, for the reason ci.yml gives: a tag is mutable, and
-# Dependabot reads the comment to bump both together.
+# Every action is pinned to a full commit SHA with the release in a trailing
+# comment, for the reason ci.yml gives. PLAYBOOK 4.5.
 jobs:
   analyze:
     runs-on: ubuntu-latest
@@ -38,40 +33,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Both languages the repository resolves to. `actions` analyses the
-        # workflow files themselves, which is where an over-broad permission or
-        # an unpinned action would surface -- the class this workflow's own
-        # rules are written against.
+        # Both languages the repository resolves to. `actions` analyses these
+        # workflow files, where an over-broad permission would surface.
         language: [python, actions]
 
     steps:
-      # Submodules are deliberately not fetched. docs/solid-ai-templates is
-      # upstream prose, not this project's code, and analysing it would report
-      # findings nobody here can fix.
+      # Submodules are deliberately not fetched: the templates are upstream
+      # prose, and analysing them reports findings nobody here can fix.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         with:
           languages: ${{ matrix.language }}
 
-          # Measured before it was chosen. Against this tree the default suite
-          # runs 43 python and 17 actions rules, extended runs 50 and 23, and
-          # both report nothing -- so the wider set costs seconds already being
-          # spent and buys 13 more rules on a library whose whole job is
-          # parsing untrusted bytes. ADR-012 carries the numbers.
+          # Measured before it was chosen: the wider set costs seconds already
+          # being spent and buys 13 rules. The decision record carries both.
           queries: security-extended
 
       # No autobuild step. Both languages are interpreted, so CodeQL reads the
-      # source directly; autobuild exists for the compiled languages and would
-      # be a no-op that only adds a step to misread.
+      # source directly and autobuild would be a no-op.
       - uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         with:
           category: /language:${{ matrix.language }}
 
-  # The same fan-in ci.yml uses, for the same reason. One required context that
-  # a language added to the matrix joins automatically beats a list of
-  # per-language checks that goes stale the moment the matrix changes -- which
-  # is the failure the `gate` job in ci.yml exists to correct.
+  # The same fan-in ci.yml uses: one required context a language added to the
+  # matrix joins automatically. PLAYBOOK 3.9.
   codeql:
     needs: [analyze]
     if: always()

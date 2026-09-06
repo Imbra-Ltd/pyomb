@@ -6,6 +6,9 @@ where a reader can find it without opening the source; left in place it grows
 by imitation, because the next author copies the neighbours rather than the
 rule.
 
+Configuration is held to the comment bound as well as source. A manifest and a
+workflow carry no docstrings, so only the first bound reaches them.
+
 The bound is on prose, not on the contract: a docstring's `Args:`, `Returns:`
 and `Raises:` sections are excluded, so annotating a wide signature never
 costs anything here.
@@ -32,6 +35,10 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 # The directories under the bound. Each migration slice adds one as it cleans
 # it, so the gate and the tree widen together.
 ROOTS = ("src", "scripts", "examples")
+
+# The configuration under the bound, selected by suffix rather than directory:
+# a manifest sits at the repository root and a workflow does not.
+CONFIG = ("*.toml", "*.yml", "*.yaml")
 
 COMMENT_LINES = 2
 
@@ -68,6 +75,10 @@ LAYOUT_ROW = re.compile(r"^-[ ]+(Byte(?![A-Za-z0-9])|[.]{3}$)")
 # Files churn, so the floor takes a margin below the measured count.
 FILES_AT_LEAST = 11
 
+# What the suffixes reached when this floor was set: 6 files on 2026-09-06 --
+# the manifest, the hook config, the Dependabot config and three workflows.
+CONFIG_AT_LEAST = 4
+
 REMEDY = (
     "Read the block, then delete it if it restates the code, move it to "
     "docs/PLAYBOOK.md if it is operational, or to a decision record if it is "
@@ -94,6 +105,60 @@ def sources():
     ).stdout.split()
 
     return [name for name in listing if name.split("/")[0] in ROOTS]
+
+
+def config_sources():
+    """Every tracked configuration file the bound covers.
+
+    Returns:
+        list[str] : Repository-relative paths, in git's own order
+    """
+
+    # The argument vector is a list and carries no caller input, so it reaches
+    # the operating system directly rather than through a shell.
+    listing = subprocess.run(  # nosec B603 B607
+        ["git", "ls-files", *CONFIG],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+        check=False,
+    ).stdout.split()
+
+    return listing
+
+
+def hash_comment_blocks(path):
+    """Runs of consecutive whole-line comments in one configuration file.
+
+    Read line-wise rather than through a parser. A `#` that opens a line is a
+    comment in both formats, including inside a YAML block scalar, where the
+    shell reads it; one inside a value never opens the line.
+
+    Args:
+        path (str) : Repository-relative path to a configuration file
+
+    Returns:
+        list[tuple[int, int]] : Each run's first line and its length
+    """
+
+    source = (REPO / path).read_text(encoding="utf-8").splitlines()
+    runs, run, start = [], 0, None
+
+    for number, line in enumerate(source, 1):
+        if line.lstrip().startswith("#"):
+            start = number if not run else start
+            run += 1
+            continue
+
+        if run:
+            runs.append((start, run))
+
+        run = 0
+
+    if run:
+        runs.append((start, run))
+
+    return [(start, length) for start, length in runs if not is_banner(source, start, length)]
 
 
 def comment_blocks(path):
@@ -225,6 +290,7 @@ class CommentsAndDocstringsAreBounded(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.paths = sources()
+        cls.config = config_sources()
 
     def test_the_listing_reached_the_modules_under_the_bound(self):
         """A pass below means the modules were read, not that none were found."""
@@ -252,6 +318,36 @@ class CommentsAndDocstringsAreBounded(unittest.TestCase):
             over,
             [],
             f"{len(over)} comment block(s) run past {COMMENT_LINES} lines:\n  " + "\n  ".join(over) + "\n\n" + REMEDY,
+        )
+
+    def test_the_listing_reached_the_configuration_under_the_bound(self):
+        """A pass below means the files were read, not that none were found."""
+
+        self.assertGreaterEqual(
+            len(self.config),
+            CONFIG_AT_LEAST,
+            f"the listing reached {len(self.config)} configuration file(s) "
+            f"matching {CONFIG} where the floor is {CONFIG_AT_LEAST}. The "
+            "assertion below is vacuous over an empty listing, so this is the "
+            "failure to fix first -- it reads git's index, so a file that is "
+            "not staged is invisible to it.",
+        )
+
+    def test_no_configuration_comment_block_runs_past_the_bound(self):
+        """A manifest explaining itself at length is a document in the wrong file."""
+
+        over = [
+            f"{path}:{line} -- {length} lines"
+            for path in self.config
+            for line, length in hash_comment_blocks(path)
+            if length > COMMENT_LINES
+        ]
+
+        self.assertEqual(
+            over,
+            [],
+            f"{len(over)} configuration comment block(s) run past {COMMENT_LINES} "
+            "lines:\n  " + "\n  ".join(over) + "\n\n" + REMEDY,
         )
 
     def test_no_docstring_carries_more_prose_than_the_bound(self):

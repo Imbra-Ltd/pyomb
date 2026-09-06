@@ -561,6 +561,13 @@ against the whole rule set, an existing one cannot get worse, and shrinking the
 table is the migration. To take a rule family on, delete the entries naming it,
 fix what ruff then reports, and commit both together — the gate holds the gain.
 
+Two entries above the table are exemptions rather than freezes: `tests/**` and
+`checks/**` drop the `D` rules, because a test's name carries its intent and a
+docstring on top of it is the busywork the quality-gates template rules out.
+The gates in `checks/` are tests and only their directory differs; without
+that second entry they report 142 `D` findings — 126 `D202`, 15 `D102` and one
+`D403` — on files whose content never moved.
+
 Never add a file to that table to make the gate pass. Regenerate it only after
 a cleanup, and empty the block before you do: with the entries in place ruff
 suppresses exactly the findings the table has to be rebuilt from, so
@@ -626,8 +633,17 @@ The two rules are the ones the lint freeze carries: never add a module to make
 the gate pass, and never widen an entry. ADR-005 records why. Narrowing is the
 migration, and it has run once: ADR-009 settled the packet operation signatures
 and dropped `override` from `pyomb.packets`, which split that entry away from
-`pyomb.stream`. The findings still frozen that are real defects rather than
-missing annotations are tracked in #45 and #46.
+`pyomb.stream`.
+
+Nothing still frozen is a real defect. The `override` code went with the
+signatures above; `assignment` went when the client's socket attribute took the
+optional type its own teardown always implied. Each is pinned by a test rather
+than by the freeze, which is what stops it returning under a different entry.
+What remains is two codes, both of them annotations the tree does not yet
+carry: 597 findings across six modules measured on 2026-09-01, `no-untyped-call`
+at 327 and `no-untyped-def` at 270. That figure rises as the tree grows —
+re-measure by emptying the override blocks and rerunning the checker rather
+than trusting the number written here.
 
 mypy is pinned to a minor range for the reason ruff is: the freeze records one
 version's error codes, and a release reporting a new one would fail the gate
@@ -650,6 +666,14 @@ ruff and gitleaks revisions are pinned to the releases CI resolves; a hook that
 formats differently from the gate is worse than no hook, because the two then
 disagree about a file nobody edited.
 
+The mypy hook runs in its own environment rather than the contributor's, so it
+does not depend on what is on `PATH`. It can afford to: the library has no
+third-party dependencies to resolve, and the strict settings and the
+per-module freeze are read from `pyproject.toml` either way. It is pinned to
+the same minor range for the reason ruff is, and it takes no filenames —
+the freeze is keyed by module, so mypy is given the file set from its own
+`files` setting rather than the staged paths.
+
 ### 3.7 Secret scanning (gitleaks)
 
 Runs in CI over the whole history, which is why that job checks out every
@@ -658,8 +682,13 @@ repository was imported at v0.1.0 and has never carried key material, so the
 full range is in scope. Push protection is enabled on the repository and blocks
 a secret at the client before it reaches CI.
 
-The job downloads the gitleaks binary from a release asset before it can scan
-anything, and that download retries. A connection reset there once failed the
+The job runs the released binary rather than `gitleaks-action`, which requires
+a paid licence secret on an organization-owned repository. It downloads that
+binary from a release asset before it can scan anything, and the download
+retries. Dropping `-f` from the fetch is the quiet failure: curl reports
+success on a 404 and writes the response body into the archive, so the run
+fails two lines later at `tar` with a corrupt-archive error standing in for a
+release that is not there. A connection reset there once failed the
 job with `curl: (35) Recv failure` and took the required gate with it, having
 scanned nothing. `checks/test_workflow_downloads_retry.py` pins the retry and
 the fail-fast flags on every download a workflow makes, so the next one added
@@ -676,6 +705,21 @@ python -m bandit -c pyproject.toml -r src scripts tests examples
 The `-c` is not optional. Bandit reads nothing from `pyproject.toml` unless
 pointed at it, so dropping the flag produces a different, noisier run than CI's
 — the exclusions and the test-only assert skip both disappear.
+
+bandit is pinned to a minor range for the reason ruff and mypy are: a release
+reporting a new check would fail the gate on untouched code. It also takes its
+`toml` extra, without which it cannot read `pyproject.toml` at all — the
+standard library gained a TOML parser in 3.11 and this project's floor is 3.10.
+
+The gate scans `tests/`, `checks/`, `scripts/` and `examples/` alongside
+`src/`. None of those is shipped, but all of them run on somebody's machine
+and the examples run on a reader's.
+
+The `exclude_dirs` list bounds a contributor's own recursive run; the gate
+names the source directories explicitly. Both of its paths are anchored with
+`./`, because bandit matches an unanchored pattern against every path segment:
+a bare `docs` would also exclude a future `src/pyomb/docs`, dropping a whole
+sub-package from the scan while the gate stayed green.
 
 The tree is clean at every severity, so there is no freeze table and no
 severity floor: any finding fails. Suppress a false positive at the line with
@@ -950,6 +994,12 @@ submodules and the patterns find nothing to select. That is the checkout
 configuration covering for the include list, not a safeguard: populating the
 submodule in that job would ship the leak on the next tag.
 
+`CHANGELOG.md` is deliberately not on the list. The tree each tag names
+carries it, which is what the source archive generated from that tag ships,
+and the release page renders it besides — so a consumer arriving from a
+release already has it. The sdist is a build input, and the standing direction
+is to ship less of the repository in it rather than more.
+
 The check reads `pyproject.toml` rather than building one, because an
 unanchored pattern is the whole of the defect and a build costs tens of
 seconds. It skips on Python 3.10, which has no standard-library TOML parser,
@@ -1192,6 +1242,10 @@ The package's docstring examples run as part of the default suite, so an
 example that stops holding fails a pull request. `testpaths` carries `src` and
 `addopts` carries `--doctest-modules`; neither is optional, and dropping either
 stops every example being collected while the suite reports the same green.
+They are the part of the documentation a reader is most likely to copy and the
+part most able to be checked, and until `src` was added nothing ran them — one
+example had been asserting something its class does not provide, on `main`,
+unnoticed.
 
 A third way is the invocation rather than the configuration, and it is the one
 that was live. `testpaths` applies only when pytest is given no path of its
@@ -1243,6 +1297,20 @@ Both assertions carry a floor rather than a comparison against each other,
 because an assertion that the default run excludes the tier is satisfied just
 as well by a default run that reached nothing at all.
 
+The two test directories are packaged differently, and both are deliberate.
+The prepend import mode puts a module's own directory on `sys.path`, which is
+what resolves `from changelog import ...` in the flat `checks/` tree. `tests/`
+is tiered, so a module in `tests/integration/` would get that directory rather
+than the one holding the helpers — an `__init__.py` in `tests/` and in each
+subdirectory puts the repository root on the path instead, which is what makes
+`from tests.helpers.stub_socket import ...` resolve from any depth.
+
+The pipeline runs the two tiers as two steps rather than one selection over
+everything, because a tier the pipeline does not name is a tier that can stop
+existing without anything going red. `pytest` exits 5 on an empty selection, so
+a marker that stopped matching fails the integration step rather than passing
+it.
+
 The fourth test reads `ci.yml` for a step selecting the tier. That step is the
 only thing that runs those tests where a merge is decided — a contributor's
 suite was never going to, by design — so deleting it is otherwise silent.
@@ -1278,6 +1346,14 @@ review keeps it.
 `ROOTS` in the check names the directories the bound covers. The migration
 adds one per slice, cleaning the directory and widening the list in the same
 change, so no slice merges unverified.
+
+`CONFIG` names the corpus beside it: every tracked `.toml`, `.yml` and `.yaml`
+file, selected by suffix because a manifest sits at the repository root and a
+workflow does not. Those carry no docstrings, so only the comment bound
+reaches them, and the reader is line-wise rather than a parser — a `#` opening
+a line is a comment in both formats, including inside a YAML block scalar
+where the shell is the one reading it. Each corpus carries its own floor, so a
+listing that stops reaching one fails separately from the rule.
 
 
 ## 4. Maintenance
@@ -1497,6 +1573,13 @@ That default is the point of the arrangement rather than an oversight: a pin
 nothing moves is a pin that goes stale, and pinning is only worth doing if
 something keeps it current.
 
+The CodeQL sub-actions are grouped into one pull request. `init` and `analyze`
+refuse to run against different versions of each other — the analysis stops on
+a configuration-version mismatch — so ungrouped bumps move half the pair each
+and fail the analysis they are updating. No merge order fixes that, because
+whichever lands first is red on its own, and the pins then stop moving at all.
+`checks/test_dependabot_groups_split_actions.py` holds the grouping.
+
 Read the release notes for input changes before merging a major bump; the
 gate proves the rest. The pip ecosystem is deliberately not enrolled, because
 this project bounds its dependencies rather than pinning them.
@@ -1611,6 +1694,15 @@ release record if the tag has none, attaches the distribution, then generates
 the SBOM and attaches that. ADR-011 carries why the SBOM is generated from an
 environment holding only the wheel, and why the distribution is uploaded before
 the SBOM exists.
+
+The generator runs with `--output-reproducible`, which drops the timestamp and
+the serial number so anyone can rebuild the tag and compare the SBOM byte for
+byte; the release record already carries the date. That step is allowed to
+fail the run rather than marked `continue-on-error`, which is the treatment an
+advisory scan against a vulnerability service gets. This generation reads a
+local environment, reaches no network and is byte-reproducible, so a failure
+is a defect worth seeing — and the distribution is already attached, so a red
+run blocks nothing a consumer needs.
 
 `release.yml` first executed on `v0.2.0`. Where it changes, rehearse the
 changed steps by hand before the tag rather than after. A tag is the trigger
