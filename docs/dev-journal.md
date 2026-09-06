@@ -4156,3 +4156,91 @@ package, per ADR-002. See `README.md` for usage and
   warnings in it and this session did not reach them.
 - **Pending:** the submodule pin still sits at `v2.79.0` against `v2.81.0`, on
   the same terms the previous entry records. #318 is still untouched.
+
+## 2026-09-06 -- Two freeze slices and a P1 (seventh session)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Retired the ruff freeze for `stream.py` (PR #342).** 43 findings behind
+    twelve rules, one of which -- `BLE001` -- had nothing behind it. `B008`
+    built one `ModbusFragmenter` at import time and shared it across every
+    stream that did not pass one; it is stateless, so nothing broke, but the
+    shape is the mutable-default bug with the sting drawn. `TRY301` is
+    suppressed at three sites: the `except ModbusBaseError: raise` clause
+    below them is the mitigation the rule asks for, and abstracting the
+    raises into helpers, as it suggests, would put a call that never returns
+    in front of code that reads as reachable in a module with no annotations
+    to say otherwise.
+  - **Retired the ruff freeze for `server_simulator.py` (PR #344).** 61
+    findings behind twenty rules, two of which -- `SIM300` and `TRY003` --
+    had nothing behind them. Chaining the cause onto the
+    `ModbusSlaveDeviceFailureError` that `on_data` raises cleared `B904` and
+    `BLE001` together. A `try`/`except SyntaxError` around `input()` in
+    `run_server()` was deleted rather than wrapped in `contextlib.suppress`:
+    Python 2's `input()` evaluated what it read, Python 3's returns the
+    string, so the clause could not fire on any supported interpreter.
+  - **Filed #343, a P1 the second slice surfaced.** Any client ends the
+    server thread by sending one malformed request. Reproduced with seven
+    bytes; not fixed here, because the fix changes what the server does with
+    a bad frame and wants its own review and regression test.
+- **PRs merged:** #341, #342, #344.
+- **Issues closed/created:** #343 created. None closed; #170 is one ruff
+  slice from done and has not started on mypy. #170 re-measured and its body
+  corrected: the ruff table is `packets.py` alone at 140 findings, and mypy
+  is unchanged at 513 across four modules.
+- **Post-mortem (#343):**
+  - **Symptom:** the server simulator stops answering and nothing raises in
+    the caller's thread. `is_alive()` reports `False`; the traceback is on
+    stderr, where a test harness does not look.
+  - **Root cause:** `run()` calls `on_data` from the `else:` branch of the
+    `try` that reads the socket. An `else:` branch is not covered by its own
+    statement's `except` clauses, so everything `on_data` raises leaves
+    `run()`. Both of its exits are reachable from the wire: a parse failure
+    above its own `try`, and the `ModbusSlaveDeviceFailureError` it raises
+    for everything below.
+  - **Why missed:** every simulator test sends well-formed requests, so the
+    parse path never fires. The suite's thread-leak fixture asserts the
+    opposite condition -- that no server thread OUTLIVES a test -- so a
+    server that died early passes it. The freeze hid nothing here; the two
+    codes at the site were `B904` and `BLE001`, and neither reports control
+    flow.
+  - **Fix:** none this session, deliberately. The lint slice is confined to
+    lint, and the repair changes observable behaviour on a bad frame. Filed
+    with the reproduction, the mechanism and a suggested shape.
+  - **Prevention:** the regression test named in #343 -- send the malformed
+    frame, assert `is_alive()` -- run against the unfixed code first. It
+    rests on the premise that the simulator is a test tool used in-process,
+    so a dead thread is a hang rather than an outage; if it is ever driven
+    as a service, the same defect is a remote denial of service and the
+    priority moves.
+- **Lesson:** a freeze entry outlives the findings that put it there. Three
+  of the thirty-two rule codes these two entries named reported nothing, and
+  a dead entry and a live one are the same line of configuration. The table
+  is what a maintainer sizes the migration against, so it reads larger than
+  the work is -- in the direction that keeps a migration parked. Emptying
+  the entry and re-measuring is the first step of the slice anyway; what was
+  missing was reading the result as a fact about the table.
+- **Lesson:** two of these rules were not independent. `B904` and `BLE001`
+  fired at one site in `server_simulator.py`, and `raise ... from e` cleared
+  both -- `BLE001` reports a blind except only where the caught exception
+  goes unused. That is worth carrying into the last ruff slice, where the
+  same pair sits on 70 handlers.
+- **Lesson:** a probe that parses a tool's output reports its parser, not the
+  tool. Measuring the mypy freeze, mine printed `0 errors` while mypy's own
+  last line read `Found 513 errors in 4 files`. The zero was a regex that
+  stopped matching, and it was believable -- the session had just been
+  clearing findings. What caught it was the rule about a uniform result
+  needing a control, applied to a number rather than to a survey. Print the
+  tool's own total beside the parsed one.
+- **Upstream:** `braboj/solid-ai-templates#1563` filed, on a freeze entry
+  outliving its findings -- `quality-gates-retrofit-ratchet` says how to
+  build and shrink the table but not that an entry can go stale, and its own
+  ban on hand-curating the table is what makes deleting a dead rule name
+  ambiguous. The `TRY301` reasoning is judged project-specific: it turns on
+  this module being unannotated, which is a state the project is migrating
+  out of. #1556, #1544, #1524, #1486, #1497 and #1518 are still open.
+- **Not done:** the warnings the previous entry records are still there, in
+  both tiers. This session did not reach them either.
+- **Pending:** the submodule pin sits at `v2.79.0` against `v2.82.0`, which
+  has moved a tag since the previous entry. It is off-limits, so the bump
+  needs a proposal before it is made. #318 is still untouched.
