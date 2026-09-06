@@ -4,6 +4,8 @@ The server runs in a thread of its own, multiplexes its clients with select,
 and answers each request from a factory with one method per function code.
 """
 
+from __future__ import annotations
+
 import logging
 import select
 import socket
@@ -12,6 +14,8 @@ import struct
 import sys
 import threading
 import time
+from collections.abc import Callable
+from typing import cast
 
 from .defines import OMB_EXCEPTION_SLAVE_DEVICE_FAILURE
 from .errors import ModbusBaseError, ModbusModeError, ModbusNetworkError, ModbusSlaveDeviceFailureError
@@ -19,6 +23,18 @@ from .logger import Logger
 from .packets import (
     ModbusError,
     ModbusHeader,
+    ModbusPdu,
+    ModbusRequestFC1,
+    ModbusRequestFC2,
+    ModbusRequestFC3,
+    ModbusRequestFC4,
+    ModbusRequestFC5,
+    ModbusRequestFC6,
+    ModbusRequestFC15,
+    ModbusRequestFC16,
+    ModbusRequestFC22,
+    ModbusRequestFC23,
+    ModbusRequestFC43,
     ModbusResponseFC1,
     ModbusResponseFC2,
     ModbusResponseFC3,
@@ -35,7 +51,11 @@ from .packets import (
     ModbusTcpResponse,
 )
 from .stream import ModbusTcpStream
-from .tls import TlsRole
+from .tls import TlsRole, TlsSettings
+
+# What a caller's handler is called with and what its answer means: false
+# makes the server answer with an exception response instead of a reply.
+DataHandler = Callable[[Logger, ModbusHeader, ModbusTcpRequest, socket.socket], bool]
 
 
 class ModbusServerSimulator(threading.Thread):
@@ -83,17 +103,17 @@ class ModbusServerSimulator(threading.Thread):
 
     def __init__(
         self,
-        log=None,
-        host="",
-        port=502,
-        delay=0,
-        frag_size=0,
-        frag_delay=0.0,
-        connection_limit=10,
-        inactive_timeout=1.0,
-        daemon=False,
-        tls=None,
-    ):
+        log: Logger | None = None,
+        host: str = "",
+        port: int = 502,
+        delay: float = 0,
+        frag_size: int = 0,
+        frag_delay: float = 0.0,
+        connection_limit: int = 10,
+        inactive_timeout: float = 1.0,
+        daemon: bool = False,
+        tls: TlsSettings | None = None,
+    ) -> None:
         """Bind the listener settings, the response timing and the TLS material."""
         # Initialize the thread
         threading.Thread.__init__(self)
@@ -116,17 +136,20 @@ class ModbusServerSimulator(threading.Thread):
         self.quit_event = threading.Event()
         self.started_event = threading.Event()
         self.new_connection_event = threading.Event()
-        self.read_list = []
-        self.clients = []
-        self.peercerts = {}
+        self.read_list: list[socket.socket] = []
+        self.clients: list[socket.socket] = []
+
+        # Recorded per TLS connection and never read back here, so the
+        # value is whatever getpeercert() returns for that session.
+        self.peercerts: dict[socket.socket, object] = {}
         self.fail = False
 
         # Captured at accept time: getpeername() fails once a connection is
         # gone, which is when it is wanted. accept() reads it from here.
-        self.peer_names = {}
+        self.peer_names: dict[socket.socket, tuple[str, int]] = {}
 
         self.process_connections = True  # Process connected clients by default
-        self.data_handler = None
+        self.data_handler: DataHandler | None = None
 
         # The TLS settings, or None for plaintext. One object rather than a
         # flag, so certificates cannot be handed over and silently unused.
@@ -147,7 +170,7 @@ class ModbusServerSimulator(threading.Thread):
 
     ############################################################################
 
-    def get_peers(self):
+    def get_peers(self) -> list[tuple[str, int]]:
         """Get a tuple clients as list of tuples in the form (IP, PORT)."""
         result = []
         for x in self.read_list[1:]:
@@ -156,13 +179,13 @@ class ModbusServerSimulator(threading.Thread):
 
     ############################################################################
 
-    def set_delay(self, delay):
+    def set_delay(self, delay: float) -> None:
         """Set delay time for modbus response from server."""
         self.delay = delay
 
     ############################################################################
 
-    def set_connection_limit(self, limit):
+    def set_connection_limit(self, limit: int) -> None:
         """Set connection limit for modbus clients.
 
         Args:
@@ -172,7 +195,7 @@ class ModbusServerSimulator(threading.Thread):
 
     ############################################################################
 
-    def set_fail(self, fail):
+    def set_fail(self, fail: bool) -> None:
         """Set fail flag for modbus server to return an exception as response.
 
         Args:
@@ -182,7 +205,7 @@ class ModbusServerSimulator(threading.Thread):
 
     ############################################################################
 
-    def set_data_handler(self, data_handler):
+    def set_data_handler(self, data_handler: DataHandler) -> None:
         """Set a custom data handler.
 
         Args:
@@ -192,7 +215,7 @@ class ModbusServerSimulator(threading.Thread):
 
     ############################################################################
 
-    def disconnect(self, sock):
+    def disconnect(self, sock: socket.socket) -> None:
         """Graceful shutdown of a socket.
 
         Args:
@@ -214,7 +237,7 @@ class ModbusServerSimulator(threading.Thread):
 
     ############################################################################
 
-    def forget(self, conn, *registers):
+    def forget(self, conn: socket.socket, *registers: dict[socket.socket, float]) -> None:
         """Disconnects a client and drops everything recorded about it.
 
         The read list and the bookkeeping that shadows it have to fall away
@@ -244,7 +267,7 @@ class ModbusServerSimulator(threading.Thread):
 
     ############################################################################
 
-    def run(self):
+    def run(self) -> None:
         """Run the Modbus server until stopped."""
         self.log.info("Server starting")
 
@@ -403,7 +426,7 @@ class ModbusServerSimulator(threading.Thread):
         self.log.info("Server stopped.")
 
     ############################################################################
-    def on_data(self, data, conn):
+    def on_data(self, data: bytes, conn: socket.socket) -> None:
         """Handles incoming data from a Modbus client connection.
 
         Parses the incoming data, determines the Modbus function code, and generates
@@ -433,34 +456,39 @@ class ModbusServerSimulator(threading.Thread):
         time.sleep(self.delay)
 
         try:
+            response_pdu: ModbusPdu
+
             # Check if the fail simulate flag is set or the data handler failed
             if self.fail or not rslt_ok:
                 response_pdu = ResponseFactory.create_err_rsp(request.pdu.fc)
 
             else:
+                # The function code is a field, not a class, so the
+                # registry is what ties the branch to the cast below.
+
                 # Read coils (FC=1)
                 if request.pdu.fc == 1:
-                    response_pdu = ResponseFactory.create_fc1_rsp(request.pdu)
+                    response_pdu = ResponseFactory.create_fc1_rsp(cast("ModbusRequestFC1", request.pdu))
 
                 # Read discrete inputs (FC=2)
                 elif request.pdu.fc == 2:
-                    response_pdu = ResponseFactory.create_fc2_rsp(request.pdu)
+                    response_pdu = ResponseFactory.create_fc2_rsp(cast("ModbusRequestFC2", request.pdu))
 
                 # Read holding registers (FC=3)
                 elif request.pdu.fc == 3:
-                    response_pdu = ResponseFactory.create_fc3_rsp(request.pdu)
+                    response_pdu = ResponseFactory.create_fc3_rsp(cast("ModbusRequestFC3", request.pdu))
 
                 # Read input registers (FC=4)
                 elif request.pdu.fc == 4:
-                    response_pdu = ResponseFactory.create_fc4_rsp(request.pdu)
+                    response_pdu = ResponseFactory.create_fc4_rsp(cast("ModbusRequestFC4", request.pdu))
 
                 # Write single coil (FC=5)
                 elif request.pdu.fc == 5:
-                    response_pdu = ResponseFactory.create_fc5_rsp(request.pdu)
+                    response_pdu = ResponseFactory.create_fc5_rsp(cast("ModbusRequestFC5", request.pdu))
 
                 # Write single register (FC=6)
                 elif request.pdu.fc == 6:
-                    response_pdu = ResponseFactory.create_fc6_rsp(request.pdu)
+                    response_pdu = ResponseFactory.create_fc6_rsp(cast("ModbusRequestFC6", request.pdu))
 
                 # Report slave ID (FC=7)
                 elif request.pdu.fc == 7:
@@ -468,23 +496,23 @@ class ModbusServerSimulator(threading.Thread):
 
                 # Write multiple coils (FC=15)
                 elif request.pdu.fc == 15:
-                    response_pdu = ResponseFactory.create_fc15_rsp(request.pdu)
+                    response_pdu = ResponseFactory.create_fc15_rsp(cast("ModbusRequestFC15", request.pdu))
 
                 # Write multiple registers (FC=16)
                 elif request.pdu.fc == 16:
-                    response_pdu = ResponseFactory.create_fc16_rsp(request.pdu)
+                    response_pdu = ResponseFactory.create_fc16_rsp(cast("ModbusRequestFC16", request.pdu))
 
                 # Mask write register (FC=22)
                 elif request.pdu.fc == 22:
-                    response_pdu = ResponseFactory.create_fc22_rsp(request.pdu)
+                    response_pdu = ResponseFactory.create_fc22_rsp(cast("ModbusRequestFC22", request.pdu))
 
                 # Read/write multiple registers (FC=23)
                 elif request.pdu.fc == 23:
-                    response_pdu = ResponseFactory.create_fc23_rsp(request.pdu)
+                    response_pdu = ResponseFactory.create_fc23_rsp(cast("ModbusRequestFC23", request.pdu))
 
                 # Read device identification (FC=43)
                 elif request.pdu.fc == 43:
-                    response_pdu = ResponseFactory.create_fc43_rsp(request.pdu)
+                    response_pdu = ResponseFactory.create_fc43_rsp(cast("ModbusRequestFC43", request.pdu))
 
                 # Generate response on invalid function code
                 else:
@@ -515,13 +543,13 @@ class ModbusServerSimulator(threading.Thread):
 
     ############################################################################
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop the Modbus server."""
         self.quit_event.set()
 
     ############################################################################
 
-    def start(self, process_connections=True, timeout=STARTUP_TIMEOUT):
+    def start(self, process_connections: bool = True, timeout: float = STARTUP_TIMEOUT) -> None:
         """Start the Modbus server and wait for its listener to come up.
 
         Args:
@@ -556,7 +584,7 @@ class ModbusServerSimulator(threading.Thread):
 
     ############################################################################
 
-    def reset(self):
+    def reset(self) -> None:
         """Reset the Modbus server."""
         for sock in list(self.clients):
             self.log.info("Reset the client connection...")
@@ -575,7 +603,7 @@ class ModbusServerSimulator(threading.Thread):
 
     ############################################################################
 
-    def accept(self, timeout):
+    def accept(self, timeout: float) -> tuple[socket.socket | None, tuple[str, int] | None]:
         """Accept a new client connection.
 
         Args:
@@ -621,7 +649,7 @@ class ResponseFactory:
     """
 
     @staticmethod
-    def create_fc1_rsp(request_pdu, coil_value=0xFF):
+    def create_fc1_rsp(request_pdu: ModbusRequestFC1, coil_value: int = 0xFF) -> ModbusResponseFC1:
         """Create a Modbus Response for Function Code 1 (Read Coils).
 
         This function takes a Modbus Request PDU (request_pdu) and an optional
@@ -632,7 +660,7 @@ class ResponseFactory:
         byte count and a list of coil_value repeated byte_count times.
 
         Args:
-            request_pdu (ModbusPduRequest): The Modbus Request PDU
+            request_pdu (ModbusPdu): The Modbus Request PDU
             coil_value (int, optional): The value to return for the coils.
 
         Returns:
@@ -649,7 +677,7 @@ class ResponseFactory:
         return pdu
 
     @staticmethod
-    def create_fc2_rsp(request_pdu, input_value=0xFF):
+    def create_fc2_rsp(request_pdu: ModbusRequestFC2, input_value: int = 0xFF) -> ModbusResponseFC2:
         """Create a Modbus Response for Function Code 2 (Read Discrete Inputs).
 
         This function takes a Modbus Request PDU (request_pdu) and an optional
@@ -659,7 +687,7 @@ class ResponseFactory:
         a list of coil_value repeated byte_count times.
 
         Args:
-            request_pdu (ModbusPduRequest): The Modbus Request PDU
+            request_pdu (ModbusPdu): The Modbus Request PDU
             input_value (int): The value to be used for the digital inputs
 
         Returns:
@@ -676,7 +704,7 @@ class ResponseFactory:
         return pdu
 
     @staticmethod
-    def create_fc3_rsp(request_pdu, register_value=0xFFFF):
+    def create_fc3_rsp(request_pdu: ModbusRequestFC3, register_value: int = 0xFFFF) -> ModbusResponseFC3:
         """Create a Modbus Response for Function Code 3 (Read Holding Registers).
 
         This function takes a Modbus Request PDU (request_pdu) and an optional
@@ -686,7 +714,7 @@ class ResponseFactory:
         byte count and a list of register_value repeated byte_count times.
 
         Args:
-            request_pdu (ModbusPduRequest): The Modbus Request PDU containing
+            request_pdu (ModbusPdu): The Modbus Request PDU containing
             the quantity of registers to be read.
             register_value (int, optional): The value to be used for the
             registers in the response. Defaults to 0xffff.
@@ -709,7 +737,7 @@ class ResponseFactory:
         return pdu
 
     @staticmethod
-    def create_fc4_rsp(request_pdu, register_value=0xFFFF):
+    def create_fc4_rsp(request_pdu: ModbusRequestFC4, register_value: int = 0xFFFF) -> ModbusResponseFC4:
         """Create a Modbus Response for Function Code 4 (Read Input Registers).
 
         This function takes a Modbus Request PDU (request_pdu) and an optional
@@ -719,7 +747,7 @@ class ResponseFactory:
         byte count and a list of register_value repeated byte_count times.
 
         Args:
-            request_pdu (ModbusPduRequest): The Modbus Request PDU
+            request_pdu (ModbusPdu): The Modbus Request PDU
             register_value (int): The register values
 
         Returns:
@@ -740,7 +768,7 @@ class ResponseFactory:
         return pdu
 
     @staticmethod
-    def create_fc5_rsp(request_pdu):
+    def create_fc5_rsp(request_pdu: ModbusRequestFC5) -> ModbusResponseFC5:
         """Create a Modbus Response for Function Code 5 (Write Single Coil).
 
         This function takes a Modbus Request PDU (request_pdu) and creates a
@@ -748,7 +776,7 @@ class ResponseFactory:
         of the coil that was written and the value that was written.
 
         Args:
-            request_pdu (ModbusPduRequest): The Modbus Request PDU
+            request_pdu (ModbusPdu): The Modbus Request PDU
 
         Returns:
             ModbusResponseFC5(): The Modbus Response PDU for Function Code 5.
@@ -763,7 +791,7 @@ class ResponseFactory:
         return pdu
 
     @staticmethod
-    def create_fc6_rsp(request_pdu):
+    def create_fc6_rsp(request_pdu: ModbusRequestFC6) -> ModbusResponseFC6:
         """Create a Modbus Response for Function Code 6 (Write Single Register).
 
         This function takes a Modbus Request PDU (request_pdu) and creates a
@@ -771,7 +799,7 @@ class ResponseFactory:
         of the register that was written and the value that was written.
 
         Args:
-            request_pdu (ModbusPduRequest): The Modbus Request PDU
+            request_pdu (ModbusPdu): The Modbus Request PDU
 
         Returns:
             ModbusResponseFC6(): The Modbus Response PDU for Function Code 6.
@@ -786,7 +814,7 @@ class ResponseFactory:
         return pdu
 
     @staticmethod
-    def create_fc7_rsp(status_code=0x00):
+    def create_fc7_rsp(status_code: int = 0x00) -> ModbusResponseFC7:
         """Create a Modbus Response for Function Code 7 (Report Slave ID).
 
         This function takes an optional status_code parameter (default is 0x00).
@@ -804,7 +832,7 @@ class ResponseFactory:
         return pdu
 
     @staticmethod
-    def create_fc15_rsp(request_pdu):
+    def create_fc15_rsp(request_pdu: ModbusRequestFC15) -> ModbusResponseFC15:
         """Create a Modbus Response for Function Code 15 (Write Multiple Coils).
 
         This function takes a Modbus Request PDU (request_pdu) and creates a
@@ -812,7 +840,7 @@ class ResponseFactory:
         of the coil that was written and the value that was written.
 
         Args:
-            request_pdu (ModbusPduRequest): The Modbus Request PDU containing the
+            request_pdu (ModbusPdu): The Modbus Request PDU containing the
                 address of the coil to be written and the value to be written.
 
         Returns:
@@ -828,7 +856,7 @@ class ResponseFactory:
         return pdu
 
     @staticmethod
-    def create_fc16_rsp(request_pdu):
+    def create_fc16_rsp(request_pdu: ModbusRequestFC16) -> ModbusResponseFC16:
         """Create a Modbus Response for FC16 (Write Multiple Registers).
 
         This function takes a Modbus Request PDU (request_pdu) and creates a
@@ -836,7 +864,7 @@ class ResponseFactory:
         of the register that was written and the value that was written.
 
         Args:
-            request_pdu (ModbusPduRequest): The Modbus Request PDU containing the
+            request_pdu (ModbusPdu): The Modbus Request PDU containing the
                 address of the register to be written and the value to be written.
 
         Returns:
@@ -852,7 +880,7 @@ class ResponseFactory:
         return pdu
 
     @staticmethod
-    def create_fc22_rsp(request_pdu):
+    def create_fc22_rsp(request_pdu: ModbusRequestFC22) -> ModbusResponseFC22:
         """Create a Modbus Response for FC22 (Mask Write Register).
 
         This function takes a Modbus Request PDU (request_pdu) and creates a
@@ -860,7 +888,7 @@ class ResponseFactory:
         of the register that was written and the value that was written.
 
         Args:
-            request_pdu (ModbusPduRequest): The Modbus Request PDU
+            request_pdu (ModbusPdu): The Modbus Request PDU
 
         Returns:
             ModbusResponseFC22(): The Modbus Response PDU for Function Code 22.
@@ -876,7 +904,7 @@ class ResponseFactory:
         return pdu
 
     @staticmethod
-    def create_fc23_rsp(request_pdu, value=0xFFFF):
+    def create_fc23_rsp(request_pdu: ModbusRequestFC23, value: int = 0xFFFF) -> ModbusResponseFC23:
         """Create a Modbus Response for FC23 (Read/Write Multiple Registers).
 
         This function takes a Modbus Request PDU (request_pdu) and an optional
@@ -886,7 +914,7 @@ class ResponseFactory:
         and a list of value repeated byte_count times.
 
         Args:
-            request_pdu (ModbusPduRequest): The Modbus Request PDU
+            request_pdu (ModbusPdu): The Modbus Request PDU
             value (int): The value to be used for the registers in the response.
 
         Returns:
@@ -906,14 +934,14 @@ class ResponseFactory:
         return pdu
 
     @staticmethod
-    def create_fc43_rsp(request_pdu):
+    def create_fc43_rsp(request_pdu: ModbusRequestFC43) -> ModbusResponseFC43:
         """Create a Modbus Response for FC43 (Read Device Identification).
 
         This function creates a Modbus Response for Function Code 43. The
         response PDU contains the byte count and the values of the registers.
 
         Args:
-            request_pdu (ModbusPduRequest): The Modbus Request PDU
+            request_pdu (ModbusPdu): The Modbus Request PDU
 
         Returns:
             ModbusResponseFC43(): The Modbus Response PDU for Function Code 43.
@@ -927,7 +955,7 @@ class ResponseFactory:
         return pdu
 
     @staticmethod
-    def create_err_rsp(request_fc):
+    def create_err_rsp(request_fc: int) -> ModbusError:
         """Creates the exception response a failed request is answered with.
 
         Args:
@@ -941,7 +969,7 @@ class ResponseFactory:
         return response_pdu
 
 
-def run_server():
+def run_server() -> None:
     """Run the Modbus server to simulate a Modbus device."""
     log = Logger("ModbusServerSimulator")
     server_thread = ModbusServerSimulator(
