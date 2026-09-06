@@ -220,10 +220,8 @@ class TestDataHandler(ServerUnderTest):
 
 class TestResponseDelay(ServerUnderTest):
     def test_configured_delay_is_applied_before_answering(self):
-        # Patched rather than measured, so the assertion is exact and the test
-        # stays fast. The transport sleeps for its own fragment delay through
-        # the same function, so this asks whether the configured delay is
-        # among the calls rather than that it is the only one.
+        # Patched rather than measured, so the assertion is exact. The
+        # transport sleeps through it too, so this asks for membership.
         self.server.set_delay(0.25)
 
         with mock.patch("pyomb.server_simulator.time.sleep") as sleep:

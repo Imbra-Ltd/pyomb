@@ -1,25 +1,15 @@
 """The package exports what it names, and names the deferred ones without loading them.
 
-`__all__` is the project's statement of its public API, and nothing checked it.
-A name can sit in that list with nothing bound to it -- the list is a literal,
-not a reference -- so `from pyomb import X` fails for a name the package
-advertises, and no gate reports it. The first check here closes that: every
-name in the list is resolved against the package.
+`__all__` is the project's statement of its public API, and nothing checked
+it. A name can sit in that list with nothing bound to it -- the list is a
+literal, not a reference -- so `from pyomb import X` fails for a name the
+package advertises. The first check resolves every name against the package.
 
-The simulators make the gap live rather than theoretical. They are bound
-through the module's `__getattr__` rather than imported at the top, because
-importing them costs every caller the ssl import for a transport most callers
-never open. The TLS settings they take are deferred on the same terms and for
-the same reason. That keeps them in the flat public API at no cost to a codec-only
-caller, and it means their entries in `__all__` are backed by a function rather
-than by an import statement -- exactly the shape whose failure the first check
-would otherwise miss.
-
-The deferral is a property of the package, not of the classes, so the last
-check runs a fresh interpreter and asks it what got imported. It reads
-`sys.modules`, which is the import system's own record of that answer and the
-only place it is observable; in-process the suite has already imported both
-submodules for other reasons, so asking here would always say yes.
+The simulators make that live rather than theoretical: they are bound through
+the module's `__getattr__`, so their entries are backed by a function rather
+than an import statement. The deferral is a property of the package, so the
+last check runs a fresh interpreter and reads `sys.modules` -- in-process the
+suite has already imported both submodules and would always say yes.
 """
 
 import subprocess  # nosec B404
@@ -43,11 +33,8 @@ def imported_names(statement):
 
     program = "import sys\n" + statement + f"\nprint(' '.join(name for name in {watched!r} if name in sys.modules))"
 
-    # The argument vector is a list, so it reaches the operating system
-    # directly rather than through a shell and nothing in it can become a
-    # second command. The interpreter is this process's own, and the program
-    # is a literal built above with no caller input in it. The checks match on
-    # call shape and see neither.
+    # The argument vector is a list holding this interpreter and a literal, so
+    # nothing reaches a shell. The checks match on call shape only.
     completed = subprocess.run(  # nosec B603
         [sys.executable, "-c", program],
         capture_output=True,
@@ -68,10 +55,8 @@ def import_failure(statement):
         str : Everything written to stderr, empty when the import succeeded
     """
 
-    # Same call shape as the helper above, and safe for the same reasons: a
-    # list argument vector that reaches the operating system without a shell,
-    # this process's own interpreter, and a program the caller composed from
-    # literals. check is off because a failing import is the subject here.
+    # Same call shape as the helper above, and safe for the same reasons.
+    # check is off because a failing import is the subject here.
     completed = subprocess.run(  # nosec B603
         [sys.executable, "-c", statement],
         capture_output=True,

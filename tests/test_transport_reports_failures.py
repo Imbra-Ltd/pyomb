@@ -8,9 +8,8 @@ mid-frame all reached the caller as the same sentence.
 Two properties are pinned here and they fail independently. The cause travels
 with the error, through `raise X(...) from e`, so a handler three frames up
 still sees what the operating system said. And the logger is the caller's: the
-module's own carries a null handler and writes nothing until an application
-asks, where the simulators construct a stdout logger because an application is
-what they are.
+module's own carries a null handler, where the simulators construct a stdout
+logger because an application is what they are.
 """
 
 import logging

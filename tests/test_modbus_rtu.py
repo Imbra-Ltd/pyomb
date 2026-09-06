@@ -73,9 +73,8 @@ class TestModbusRtuRequest(unittest.TestCase):
 
     def test_crc_calc(self):
 
-        # For manual calculation, refer to the following link:
-        # - https://www.lammertbies.nl/comm/info/crc-calculation.html
-        # - https://crccalc.com/
+        # Calculate by hand at https://crccalc.com/ or
+        # https://www.lammertbies.nl/comm/info/crc-calculation.html
 
         request = ModbusRtuRequest(slave_id=1, pdu=ModbusRequestFC1(start_addr=1, quantity=2))
 
@@ -154,9 +153,8 @@ class TestModbusRtuResponse(unittest.TestCase):
 
     def test_crc_calc(self):
 
-        # For manual calculation, refer to the following link:
-        # - https://www.lammertbies.nl/comm/info/crc-calculation.html
-        # - https://crccalc.com/
+        # Calculate by hand at https://crccalc.com/ or
+        # https://www.lammertbies.nl/comm/info/crc-calculation.html
 
         response = ModbusRtuResponse(slave_id=1, pdu=ModbusResponseFC1(byte_count=2, output_status=(1, 2)))
 

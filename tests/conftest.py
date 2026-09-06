@@ -1,18 +1,16 @@
 """The suite's tier hook, and the guard that no test outlives itself.
 
 Both live here because both have to reach every tier, and a conftest reaches
-the directory it sits in and everything below it. Moving either one down a
-level would silently narrow it to one tier.
+its own directory and everything below it. Moving either down a level would
+silently narrow it to one tier.
 
-**The tier comes from the directory.** The hook below marks every item under
-`tests/integration/` and nothing else, so no module carries a marker of its
-own and a marker cannot drift from where a test sits.
+**The tier comes from the directory.** The hook marks every item under
+`tests/integration/` and nothing else, so a marker cannot drift from where a
+test sits.
 
-**No test may leave a server thread running behind it.** The guard names the
-test that does, where the thread would otherwise run into the next one and, at
-the end of a run, print a logging traceback beside unrelated output. It costs
-one list comprehension on a clean run and waits for nothing. PLAYBOOK 3.1
-carries why a sleep is not the wait.
+**No test may leave a server thread running.** The guard names the test that
+does, where the thread would otherwise print a logging traceback beside
+unrelated output. PLAYBOOK 3.1 carries why a sleep is not the wait.
 """
 
 import pathlib

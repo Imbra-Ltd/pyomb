@@ -1,21 +1,16 @@
 """The leak guard's thread name is the name the server thread actually takes.
 
-`conftest.py` fails any test that leaves a simulator thread running, and it
-finds those threads by comparing `Thread.name` against a string constant. The
-constant and the assignment in the server are two copies of one fact, and
-nothing joined them: the guard reads its own constant, and the server sets its
-own name, and neither has ever looked at the other.
+`conftest.py` fails any test that leaves a simulator thread running, and finds
+those threads by comparing `Thread.name` against a string constant. That
+constant and the assignment in the server are two copies of one fact, joined
+by nothing.
 
-That makes the guard fail open. A constant naming a thread the server does not
-produce matches nothing, so the comprehension returns empty, so every test
-passes -- including the ones leaking the thread the guard exists to catch. No
-output changes and no test goes red. The rename that produced this module is
-exactly the edit that breaks it, because the name is a string in two files and
-only one of them is anywhere near the class.
+It makes the guard fail open. A constant naming a thread the server does not
+produce matches nothing, so every test passes -- including the ones leaking
+the thread the guard exists to catch.
 
-Asserting on the name is deliberate here, where a test would normally assert on
-behaviour. The name IS the behaviour under test: it is the join key the guard
-matches on, and a guard matching on the wrong key is the defect.
+Asserting on the name is deliberate where a test would normally assert on
+behaviour. The name IS the behaviour: it is the join key the guard matches on.
 """
 
 import unittest

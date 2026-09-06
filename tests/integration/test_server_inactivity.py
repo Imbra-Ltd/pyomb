@@ -116,9 +116,8 @@ class TestInactivitySweep(unittest.TestCase):
         self.assertEqual(self.server.get_peers(), [])
 
     def test_a_client_is_not_closed_while_it_is_still_talking(self):
-        # Activity used to be recorded against the shared key, so any one
-        # client's traffic kept every other one alive. This holds the opposite
-        # property: an idle client goes even though a busy one stays.
+        # Activity used to be recorded against the shared key, so one client's
+        # traffic kept every other alive. An idle client goes, a busy one stays.
         self.start_server(inactive_timeout=1.0)
         busy = self.connect()
         self.connect()

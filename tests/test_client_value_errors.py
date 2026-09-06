@@ -91,8 +91,7 @@ class TestValuesStillAccepted(ClientOnAStubSocket):
 
     def test_generator_is_still_accepted(self):
         # len() would have raised TypeError here, and the handler below the
-        # normalisation would have swallowed it and treated the generator as a
-        # scalar.
+        # normalisation would have swallowed it and taken it for a scalar.
         client = self.make_client()
         client.send_request(fc=6, write_address=1, values=(v for v in [0x0042]))
         request = ModbusTcpRequest.deserialize(client.sock.frame())

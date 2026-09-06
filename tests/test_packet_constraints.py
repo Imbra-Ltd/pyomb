@@ -5,12 +5,11 @@ declared length. No function-code field limit was written down, so a frame
 carrying a quantity no device will honour was emitted without complaint --
 well formed, correct checksum, and wrong.
 
-The bounds now sit on the class carrying the field, as `LIMITS`, and two
-methods read them: `violations()` returns findings, `validate()` raises.
-`serialize()` calls neither, because building a frame a device rejects is the
-point of a simulator. Each bound is anchored to the Modbus Application
-Protocol v1.1b3 rather than to this library's output, and two cases use that
-document's own worked examples.
+The bounds now sit on the class carrying the field, as `LIMITS`, read by two
+methods: `violations()` returns findings, `validate()` raises. `serialize()`
+calls neither, because building a frame a device rejects is the point of a
+simulator. Each bound is anchored to the Modbus Application Protocol v1.1b3,
+and two cases use that document's own worked examples.
 """
 
 import ast

@@ -1,20 +1,15 @@
 """The client's host parameter is a string everywhere it is stated.
 
 The constructor documented `host (str)` and defaulted it to `b"localhost"`,
-and `connect` documented the same value as bytes. Both forms reach the
-socket layer and connect, so nothing failed -- what was wrong is that the
-parameter had two answers to "what type is this" and a reader had to run
-something to find out which one the library meant.
+while `connect` documented the same value as bytes. Both forms reach the
+socket layer, so nothing failed -- the parameter simply had two answers to
+"what type is this".
 
-Two of the checks below are drift guards: the declared type and the real
-default are the same fact written twice, and so are the two simulators'
-descriptions of the parameter they share. Each introspects the live module
-rather than restating the answer, so changing one copy and not the other
-fails here rather than drifting.
-
-The last check goes the other way. Settling on a string is only safe if the
-bytes form keeps working, because callers in this suite pass it, so one test
-connects with bytes and asserts the socket came up.
+Two checks below are drift guards: the declared type and the real default are
+one fact written twice, as are the two simulators' descriptions of the shared
+parameter. Each introspects the live module. The last goes the other way --
+settling on a string is only safe while the bytes form works, so one test
+connects with bytes.
 """
 
 import ast
@@ -27,11 +22,8 @@ import unittest
 from pyomb.client_simulator import ModbusClientSimulator, run_client
 from pyomb.server_simulator import ModbusServerSimulator
 
-# The `host (str)` line of a Google-style Args block, capturing the declared
-# type. The character class is spelled out rather than written as a shorthand
-# escape, which can be lost on the way into a file while still compiling.
-# Both simulators are matched by it: one aligns the colon into a column and
-# the other does not, and neither part is inside the group.
+# The `host (str)` line of a Google-style Args block. The character class is
+# spelled out, since a shorthand escape can be lost while still compiling.
 DECLARED = re.compile(r"^[ ]*host \(([A-Za-z]+)\)", re.M)
 
 

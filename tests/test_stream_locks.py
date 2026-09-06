@@ -6,24 +6,10 @@ bind the unconstructed lock, which cannot be acquired and cannot be entered.
 It stayed invisible because the sender never takes its lock -- the receiver is
 the only one of the pair that does.
 
-Everything here exercises the attribute rather than inspecting it, and asserts
-nothing about which exception an unusable one produces. Both of those turned
-out to vary: `threading.Lock` is a type on Windows and the builtin function
-`_thread.allocate_lock` on Linux, so `hasattr(x, 'acquire')` holds for the
-defect on one and `isinstance(x, type)` holds for it on the other; and
-entering it raises AttributeError on Python 3.10 where 3.13 raises TypeError.
-Using the object is the only description that survives all four combinations.
-
-Those tests describe the lock and not what takes it, which is the gap the
-second half of this module closes. Every one of them passed against a sender
-whose lock was created and never acquired: they assert the object works, that
-the pair do not share one, and that both are the same type -- all properties of
-the lock rather than of the code around it. Coverage reported the lines as
-covered, because they were, by a witness that could not disagree.
-
-So the classes below record acquisition instead. A lock that logs its entries
-and exits, and a socket that logs its sends, share one list; the order of that
-list is what says the send loop ran inside the lock rather than beside it.
+The first half exercises the attribute rather than inspecting it, since both
+natural inspections vary by platform. The second half asserts that the sender
+takes the lock at all, which the first cannot reach: every one of those tests
+passed against a lock created and never acquired. PLAYBOOK 3.10 carries both.
 """
 
 import threading
@@ -215,12 +201,8 @@ class TestLockShapeIsNotVacuous(unittest.TestCase):
     """Confirms the check above would reject the defect it describes."""
 
     def test_the_unconstructed_lock_does_not_pass(self):
-        # Deliberately broad: the claim is that this fails, not that it fails
-        # in the particular way one interpreter happens to report. Entering the
-        # unconstructed class raises AttributeError on 3.10 and TypeError on
-        # 3.13, so naming either class writes one interpreter's answer into a
-        # test that runs on both. B017 asks for the narrower assertion and is
-        # wrong here for that reason.
+        # Deliberately broad: the claim is that this fails, not how. B017 asks
+        # for the narrower assertion and is wrong here -- PLAYBOOK 3.10.
         with self.assertRaises(Exception):  # noqa: B017
             exercise(threading.Lock)
 

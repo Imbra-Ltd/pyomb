@@ -25,10 +25,8 @@ class TestPduRequestFC7(unittest.TestCase):
 
     def test_inequality(self):
 
-        # This request carries no named field, so two of them are always
-        # equal and inequality has to come from a different packet. The
-        # assertion used to write request2.data directly, which is the second
-        # copy the packets no longer keep -- assigning it now raises.
+        # This request carries no named field, so two are always equal and
+        # inequality has to come from a different packet.
         request = ModbusRequestFC7()
         response = ModbusResponseFC7(status=1)
 

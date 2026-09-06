@@ -34,7 +34,7 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 
 # The directories under the bound. Each migration slice adds one as it cleans
 # it, so the gate and the tree widen together.
-ROOTS = ("src", "scripts", "examples")
+ROOTS = ("src", "scripts", "examples", "tests")
 
 # The configuration under the bound, selected by suffix rather than directory:
 # a manifest sits at the repository root and a workflow does not.
@@ -71,9 +71,9 @@ RULE = "#####"
 # between. Spelled without a shorthand escape, which can be lost into a file.
 LAYOUT_ROW = re.compile(r"^-[ ]+(Byte(?![A-Za-z0-9])|[.]{3}$)")
 
-# What the roots held when this floor was set: 17 modules on 2026-09-05.
+# What the roots held when this floor was set: 79 modules on 2026-09-06.
 # Files churn, so the floor takes a margin below the measured count.
-FILES_AT_LEAST = 11
+FILES_AT_LEAST = 55
 
 # What the suffixes reached when this floor was set: 6 files on 2026-09-06 --
 # the manifest, the hook config, the Dependabot config and three workflows.

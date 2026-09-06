@@ -887,6 +887,26 @@ defect on the branch that fixes it: run the check with the fix's own edit still
 uncommitted, then again once it is committed. Those two numbers are the defect
 and its repair over real inputs, and they cost one extra invocation.
 
+Assert what an object does, never what the runtime says it is. A missing pair
+of parentheses on `threading.Lock` shipped in the sender, and both natural
+assertions against it vary by platform: `threading.Lock` is a type on Windows
+and the builtin `_thread.allocate_lock` on Linux, so `hasattr(x, "acquire")`
+holds for the defect on one and `isinstance(x, type)` holds for it on the
+other, while entering the unconstructed class raises `AttributeError` on
+Python 3.10 and `TypeError` on 3.13. Acquiring the lock is the only
+description that survives all four combinations, which is also why the test
+asserting the misuse fails asserts only that it fails.
+
+Assert that a guard is taken, not that it exists. Four tests covered that same
+sender's lock — that it works, that the pair do not share one, that both are
+the same type — and all four passed against a sender that never acquired it.
+Every one is a property of the lock rather than of the code around it, and
+coverage reported the lines as covered because they were, by a witness that
+could not disagree. The fix is a recording wrapper: a lock that logs its
+entries and exits and a socket that logs its sends share one list, and the
+order of that list is what says the send ran inside the lock rather than
+beside it.
+
 ### 3.11 Build (build, twine)
 
 ```bash
@@ -1383,9 +1403,10 @@ fixed. Compressing it in place satisfies the count and fails the reader.
 Whether a comment was needed at all is a judgement this cannot reach, and
 review keeps it.
 
-`ROOTS` in the check names the directories the bound covers. The migration
-adds one per slice, cleaning the directory and widening the list in the same
-change, so no slice merges unverified.
+`ROOTS` in the check names the directories the bound covers: `src`, `scripts`,
+`examples` and `tests`. The migration adds one per slice, cleaning the
+directory and widening the list in the same change, so no slice merges
+unverified. `checks/` is the one still outside it.
 
 `CONFIG` names the corpus beside it: every tracked `.toml`, `.yml` and `.yaml`
 file, selected by suffix because a manifest sits at the repository root and a

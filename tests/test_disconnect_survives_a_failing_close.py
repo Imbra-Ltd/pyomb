@@ -1,23 +1,16 @@
 """A close that fails does not escape the teardown or strand the socket.
 
-`disconnect()` treats `shutdown()` as able to fail -- a peer that has gone away
-is the ordinary case on that path, not a fault -- and used not to treat
-`close()` the same way. The close sat in a `finally` with nothing catching it,
-so a close that raised escaped the method and the line clearing the attribute
-never ran. The client was then left holding a socket it had already given up
-on, which is the opposite of what a teardown is for.
+`disconnect()` treats `shutdown()` as able to fail and used not to treat
+`close()` the same way. The close sat in a `finally` catching nothing, so one
+that raised escaped and never cleared the attribute.
 
-Whether a close raises is a platform difference. On Windows a close on a reset
-socket is silent, and on Linux the same call can raise `ENOTCONN`. Development
-here is Windows and CI is Linux, so waiting for a platform to supply the fault
-means the defect reproduces only where nobody is looking. The fault is injected
-instead, from a double at the same seam the real call sits on.
+Whether a close raises is a platform difference -- silent on Windows,
+`ENOTCONN` on Linux -- so the fault is injected from a double at the same
+seam rather than waited for.
 
-The third test is the one that keeps the fix honest. `shutdown()` is not made
-redundant by the `close()` that follows it: it sends the FIN immediately and
-unconditionally, where `close()` only does so when no other reference to the
-socket remains. Deleting it would make the first two tests pass and change what
-a peer observes, so it is pinned.
+The third test keeps the fix honest. `shutdown()` sends the FIN immediately
+where `close()` waits for the last reference, so deleting it would pass the
+first two and change what a peer observes.
 """
 
 import contextlib
@@ -92,9 +85,8 @@ class TeardownSurvivesAFailingClose(unittest.TestCase):
 
         client, _ = client_whose_close_fails()
 
-        # Suppressed so this test reports on the clearing rather than on the
-        # escape, which is what the test above is for. Against the unfixed
-        # code both fail, and they fail for different reasons.
+        # Suppressed so this reports on the clearing rather than the escape,
+        # which the test above covers. Both fail unfixed, for different reasons.
         with contextlib.suppress(OSError):
             client.disconnect()
 

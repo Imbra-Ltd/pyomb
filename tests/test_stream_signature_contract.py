@@ -2,19 +2,13 @@
 
 `ModbusSenderAbc` declared `run_once` with a `burst` parameter its only
 implementation does not take. Burst is a property of the sender rather than of
-one run -- it sets TCP_NODELAY on the socket the sender owns -- and
-`ModbusTcpSender` carries it as state, set through the constructor or
-`set_burst_mode`. So the abstract operation promised a per-call choice nothing
-honours, and a caller holding a `ModbusSenderAbc` had no implementation that
-would accept it. mypy reported it as the last `override` finding in the tree.
+one run, so the abstract operation promised a per-call choice nothing honours,
+and mypy reported it as the last `override` finding in the tree.
 
-`ModbusStreamAbc.send` carried the milder form of the same defect: it named its
-parameter `packet` where its own subtype named it `message`, so the keyword the
-supertype promised was one the subtype refused.
-
-ADR-009 settled this shape in the packet hierarchy. This module is that test
-for the stream hierarchies, and it is what keeps the `override` code out of the
-mypy freeze in `pyproject.toml` now that the freeze no longer carries it.
+`ModbusStreamAbc.send` carried the milder form: it named its parameter
+`packet` where its own subtype named it `message`, so the keyword the
+supertype promised was one the subtype refused. This module is what keeps the
+`override` code out of the mypy freeze now that the freeze no longer has it.
 """
 
 import inspect

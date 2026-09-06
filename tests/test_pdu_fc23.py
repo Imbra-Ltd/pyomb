@@ -94,8 +94,7 @@ class TestPduRequestFC23(unittest.TestCase):
 
     def test_deserialization(self):
 
-        # fc=0x17, read_start_addr=0x000A, read_quantity=0x0005
-        # write_start_addr=0x000F, write_quantity=0x0003,
+        # fc=0x17, read 0x0005 from 0x000A, write 0x0003 to 0x000F,
         # write_byte_count=0x02, write_values=(0x00, 0x01)
         message = b"\x17\x00\x0a\x00\x05\x00\x0f\x00\x03\x02\x00\x01"
 

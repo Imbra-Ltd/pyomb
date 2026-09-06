@@ -1,18 +1,15 @@
 """Stopping a sender or a receiver stops it.
 
 Both classes build a `threading.Event` in their constructor and set it in
-`stop()`. Neither ever read it. The event was written and never consulted, so
-`stop()` returned having changed nothing a later call could observe, and
-`run_once()` went on sending or receiving exactly as before.
+`stop()`. Neither ever read it, so `stop()` returned having changed nothing a
+later call could observe and `run_once()` went on as before.
 
-That is the same shape as the sender's unacquired lock, one field over: a
-threading primitive created, wired to a public method, and never consulted.
-Finding the first is what prompted the search that found the second -- a
-`grep` for `is_set` and `wait(` across the module returned nothing at all.
+That is the same shape as the sender's unacquired lock, one field over.
+Finding the first prompted the search that found the second: a `grep` for
+`is_set` and `wait(` across the module returned nothing at all.
 
-The tests here are behavioural. They do not assert that the event is read,
-which would pin the mechanism; they assert that a stopped component does no
-work, which is the promise `stop()` makes to a caller.
+The tests here are behavioural. They assert that a stopped component does no
+work, which is the promise `stop()` makes, rather than that the event is read.
 """
 
 import unittest
