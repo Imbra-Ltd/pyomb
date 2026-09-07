@@ -164,9 +164,8 @@ class TestFramesTheLayoutCannotSize(unittest.TestCase):
         self.assertEqual(found[0].serialize(), FC8_RESTART)
 
     def test_return_query_data_does_not_stall_the_stream(self):
-        # Its data field is echoed at whatever length the client sent, so no
-        # byte of the prefix says where the frame ends. The frame is lost and
-        # the one behind it is not.
+        # Return Query Data echoes the client's bytes, so no byte of the
+        # prefix says where the frame ends. It is lost; the next one is not.
         splitter = ModbusRtuSplitter(side=RtuSide.REQUEST)
 
         found = splitter.push(FC8_ECHO + FC3_REQUEST)
