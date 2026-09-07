@@ -7,6 +7,9 @@ from: the network, a frame that will not parse, and a peer answering with a
 Modbus exception code. Everything under ModbusProtocolError is one of those
 codes.
 
+A code appears twice by design: as a named constant where a class raises it,
+and as a number in prose where the specification publishes it.
+
 The tree is in the exception hierarchy section of docs/PLAYBOOK.md.
 """
 
@@ -14,8 +17,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from pyomb.defines import (
+    OMB_EXCEPTION_ACKNOWLEDGE,
+    OMB_EXCEPTION_GATEWAY_PATH_UNAVAILABLE,
+    OMB_EXCEPTION_GATEWAY_TARGET_DEVICE_FAILED_TO_RESPOND,
+    OMB_EXCEPTION_ILLEGAL_DATA_ADDRESS,
+    OMB_EXCEPTION_ILLEGAL_DATA_VALUE,
+    OMB_EXCEPTION_ILLEGAL_FUNCTION,
+    OMB_EXCEPTION_MEMORY_PARITY_ERROR,
+    OMB_EXCEPTION_SLAVE_DEVICE_BUSY,
+    OMB_EXCEPTION_SLAVE_DEVICE_FAILURE,
+)
+
 # The header type is needed for the annotation and not at runtime. Importing
-# it for real would close a cycle, since packets.py imports this module.
+# it for real would close a cycle, since the packets package imports this module.
 if TYPE_CHECKING:
     from pyomb.packets import ModbusHeader
 
@@ -112,7 +127,7 @@ class ModbusIllegalFunctionError(ModbusProtocolError):
 
     def __init__(self, fc: object) -> None:
         """Name the function code the peer refused."""
-        super().__init__(message=f"The function code {fc} is not valid", error_code=0x01)
+        super().__init__(message=f"The function code {fc} is not valid", error_code=OMB_EXCEPTION_ILLEGAL_FUNCTION)
 
 
 class ModbusIllegalDataAddressError(ModbusProtocolError):
@@ -140,7 +155,9 @@ class ModbusIllegalDataAddressError(ModbusProtocolError):
 
     def __init__(self, address: object) -> None:
         """Name the address, or address-and-length pair, that was refused."""
-        super().__init__(message=f"The data address {address} is not valid", error_code=0x02)
+        super().__init__(
+            message=f"The data address {address} is not valid", error_code=OMB_EXCEPTION_ILLEGAL_DATA_ADDRESS
+        )
 
 
 class ModbusIllegalDataValueError(ModbusProtocolError):
@@ -169,7 +186,9 @@ class ModbusIllegalDataValueError(ModbusProtocolError):
 
     def __init__(self, data_value: object) -> None:
         """Name the value the peer refused."""
-        super().__init__(message=f"The data value {data_value} is not valid", error_code=0x03)
+        super().__init__(
+            message=f"The data value {data_value} is not valid", error_code=OMB_EXCEPTION_ILLEGAL_DATA_VALUE
+        )
 
 
 class ModbusSlaveDeviceFailureError(ModbusProtocolError):
@@ -190,7 +209,10 @@ class ModbusSlaveDeviceFailureError(ModbusProtocolError):
 
     def __init__(self) -> None:
         """Report exception code 0x04, an unrecoverable failure on the peer."""
-        super().__init__(message="The slave device failed to perform the requested action", error_code=0x04)
+        super().__init__(
+            message="The slave device failed to perform the requested action",
+            error_code=OMB_EXCEPTION_SLAVE_DEVICE_FAILURE,
+        )
 
 
 class ModbusAcknowledgeError(ModbusProtocolError):
@@ -216,7 +238,10 @@ class ModbusAcknowledgeError(ModbusProtocolError):
 
     def __init__(self) -> None:
         """Report exception code 0x05, a request accepted and still running."""
-        super().__init__(message="The slave device acknowledged the request but is processing it", error_code=0x05)
+        super().__init__(
+            message="The slave device acknowledged the request but is processing it",
+            error_code=OMB_EXCEPTION_ACKNOWLEDGE,
+        )
 
 
 class ModbusSlaveDeviceBusyError(ModbusProtocolError):
@@ -239,7 +264,10 @@ class ModbusSlaveDeviceBusyError(ModbusProtocolError):
 
     def __init__(self) -> None:
         """Report exception code 0x06, a peer that wants the request retried."""
-        super().__init__(message="The slave device is busy processing a long-duration command", error_code=0x06)
+        super().__init__(
+            message="The slave device is busy processing a long-duration command",
+            error_code=OMB_EXCEPTION_SLAVE_DEVICE_BUSY,
+        )
 
 
 class ModbusMemoryParityError(ModbusProtocolError):
@@ -265,7 +293,9 @@ class ModbusMemoryParityError(ModbusProtocolError):
 
     def __init__(self) -> None:
         """Report exception code 0x08, a consistency check the peer failed."""
-        super().__init__(message="The slave device detected a parity error in memory", error_code=0x08)
+        super().__init__(
+            message="The slave device detected a parity error in memory", error_code=OMB_EXCEPTION_MEMORY_PARITY_ERROR
+        )
 
 
 class ModbusGatewayPathUnavailableError(ModbusProtocolError):
@@ -288,7 +318,10 @@ class ModbusGatewayPathUnavailableError(ModbusProtocolError):
 
     def __init__(self) -> None:
         """Report exception code 0x0A, a gateway with no path to allocate."""
-        super().__init__(message="The gateway could not find the path to the target device", error_code=0x0A)
+        super().__init__(
+            message="The gateway could not find the path to the target device",
+            error_code=OMB_EXCEPTION_GATEWAY_PATH_UNAVAILABLE,
+        )
 
 
 class ModbusGatewayTargetDeviceFailedToRespondError(ModbusProtocolError):
@@ -310,7 +343,10 @@ class ModbusGatewayTargetDeviceFailedToRespondError(ModbusProtocolError):
 
     def __init__(self) -> None:
         """Report exception code 0x0B, a target that never answered the gateway."""
-        super().__init__(message="The gateway received no response from the target device", error_code=0x0B)
+        super().__init__(
+            message="The gateway received no response from the target device",
+            error_code=OMB_EXCEPTION_GATEWAY_TARGET_DEVICE_FAILED_TO_RESPOND,
+        )
 
 
 class ModbusNetworkError(ModbusBaseError):
