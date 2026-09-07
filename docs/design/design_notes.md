@@ -266,8 +266,7 @@ RtuFramer
 
 **RTU** uses the unit address, PDU and CRC. The specification separates
 frames by silence on the line, but a program cannot observe that timing
-reliably, so the boundary is worked out from the content instead -- see
-section 27.
+reliably, so the boundary is worked out from the content instead.
 
 The Modbus PDU should not need to know which framer is being used.
 
@@ -394,9 +393,11 @@ implementation.
 RTU makes the Channel abstraction particularly valuable.
 
 An RTU frame carries no length field, and detection was proposed here as
-a timing question. It is a content question, and section 27 carries the
-mechanism. The timing concepts below stay useful for generating traffic,
-which is what the rest of this section is about.
+a timing question. It is a content question: the function code names a
+class, that class states how long the frame is, and the checksum at that
+boundary confirms the answer or rejects it. The timing concepts below stay
+useful for generating traffic, which is what the rest of this section is
+about.
 
 PyOMB should understand concepts such as:
 
@@ -846,195 +847,3 @@ The long-term differentiator is simple:
 > **If an implementation claims to speak Modbus, PyOMB should be able to
 > determine how well it speaks Modbus --- including when the other side
 > does everything wrong.**
-
-## 27. RTU Frame Splitting
-
-Section 5 says how a message is separated on the wire. This section says
-how a reader finds that separation when the wire is RTU.
-
-An RTU frame carries no length field and no start marker, only a trailing
-CRC. A boundary therefore has to be worked out from the content: look the
-PDU class up from the function code, ask it how long its frame is, and
-check the CRC there. The size depends on the direction, and the byte that
-would supply the direction does not.
-
-A server echoes the request's function code unchanged in a normal
-response, so the same byte appears in both directions. Only an exception
-response differs, carrying the code with its top bit set. The two
-directions are laid out differently:
-
-``` text
-function code 0x03
-  as a request    >BHH       fixed, 5 bytes
-  as a response   >BB{0}H    2 bytes, plus the byte count it declares
-```
-
-So the direction is needed to get the length, and the obvious way to get
-the direction -- alternating request, response, request -- needs frames
-that have already been split.
-
-### The CRC breaks the circle
-
-Nothing has to resolve the direction in advance if the checksum settles
-it. An oracle predicts a side, the splitter sizes on the prediction, and
-the CRC at the computed boundary reports whether the prediction was
-right. A wrong prediction puts the boundary in the wrong place, so the
-CRC fails there, and that failure is the signal to discard a byte and
-start again.
-
-``` text
-   +-------------------+     side     +--------------------+
-   |      oracle       | -----------> |      splitter      |
-   |  predicts a side  |              |   sizes on it      |
-   +-------------------+              +--------------------+
-             ^                                  |
-             |                                  v
-             |                        +--------------------+
-             |     a frame, or one    |        CRC         |
-             +---- byte to discard ---|    adjudicates     |
-                                      +--------------------+
-```
-
-This is what removes the need for length heuristics. A rule such as "a
-read request is always eight bytes" answers the same question, less
-reliably, and is wrong in the case below.
-
-### Worked example
-
-The specification's Read Holding Registers response, slave 0x11 returning
-three registers. Both sizings are shown against the same eleven bytes.
-
-``` text
-  Sized as a request -- fixed >BHH, so the unit is 5 bytes
-
-      11 03 06 AE 41 56 | 52 43 | 40 49 AD ...
-      \_______________/   \___/
-       CRC computed       read as the CRC     96 5D expected
-       over these                             52 43 found      rejected
-
-  Sized as a response -- 2 bytes plus the declared count of 6
-
-      11 03 06 AE 41 56 52 43 40 | 49 AD |
-      \________________________/   \___/
-       CRC computed over these     the CRC  49 AD expected
-                                            49 AD found        accepted
-```
-
-Read as a request the reader stops at offset 8 and compares against
-register data. It discards the leading byte and tries again. Read as a
-response it takes the declared byte count, stops at offset 11, and the
-CRC lands.
-
-### Two objects, because only one of them guesses
-
-ADR-052 settles that an RTU reader is told which side it decodes rather
-than inferring it per message. A sniffer that infers looks like a
-reversal of that, and is not, provided the inferring lives in a second
-object.
-
-``` text
-ModbusRtuSplitter(side=...)   told at construction; a client reading its
-                              server, or a server reading its client.
-                              No heuristics and no clock
-
-ModbusRtuSniffer()            supplies the side from the oracle below;
-                              passive monitoring, where nobody has told
-                              anyone anything
-```
-
-The splitter is still told which side it decodes. The sniffer is the
-thing doing the telling, so this stacks a decision on ADR-052 rather than
-correcting it.
-
-### The splitter loop
-
-``` text
-1. Fewer than four bytes held -- the shortest legal frame -- wait
-2. Look the PDU class up from the function code, in this splitter's side
-3. Ask expected_size(). None means the count field has not arrived; wait.
-   A raise means the layout states no size at all -- see below
-4. The frame runs 1 + size + 2 bytes. Fewer held than that, wait
-5. CRC over all but the last two matches those two -- emit the frame,
-   drop those bytes, go again
-6. It does not -- drop the leading byte, count the discard, back to 1
-```
-
-The splitter opens no socket and no serial port, so it belongs beside the
-packet classes rather than in the transport module. A serial byte source
-feeds it; section 7 covers that half.
-
-### Diagnostics and Encapsulated Interface cannot be sized
-
-Function codes 0x08 and 0x2B lead with a sub-function and an interface
-type. Those discriminate; they do not count, so no byte of the prefix
-says where the frame ends and `expected_size` raises rather than
-guessing. A splitter that knows only the six steps above stops dead on
-the first one to cross the bus.
-
-| Option | Costs | Risks |
-| --- | --- | --- |
-| Raise to the caller | nothing | one such frame stalls a sniffer permanently |
-| Try every length in a window | one CRC per candidate | about one false accept in 65,536 per candidate |
-| Treat as unsplittable, resync past it | nothing | that frame is lost, the stream survives |
-| A sub-function table for 0x08 | one table | covers most sub-functions, not all |
-
-The proposal is the last two together: size what the table knows, discard
-and resynchronise past what it does not, and count the discarded bytes so
-the loss is reportable rather than silent.
-
-### The oracle
-
-Certainties first, alternation second.
-
-``` text
-  checked before the state is consulted
-    fc >= 0x80    ->  response  (only a server sends an exception)
-    addr == 0x00  ->  request   (broadcast; no answer follows)
-
-  +-----------+
-  |  SYNCING  |  try the predicted side, then the other;
-  +-----------+  whichever CRC lands wins
-        |
-        | a side confirmed
-        v
-  +------------------+  --- emits a request --->  +------------------+
-  | EXPECT_REQUEST   |                            | EXPECT_RESPONSE  |
-  +------------------+  <-- emits a response ---  +------------------+
-        ^                                                  |
-        +----------------- timeout ------------------------+
-```
-
-Two cases stay ambiguous whatever the oracle does, and both are
-properties of the protocol rather than gaps in this design:
-
-``` text
-Read Coils, three bytes of data
-  request    11 01 00 13 00 25 0E 84
-  response   11 01 03 CD 6B B2 00 64
-  both are eight-byte frames with a valid CRC, so length separates
-  nothing here
-
-Write Single Coil, Write Single Register
-  the specification defines the response as an echo of the request, so
-  the two directions are the same bytes
-```
-
-Alternation resolves both. A single frame in isolation does not.
-
-### Which timing is usable
-
-The specification separates frames by roughly 3.5 character times of
-silence. A program cannot observe that: a UART, a USB converter and a
-driver buffer have each buffered the bytes before the process sees them,
-so arrival times are not transmission times. That is why the boundary
-above comes from content, and it is why section 9's detection claim is
-corrected there rather than restated here.
-
-A response timeout is a different measurement. At a second or so it sits
-well above the buffering noise, and it recovers a state machine left
-waiting on a server that never answered. The clock is injected, so the
-recovery is testable without sleeping.
-
-The deliberate-violation half of section 9 is untouched. Emitting
-non-compliant timing to exercise somebody else's client needs no reliable
-receive timing at all, and it is what a simulator is for.
