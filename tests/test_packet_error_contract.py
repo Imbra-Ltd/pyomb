@@ -112,7 +112,10 @@ class SkippingCrcVerificationKeepsTheErrorHandling(unittest.TestCase):
     def test_the_toggle_exists_on_the_rtu_packets(self):
         """The list is collected, so an empty one would pass the test below silently."""
 
-        self.assertEqual(sorted(cls.__name__ for cls in self.classes), ["ModbusRtuRequest", "ModbusRtuResponse"])
+        self.assertEqual(
+            sorted(cls.__name__ for cls in self.classes),
+            ["ModbusRtuPacket", "ModbusRtuRequest", "ModbusRtuResponse"],
+        )
 
     def test_an_unverified_frame_that_cannot_be_decoded_is_still_refused(self):
         """Without the toggle the checksum check rejects first, so this path needs it off."""
