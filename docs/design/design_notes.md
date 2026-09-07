@@ -1,34 +1,100 @@
 # PyOMB Architecture Direction
 
-> **Pruned 2026-09-07.** This note is a proposal and binds nothing;
-> ADR-035 settled what it contributes. Modbus ASCII is removed at the
-> owner's direction, and every refused capability now carries a marker
-> in place of its proposal: validation modes (ADR-031 rule 6), and
-> deterministic fuzzing, capture and replay, proxy mode, PCAP export
-> and the conformance framework (ADR-035 rule 2). The headings are
-> kept so the section numbers cited by ADR-031, ADR-035 and ADR-036
-> still resolve. ADR-035 describes this file as it stood before this
-> pruning, including its length.
+> **Updated 2026-09-07.** At the owner's direction, this note now separates
+> the open `pyomb` library from the proposed paid `pyomb-workbench`
+> application. It describes design direction, not implemented APIs or a
+> release commitment. ADR-035 records the earlier scope decision; capture,
+> replay, proxy operation and PCAP integration remain outside this library.
+> Modbus ASCII, validation modes, deterministic fuzzing and the conformance
+> framework remain excluded as recorded below. Existing section numbers
+> are preserved so earlier references still resolve.
 
 ## 1. Project Philosophy
 
-PyOMB is a **testing-first Modbus library that is also suitable for
-production use**.
+PyOMB is a **simple Modbus library for rapid prototyping, device simulation
+and protocol testing**. It keeps a testing-first approach and full control
+of the wire while supporting ordinary Modbus communication.
 
 The guiding principle should be:
 
 > **PyOMB should make every valid Modbus interaction easy to produce and
 > every invalid Modbus interaction possible to produce deliberately.**
 
-PyOMB should therefore not attempt to compete with general-purpose
-Modbus libraries purely on convenience APIs. Its differentiation should
-come from exposing and controlling the Modbus wire protocol while still
-providing a clean production API.
+Rapid prototyping is part of the identity: a new user should reach a first
+working exchange or simulated device in minutes. Simple common operations
+and detailed wire control should coexist, so the same small prototype can
+grow into a device simulation or a test for an unusual failure.
 
 A useful positioning is:
 
 > **PyModbus: Talk Modbus correctly.**\
-> **PyOMB: Find out what happens when Modbus isn't correct.**
+> **PyOMB: Start in minutes. Prototype, simulate and test with wire control.**
+
+### Rapid prototyping: start in minutes
+
+The first experience should need only the documented Python prerequisites,
+installation and one small, runnable example. A local client/server example
+should work without a physical Modbus device or a separately managed service.
+
+- Provide complete examples that start a local simulator, exchange a request
+  and show a value. Let the operating system assign a free local port, and
+  make cleanup part of the example.
+- Give common operations sensible defaults and short constructors. A caller
+  should not need to assemble every transport, framer and channel by hand.
+- Make a small register map and a simple response handler enough to prototype
+  a device. Expose advanced timing, transport and fault settings when needed.
+- Let users extend the same Python script from a normal exchange to stateful
+  behavior and deliberate faults, without adopting an application framework
+  or buying a workbench license.
+
+Treat starting in minutes as a usability target to validate. Observe a new
+user following the quick start from the documented prerequisites to the
+first visible result, and record elapsed time and setup obstacles. The note
+does not claim a measured onboarding time today.
+
+### Open library and paid application
+
+`pyomb` remains an independently useful open library under its MIT license.
+Python users can build and run their own tests, control both simulated peers,
+and deliberately produce invalid traffic without a workbench license.
+
+`pyomb-workbench` is a proposed paid application in a separate product
+repository. Its product concept lives in the `imbra-explore` knowledge base.
+Capture, proxy and replay belong to one integrated application, with the
+workflow: capture a problem, reproduce it in the lab, and compare the fix.
+
+``` text
+pyomb                         OPEN -- this repository
+|-- Packet encoding, decoding and inspection
+|-- Transport and wire controls
+|-- Scriptable client and server
+|-- Python handlers, response sequences and faults
+`-- Public observation hooks and capture format
+             ^
+             | imports the public API
+             |
+pyomb-workbench               PAID -- separate product repository
+|-- Sniffer and session recording
+|-- Proxy with configurable fault rules
+|-- Session replay and comparison
+|-- Visual device and scenario editor
+|-- Device profiles and recording-to-simulator conversion
+`-- Test reports
+```
+
+This diagram assigns responsibilities; it does not claim every item exists.
+The codec, TCP stream, TLS settings and configurable simulators already ship.
+The richer handler and sequence APIs below, public observation hooks, and a
+capture format are proposed extensions. The workbench is a product concept.
+
+The workbench should consume the library's public API and share its protocol
+implementation. Reusable protocol improvements belong in `pyomb`; capture
+backends, session storage, application interfaces and commercial dependencies
+belong in the workbench. Nothing in the library should import the workbench.
+
+Add hooks or shared formats when a concrete scripting or workbench workflow
+requires them. Document a capture format publicly so ordinary scripts can
+read and produce it; recording and replay applications remain separate.
 
 ## 2. Main Capabilities
 
@@ -68,7 +134,9 @@ Normal production Modbus communication:
 ### SIMULATE
 
 Programmable Modbus clients and servers for device and system
-simulation.
+simulation. Their Python scripting interfaces remain in the open library.
+Visual behavior editing and generating device profiles from recordings
+belong in the workbench.
 
 ### TEST
 
@@ -86,11 +154,16 @@ Protocol testing capabilities including:
 
 ### OBSERVE
 
-Tools for understanding existing Modbus communication:
+Library functions for understanding supplied Modbus bytes and observing
+communication through its own transports:
 
 -   packet inspection
 -   protocol decoding
--   traffic mutation
+-   proposed observation hooks exposing direction, raw bytes and timing
+
+Passive sniffing of external traffic, capture setup, session storage and
+searchable timelines belong in the workbench. Packet mutation remains a
+library testing capability under TEST.
 
 ## 3. Architectural Layers
 
@@ -417,8 +490,13 @@ independently.
 
 ## 13. Scriptable Server
 
-The server should support normal production-style handlers but also
-deliberately abnormal behavior.
+The scriptable server belongs in the open library, alongside the scriptable
+client. Python handlers should control register values, state, response
+sequences, delays, malformed responses and disconnects. These capabilities
+should remain usable from ordinary test scripts without the workbench.
+
+The existing configurable server is the starting point. The fluent APIs
+below illustrate proposed extensions; they are not current callable APIs.
 
 ``` python
 server.when(
@@ -453,9 +531,17 @@ server.when(fc=3).sequence(
 This makes it possible to test recovery behavior of PLCs, SCADA systems,
 gateways, and Modbus libraries.
 
+The workbench should use this same execution engine for its visual device
+editor, curated device profiles and recording-to-simulator conversion.
+For example, responding normally twice and then timing out is library
+behavior; deriving that behavior from a recording is a workbench workflow.
+
 ## 14. Scenario Framework
 
-Testing behavior should eventually be expressible as scenarios.
+Python tests should remain free to compose library operations and assertions.
+The scenario API below is a proposal for making those scripts easier to read.
+It does not require the paid application. Visual scenario editing, managing
+test campaigns, comparing runs and producing reports belong in the workbench.
 
 ``` python
 scenario = Scenario("invalid-length")
@@ -500,21 +586,50 @@ resolve.
 
 ## 16. Capture and Replay
 
-Refused. ADR-035 rule 2 neither adopts nor tracks a capability that
-traces to no requirement this project has stated. The heading is kept
-so that the section numbers cited by the decision records still
-resolve.
+Session recording and replay belong in `pyomb-workbench`. The application
+should record or import an exchange, reproduce a selected peer's behavior,
+and compare the resulting responses with the original evidence.
+
+The library supplies packet decoding, explicit byte transmission, wire
+controls and programmable peers. Observation hooks and a shared capture
+format should be added when this workflow needs them. The format should
+carry raw bytes, direction, timestamps and connection identity; decoded
+fields are derived information. Undecodable or malformed bytes must survive.
+
+The workbench owns persistent sessions, capture import, replay scheduling,
+peer-role selection, request matching, identifier adaptation and comparisons.
+Replay needs explicit choices about device state, response waits and intended
+timing. Reusing a capture does not promise identical TCP segmentation or
+exact timing on a different host.
+
+The existing buffered receiver consumes a connected socket and holds parsed
+packets. It is not a passive sniffer or a durable session recorder. Simple
+recording and resend examples can remain in the library's examples without
+making it responsible for the workbench's complete replay workflow.
 
 ## 17. Proxy Mode
 
-Refused. ADR-035 rule 2 neither adopts nor tracks a capability that
-traces to no requirement this project has stated. The heading is kept
-so that the section numbers cited by the decision records still
-resolve.
+The inline proxy belongs in `pyomb-workbench`. It should combine observation,
+recording and conditional fault rules against real implementations, using
+the library's raw-byte, mutation and wire-control capabilities.
+
+The workbench owns both connection lifecycles, bidirectional forwarding,
+bounded buffering, rule execution and the record of each intervention.
+Unmodified forwarding should preserve application bytes, including malformed
+traffic. Rules that wait for a complete frame can change timing; this is
+different from forwarding arriving bytes immediately.
+
+Reusable delays, fragmentation, packet modification and simulator faults
+remain available through the open Python API. A managed proxy service and
+its rule editor are application responsibilities.
 
 ## 18. Packet Inspection
 
-Packets should be highly introspectable.
+Packets should be highly introspectable through the open library. Decoding
+supplied bytes and reporting field values or violations require no paid
+application. Programmatic register maps and simulator state belong in the
+open library. Searchable session views, visual register-map editors and
+curated device-specific interpretation profiles belong in the workbench.
 
 Suggested API:
 
@@ -542,15 +657,20 @@ Modbus TCP Request
 
 ## 19. PCAP / Wireshark Integration
 
-Refused. ADR-035 rule 2 neither adopts nor tracks a capability that
-traces to no requirement this project has stated. The heading is kept
-so that the section numbers cited by the decision records still
-resolve.
+Passive capture and PCAP import/export belong in `pyomb-workbench`.
+Capture backends and external-stream reconstruction should remain outside
+the library's runtime dependencies. The workbench passes extracted Modbus
+bytes to the shared codec and retains the original capture evidence.
+
+The library should expose enough packet information for external tools to
+use it through the public API. Adding a capture backend or a file-format
+adapter does not require duplicating the protocol implementation.
 
 ## 20. Production API
 
-Despite the testing-first design, normal Modbus operation should remain
-simple.
+Normal Modbus operation should fit a short prototype script. Common client
+and server constructors should supply sensible defaults; explicit layer
+composition remains available for callers who need more control.
 
 ``` python
 with ModbusTcpClient("10.0.0.10") as client:
@@ -651,6 +771,12 @@ A possible roadmap is:
 The exact version numbers are less important than maintaining the
 architectural progression.
 
+The workbench has a separate validation step before a broad implementation:
+try one paid pilot around a real failure, from capture import through lab
+reproduction to a comparison report. This is a proposed next step; no pilot,
+customer commitment, price or delivery date is established here. Add shared
+library capabilities as that concrete workflow requires them.
+
 ## 25. Core Design Rules
 
 1.  **PDU semantics must be independent of transport.**
@@ -660,27 +786,33 @@ architectural progression.
 5.  **Serialization must not automatically imply validation.**
 6.  **Normal production usage must remain simple.**
 7.  **Fault injection should be deterministic and reproducible.**
-8.  Refused by ADR-035 rule 2; the rule proposed here was that real
-    traffic be capturable and replayable. The number is kept so the
-    rules below it do not renumber.
+8.  Capture and replay workflows belong in the workbench. Any shared
+    observation hooks and capture format remain open for Python scripts.
 9.  **Custom/vendor behavior should be easy to implement.**
 10. **Avoid unnecessary runtime dependencies.**
 11. **Convenience clients should wrap common primitives rather than
     duplicate implementations.**
 12. **Wire-level visibility should remain available at every level.**
+13. Scriptable clients, servers and reusable fault controls remain in the
+    open library; application workflows use the same public API.
+14. Make a first working exchange or simulated device possible in minutes,
+    with sensible defaults and advanced configuration available when needed.
 
 ## 26. Target Identity
 
-PyOMB should not become merely another Modbus client library.
+PyOMB should combine a quick start with the control needed for detailed
+protocol experiments.
 
 Its identity should be:
 
-> **A production-capable, wire-level Modbus protocol testing and
-> simulation toolkit.**
+> **A simple Modbus toolkit for rapid prototyping, simulation and protocol
+> testing, with full control of the bytes on the wire.**
 
 The most important combination of capabilities is:
 
 ``` text
+Quick start and sensible defaults
+     +
 Raw packets
      +
 Transport abstraction
@@ -699,6 +831,10 @@ Fault injection
 That creates a coherent platform where the same protocol implementation
 can be used for normal production communication, device simulation,
 debugging and robustness testing.
+
+`pyomb-workbench` builds the paid capture, proxy, replay and reporting
+workflows on this foundation. It should make reproducing and investigating
+failures easier while leaving the library useful to independent Python users.
 
 The long-term differentiator is simple:
 
