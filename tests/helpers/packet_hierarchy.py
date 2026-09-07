@@ -24,8 +24,10 @@ def packet_classes():
     for name in dir(packets):
         candidate = getattr(packets, name)
 
-        # A class imported into the module is somebody else's contract
-        if not inspect.isclass(candidate) or candidate.__module__ != packets.__name__:
+        # Match the package prefix, not the package: the classes live in
+        # its submodules and report those as their module.
+        own = inspect.isclass(candidate) and candidate.__module__.startswith(packets.__name__)
+        if not own:
             continue
 
         if issubclass(candidate, ModbusPacketAbc):

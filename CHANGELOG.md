@@ -14,6 +14,10 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `pyomb.packets` is a package rather than one module. Every name it exported
+  is re-exported, so imports are unchanged; code filtering packet classes on
+  `__module__` equalling `pyomb.packets` must match the prefix instead.
+
 - The server simulator answers a frame whose header parsed and whose PDU did
   not with exception code 0x03 and keeps the connection, where it previously
   dropped the peer. A header that will not parse still drops. See #352, ADR-049

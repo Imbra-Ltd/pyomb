@@ -51,7 +51,9 @@ def examples_by_name():
 
     found = {}
 
-    for info in pkgutil.iter_modules(pyomb.__path__, pyomb.__name__ + "."):
+    # walk_packages rather than iter_modules: the packet classes live in
+    # a package, and the shallow walk stops at its __init__.
+    for info in pkgutil.walk_packages(pyomb.__path__, pyomb.__name__ + "."):
         module = importlib.import_module(info.name)
 
         for test in doctest.DocTestFinder().find(module):
