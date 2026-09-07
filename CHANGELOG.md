@@ -8,6 +8,10 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `ModbusPdu.expected_size()`, reporting how many bytes a PDU occupies from
+  the start of a frame, before anything has parsed it. Returns `None` where
+  the prefix is too short, and raises for a layout carrying no count. See #231
+
 - `ModbusRtuPacket`, the RTU counterpart to `ModbusTcpPacket`. It reads a
   frame without being told whether the frame is a request or a response, and
   verifies the checksum on read. See #231
