@@ -1462,6 +1462,47 @@ fence pattern, the tool list or the document list drifted, so the comparison
 would have read almost nothing. The comparison failing names the document, the
 line, both path sets and the command.
 
+### 3.28 Numbered heading collisions (pytest)
+
+```bash
+pytest checks/test_numbered_headings_do_not_collide.py
+```
+
+A numbered section opens where the one above it left off. This document
+reached `main` carrying two sections numbered 3.21 and two numbered 3.22, in
+two separate pull requests, each of which appended a section and picked the
+next number after the last one it had seen rather than the last one in the
+file.
+
+Nothing reported it. Each change was individually correct, and a diff that
+appends one section shows no part of the document where the collision lives --
+so review reads a correct diff and the suite reads a document it never
+numbered.
+
+A duplicate is worse than a dangling reference, which is why this is a gate
+rather than a release step. A record citing 3.22 pointed past the end of the
+document before the collision, which a reader notices at once. Afterwards it
+resolved to a real section about something else, which a reader does not
+notice at all.
+
+It reads every tracked Markdown document, groups each numbered heading under
+its parent and heading level, and reports a number that repeats or skips its
+neighbour, naming both lines. Three things it deliberately reads past:
+
+- `docs/specs/` holds published documents copied in whole. Their numbering
+  belongs to whoever wrote them, and the tutorial among them carries a
+  duplicate this project does not own
+- A heading spanning a range, `### 1 to 3. Title`, covers all three, so the
+  heading after it opens at four
+- A run is compared against its own last value only, so a document whose first
+  section is not numbered one is left alone
+
+Two reds are worth telling apart, as in 3.22. The floor failing means the
+heading pattern drifted from the convention the documents use, or a document
+was written and not staged, so the rule would have read almost nothing. The
+rule failing names the offending heading, the one it collides with, and the
+line each sits on.
+
 ## 4. Maintenance
 
 ### 4.1 Bump the templates submodule
