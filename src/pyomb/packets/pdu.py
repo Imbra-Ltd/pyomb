@@ -1781,6 +1781,17 @@ class ModbusResponseFC7(ModbusPdu):
         return cls(status=pdu[1])
 
 
+# Modbus Application Protocol v1.1b3 section 6.8.1 enumerates the Diagnostics
+# sub-function codes. Every value the table does not list is reserved.
+_DIAGNOSTIC_SUB_FUNCTIONS = frozenset(
+    {0x00, 0x01, 0x02, 0x03, 0x04, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x14}
+)
+
+# The set as the table renders it, so a finding reads back against the
+# document rather than against a list of fifteen numbers.
+_DIAGNOSTIC_SUB_FUNCTION_RULE = "0x0000 to 0x0004, 0x000A to 0x0012, or 0x0014"
+
+
 class ModbusRequestFC8(ModbusPdu):
     """Request FC8 PDU (Diagnostics).
 
@@ -1809,7 +1820,8 @@ class ModbusRequestFC8(ModbusPdu):
     PDU_FORMAT = ">BH{0}H"
     PDU_ID = 0x0008
 
-    # The specification states no bound on this packet's fields.
+    # The specification's rule here names a value set, so it lives in
+    # violations() below rather than in a range.
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("sub_func",)
     PDU_TAIL = "subfunc_data"
@@ -1828,6 +1840,22 @@ class ModbusRequestFC8(ModbusPdu):
     def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT.format(len(self.subfunc_data)))
+
+    def violations(self) -> tuple[ModbusViolation, ...]:
+        """Report the bounds, and the sub-function set the specification enumerates.
+
+        Modbus Application Protocol v1.1b3 section 6.8.1: the table lists the
+        sub-function codes; every other value in the field is reserved.
+
+        Returns:
+            tuple : The findings, empty when the packet is conforming
+        """
+        found = list(super().violations())
+
+        if self.sub_func not in _DIAGNOSTIC_SUB_FUNCTIONS:
+            found.append(self._finding("sub_func", _DIAGNOSTIC_SUB_FUNCTION_RULE))
+
+        return tuple(found)
 
     def serialize(self) -> bytes:
         """Serialize the request FC8 PDU to a stream of bytes.
@@ -1905,7 +1933,8 @@ class ModbusResponseFC8(ModbusPdu):
     PDU_FORMAT = ">BH{0}H"
     PDU_ID = 0x8008
 
-    # The specification states no bound on this packet's fields.
+    # The specification's rule here names a value set, so it lives in
+    # violations() below rather than in a range.
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("sub_func",)
     PDU_TAIL = "subfunc_data"
@@ -1924,6 +1953,22 @@ class ModbusResponseFC8(ModbusPdu):
     def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT.format(len(self.subfunc_data)))
+
+    def violations(self) -> tuple[ModbusViolation, ...]:
+        """Report the bounds, and the sub-function set the specification enumerates.
+
+        Modbus Application Protocol v1.1b3 section 6.8.1: the table lists the
+        sub-function codes; every other value in the field is reserved.
+
+        Returns:
+            tuple : The findings, empty when the packet is conforming
+        """
+        found = list(super().violations())
+
+        if self.sub_func not in _DIAGNOSTIC_SUB_FUNCTIONS:
+            found.append(self._finding("sub_func", _DIAGNOSTIC_SUB_FUNCTION_RULE))
+
+        return tuple(found)
 
     def serialize(self) -> bytes:
         """Serialize the response FC8 PDU to a stream of bytes.

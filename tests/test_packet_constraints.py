@@ -25,11 +25,13 @@ from pyomb.packets import (
     ModbusRequestFC1,
     ModbusRequestFC3,
     ModbusRequestFC5,
+    ModbusRequestFC8,
     ModbusRequestFC15,
     ModbusRequestFC16,
     ModbusRequestFC23,
     ModbusRequestFC43,
     ModbusResponseFC3,
+    ModbusResponseFC8,
     ModbusRtuRequest,
     ModbusTcpRequest,
     ModbusViolation,
@@ -38,6 +40,27 @@ from pyomb.packets import (
 # Every module of the package: __init__ declares no class, so reading it
 # alone would report every class as not declaring its own LIMITS.
 SOURCE = sorted(pathlib.Path(packets.__file__).parent.glob("*.py"))
+
+
+# The Diagnostics sub-function codes of Modbus Application Protocol v1.1b3
+# section 6.8.1, typed from the table rather than read from the package.
+DIAGNOSTIC_SUB_FUNCTIONS = (
+    0x00,
+    0x01,
+    0x02,
+    0x03,
+    0x04,
+    0x0A,
+    0x0B,
+    0x0C,
+    0x0D,
+    0x0E,
+    0x0F,
+    0x10,
+    0x11,
+    0x12,
+    0x14,
+)
 
 
 class ASpecificationExampleIsConforming(unittest.TestCase):
@@ -155,6 +178,28 @@ class ARuleAcrossFieldsIsNotABound(unittest.TestCase):
         wrong = ModbusRequestFC5(output_address=0, output_value=0x0001)
 
         self.assertEqual([finding.field for finding in wrong.violations()], ["output_value"])
+
+    def test_diagnostics_takes_a_sub_function_the_table_lists(self):
+        # The table enumerates fifteen codes and reserves the rest, which is a
+        # third shape: not a range, and not a rule tying two fields together.
+        for listed in DIAGNOSTIC_SUB_FUNCTIONS:
+            self.assertEqual(ModbusRequestFC8(sub_func=listed, subfunc_data=[0]).violations(), ())
+            self.assertEqual(ModbusResponseFC8(sub_func=listed, subfunc_data=[0]).violations(), ())
+
+    def test_diagnostics_reports_a_reserved_sub_function(self):
+        # 0x0005 falls in the table's own RESERVED row, 05 to 09.
+        wrong = ModbusRequestFC8(sub_func=0x0005, subfunc_data=[0])
+
+        self.assertEqual([finding.field for finding in wrong.violations()], ["sub_func"])
+
+    def test_diagnostics_reports_a_sub_function_past_the_table(self):
+        # Every code above 0x0014 is reserved, so this one is in no row.
+        findings = ModbusResponseFC8(sub_func=0x00FF, subfunc_data=[0]).violations()
+
+        # Read the whole tuple rather than its first entry: indexing an empty
+        # one raises where a comparison names what was found instead.
+        self.assertEqual([finding.field for finding in findings], ["sub_func"])
+        self.assertEqual([finding.value for finding in findings], [0x00FF])
 
     def test_device_identification_names_one_mei_type(self):
         self.assertEqual(ModbusRequestFC43(mei_type=0x0E, mei_data=[1]).violations(), ())

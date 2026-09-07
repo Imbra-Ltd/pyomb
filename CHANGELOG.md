@@ -14,6 +14,10 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- A Diagnostics packet reports a violation when its sub-function code is one
+  the Modbus Application Protocol v1.1b3 table reserves. A caller reading
+  `violations()` sees a finding where an empty tuple came back before. See #262
+
 - `pyomb.packets` is a package rather than one module. Every name it exported
   is re-exported, so imports are unchanged; code filtering packet classes on
   `__module__` equalling `pyomb.packets` must match the prefix instead.
