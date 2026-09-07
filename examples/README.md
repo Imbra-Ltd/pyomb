@@ -27,14 +27,13 @@ and nothing else can run all seven.
 
 The three socket examples ask the operating system for a free port by passing
 `port=0`, and read the assigned port back once the listener is up. The project
-README shows port 502 instead, which is the registered Modbus port and what a
-real device listens on.
+README's local quick start uses the same approach. Its fragmentation snippet
+uses port 502 for an already running server; `fragmented_send.py` starts its
+own simulator on an assigned port.
 
-The difference is deliberate, not a simplification. On Linux a port below 1024
-needs privileges, so an example fixed at 502 could not run in CI, and an
-example CI does not run is one nobody notices breaking. Every printed port
-below is therefore whatever the operating system handed out on that run and
-differs on yours.
+Using an assigned port avoids conflicts with an existing listener and the
+privileges a fixed low port can require. Every printed port below is whatever
+the operating system handed out on that run and differs on yours.
 
 ## The examples
 
@@ -144,6 +143,11 @@ python examples/fragmented_send.py
 Sends the request in 8-byte pieces and reassembles the reply by the length its
 header declares, rather than by whatever one `recv()` happened to return. The
 server simulator runs in-process on an operating-system-assigned port.
+
+On Windows, the bundled server can close the connection with `WinError 10035`
+while receiving a fragmented request. This local example can fail on that
+path. The README's transport snippet can instead target a separate Modbus
+server that accepts fragmented requests.
 
 Both simulators log to standard output, so the run prints protocol lines around
 the two shown here. Trimmed to the parts the example is about:
