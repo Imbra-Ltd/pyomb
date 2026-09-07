@@ -201,7 +201,10 @@ on the message text.
 
 ```text
 src/pyomb/              # The library
-  packets.py            # Codec: MBAP header, PDU classes, parser, frame wrappers
+  packets/              # Codec, split by data-flow stage
+    base.py             # Constraints and the abstract packet bases
+    pdu.py              # PDU classes, one pair per function code, and the parser
+    framing.py          # MBAP header, CRC helpers, TCP and RTU frame wrappers
   stream.py             # Transport: length-driven framing and fragmentation
   client_simulator.py   # Client simulator and request builder
   server_simulator.py   # Server simulator, select loop and response factory
