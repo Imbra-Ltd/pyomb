@@ -4503,3 +4503,41 @@ package, per ADR-002. See `README.md` for usage and
 - **Pending:** the submodule pin sits at `v2.79.0`, fifty-five commits behind
   its remote. It is off-limits, so the bump needs a proposal carrying a
   rollback strategy. Carried from the previous entry.
+
+## 2026-09-07 -- Correct the evening entry (late)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:** none to the tree. This entry exists to correct the one
+  above it, which was written before the session finished and carries two
+  claims that stopped being true afterwards.
+- **Correction:** the previous entry's **Upstream** line reads `none filed`.
+  Two issues were filed after it merged, both against
+  `braboj/solid-ai-templates` and both correcting a claim a bound template
+  makes rather than filling a gap in one. Issue 1601 reports that the
+  closing-keyword rule in `base-git` covers writing the negated form and not
+  quoting it, so an incident write-up re-fires the trap it describes. Issue
+  1602 reports that the module-split rule in `base-quality` claims the
+  unchanged suite is the split's regression oracle, which holds only while
+  nothing in the suite introspects module identity -- five sites here did.
+- **Correction:** the previous entry says issue 358 was closed in error and
+  reopened. It was then closed a second time, by the pull request carrying
+  that very entry: the body quoted the sentence from the first pull request
+  to explain the first closure, and the quotation fired the keyword again.
+  Reopened by hand at 10:19. The number is written without an adjacent
+  keyword from here on.
+- **PRs merged:** this entry's own.
+- **Issues closed/created:** none in this repository. Created 1601 and 1602
+  upstream.
+- **Lesson:** the checklist's rule that only the last pass writes the journal
+  entry is load-bearing, and this session broke it. The entry was written at
+  the first wrap-up, and the two items after it -- the upstream filings and
+  the reconciliation that caught the second closure -- both produced facts the
+  entry states wrongly. An entry's account is fixed once merged, so the cost
+  of writing it early is a second entry for one session, which is what this
+  is.
+- **Not done:** unchanged from the previous entry. The boilerplate collapse in
+  `pdu.py` is still open, and the bind-collision warnings issue 210 records
+  are still there.
+- **Pending:** unchanged. ADR-035 rule 1 forbids the split that merged as
+  #362 and no superseding record was written; the submodule pin sits at
+  `v2.79.0`, fifty-five commits behind, and is off-limits.
