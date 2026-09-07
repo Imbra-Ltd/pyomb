@@ -28,9 +28,8 @@ REQUEST_FRAME = b"\x11\x03\x00\x00\x00\x02\xc6\x9b"
 # 01 04 02 FF FF -- two bytes of input register data from slave 1, checksum B8 80.
 RESPONSE_FRAME = b"\x01\x04\x02\xff\xff\xb8\x80"
 
-# 01 83 02 -- slave 1 refuses an FC3 with ILLEGAL DATA ADDRESS. The function
-# code carries the exception bit, which is the one case the byte states a
-# direction.
+# 01 83 02 -- slave 1 refuses an FC3 with ILLEGAL DATA ADDRESS. The exception
+# bit is the one case where the function code states a direction.
 EXCEPTION_FRAME = b"\x01\x83\x02\xc0\xf1"
 
 
@@ -59,9 +58,8 @@ class TestReadingWithoutADirection(unittest.TestCase):
         self.assertEqual(packet.pdu.data, (2,))
 
     def test_the_payload_is_not_interpreted(self):
-        # The FC3 request's start address and quantity stay payload bytes
-        # rather than becoming fields, which is what makes one class able to
-        # read both directions.
+        # The start address and quantity stay payload bytes rather than
+        # becoming fields, which is what lets one class read both directions.
         packet = ModbusRtuPacket.deserialize(REQUEST_FRAME)
 
         self.assertFalse(hasattr(packet.pdu, "start_addr"))
