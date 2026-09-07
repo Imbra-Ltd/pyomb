@@ -4,38 +4,49 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-_A Modbus library built for testing other Modbus implementations._
+_A Python Modbus library for rapid prototyping, device simulation and protocol
+testing._
 
-Testing a Modbus device means sending it frames a well-behaved library will not
-send: a response split across three packets, a length field that disagrees with
-the payload, a checksum that does not match the bytes it covers.
+Use pyomb to communicate with a device, run a local simulator, or build and
+inspect Modbus packets. Start with a small Python script, then add custom
+behavior, response delays and deliberate protocol errors as your experiment
+grows.
 
-General-purpose Modbus libraries hide the wire. They assemble frames correctly,
-retry on your behalf, and give you back parsed values — which is what you want
-in production and exactly what you cannot use when the device under test is the
-thing you are trying to break.
-
-pyomb exposes the wire. It is a Modbus TCP and RTU codec, a length-driven
-stream transport with explicit fragmentation control, and a scriptable
-server/client pair, for engineers who need to drive another implementation
-through cases a compliant peer would never produce.
+Work with packet objects or raw bytes, with control over how messages are
+constructed and sent, using Python's standard library alone.
 
 ## Features
 
-- Encode and decode Modbus TCP and RTU frames, with the checksum computed from
-  the bytes on the wire rather than read from a stored field
-- Send a message in fragments of a chosen size, to exercise a peer's
-  reassembly
-- Reassemble a fragmented message by its declared length, rather than trusting
-  one socket read to deliver one frame
-- Run a scriptable server simulator that answers requests over plain TCP or TLS
-- Drive a client simulator that matches responses to requests by transaction
-  identifier and discards anything else
-- Raise Modbus exception codes as a Python exception hierarchy
-- Ask a packet which of the specification's constraints it breaks, and still
-  send it — the check reports, it never refuses, because putting a frame a
-  device rejects on the wire is how you grade the device
-- Depend on nothing outside the standard library
+> Note: the list below describes the target product. Not built in v0.6.0 —
+> serial RTU and RTU-over-TCP transport, client retries and reconnection,
+> server register maps and scripted response sequences, composed test
+> scenarios, traffic hooks and the capture format. Serial framing exists in
+> the codec only; reading frames off a serial line is tracked in
+> [#231](https://github.com/Imbra-Ltd/pyomb/issues/231).
+
+- **Modbus communication:** Connect over TCP, TLS, serial RTU or RTU-over-TCP,
+  with configurable timeouts, retries and reconnection.
+- **Scriptable server:** Define register maps, attach Python handlers and
+  model device state. Script response sequences, delays, exception replies,
+  malformed responses and disconnects.
+- **Scriptable client:** Build request sequences to prototype integrations
+  and exercise devices or local simulators from ordinary Python scripts.
+- **Packet codecs:** Build, encode and decode TCP and RTU packets, including
+  RTU checksum generation and verification.
+- **Wire controls:** Send and receive raw bytes, configure TCP write chunks
+  and control RTU timing. Inject delays, corruption, truncation and connection
+  failures to test how a peer recovers.
+- **Constraint checking:** Inspect protocol violations separately from
+  serialization, so deliberately invalid packets remain possible.
+- **Custom packet types:** Register additional request and response classes
+  with the PDU parser.
+- **Test scenarios:** Compose exchanges and assert responses, exceptions,
+  timeouts, disconnects and response times.
+- **Packet inspection and observation:** Inspect decoded fields and raw
+  bytes, and observe traffic through public hooks carrying direction and
+  timing. Exchange records using an open capture format.
+- **Lightweight core:** No runtime dependencies — TCP, TLS and packet
+  processing use the standard library alone.
 
 ## Quick start
 
@@ -48,50 +59,105 @@ record on GitHub, so install that:
 pip install https://github.com/Imbra-Ltd/pyomb/releases/download/v0.6.0/pyomb-0.6.0-py3-none-any.whl
 ```
 
-The [releases page](https://github.com/Imbra-Ltd/pyomb/releases) carries an
-sdist and a CycloneDX SBOM beside each wheel. Contributors install from a
-checkout instead; see [Development setup](#development-setup).
-
-Build a Modbus TCP request, serialize it, and read it back:
+Save this as `quickstart.py` and run it with `python quickstart.py`. It starts
+a local server, reads one holding register and shuts both peers down. No
+physical device is needed; the operating system chooses a free local port.
 
 ```python
-from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest
+from pyomb import ModbusClientSimulator, ModbusServerSimulator
 
-pdu = ModbusRequestFC1(start_addr=0, quantity=1)
-header = ModbusHeader(unit_id=1, length=len(pdu) + 1)  # +1 for the unit id
-packet = ModbusTcpRequest(header=header, pdu=pdu)
+server = ModbusServerSimulator(host="127.0.0.1", port=0)
+server.start()
+client = ModbusClientSimulator(host="127.0.0.1", port=server.port)
 
-print(packet.serialize().hex())
+try:
+    client.connect()
+    header, response = client.request(fc=3, read_address=0, read_count=1)
+    print(response)
+finally:
+    client.disconnect()
+    server.stop()
+    server.join(timeout=10)
 ```
 
-This prints the twelve bytes of the frame:
+The simulator returns its default register value, `65535`. Alongside the
+connection logs, the response prints as:
 
 ```text
-000000000006010100000001
+PDU: (FC: 03, Data: (2, 65535))
 ```
 
-Reading them in order: transaction identifier `0000`, protocol identifier
-`0000`, length `0006`, unit identifier `01`, function code `01`, start address
-`0000`, quantity `0001`.
+Change `read_address` or `read_count` to try another request, then add a
+register map or Python handler to model your device's behavior.
+
+The [releases page](https://github.com/Imbra-Ltd/pyomb/releases) carries an
+sdist and a CycloneDX software bill of materials (SBOM) beside each wheel.
+For installation from a checkout, see [Development setup](#development-setup).
 
 ## Usage
 
-The simulators log to standard output, so the runs below print protocol
-description lines alongside the values shown.
+The [examples guide](examples/README.md) contains additional runnable patterns
+and their output. Those scripts run offline and are exercised by CI.
 
-Each of the four snippets below has a runnable counterpart in
-[examples/](examples/), which CI executes on every change. The two that need a
-server bind a port the operating system assigns rather than 502, which is what
-lets them run without privileges; [examples/README.md](examples/README.md)
-indexes them with the output each produces.
+### Script the server
+
+In the quick start, insert one or both of these lines after `server.start()`:
+
+```python
+server.set_delay(0.2)
+server.set_fail(True)
+```
+
+The first adds a 200 ms response delay. The second makes the server return a
+Modbus exception response. Reset them with `server.set_delay(0)` and
+`server.set_fail(False)` to restore normal replies. For custom processing,
+attach a Python callback with `server.set_data_handler(handler)`.
+
+### Send a fragmented message
+
+For a Modbus server already listening on `localhost:502`, configure sends in
+8-byte chunks. TCP can combine or split writes, so these settings do not fix
+the boundaries of network packets. The receiver reassembles the response
+using the length declared in its header.
+
+```python
+import socket
+
+from pyomb.packets import ModbusHeader, ModbusRequestFC1
+from pyomb.packets import ModbusTcpRequest, ModbusTcpResponse
+from pyomb.stream import ModbusTcpStream
+
+pdu = ModbusRequestFC1(start_addr=0, quantity=1)
+header = ModbusHeader(unit_id=1, length=len(pdu) + 1)
+request = ModbusTcpRequest(header=header, pdu=pdu)
+
+with socket.create_connection(("localhost", 502), timeout=5) as sock:
+    stream = ModbusTcpStream(sock=sock, frag_size=8)
+    stream.send(request.serialize())
+
+    response = ModbusTcpResponse.deserialize(stream.receive())
+    print(response)
+```
+
+A response carrying one byte of coil data looks like:
+
+```text
+MODBUS TCP RSP -> | HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 4, Unit-ID: 1) | PDU: (FC: 01, Data: (1, 255))
+```
+
+For a version that starts its own local server, see
+[fragmented_send.py](examples/fragmented_send.py).
 
 ### Serialize and deserialize a packet
+
+Work directly with packet objects when you need to choose the header or
+payload fields yourself. This example needs no connection:
 
 ```python
 from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest
 
 pdu = ModbusRequestFC1(start_addr=0, quantity=1)
-header = ModbusHeader(unit_id=1, length=len(pdu) + 1)
+header = ModbusHeader(unit_id=1, length=len(pdu) + 1)  # Includes the unit ID
 packet = ModbusTcpRequest(header=header, pdu=pdu)
 
 packet_bytes = packet.serialize()
@@ -105,67 +171,7 @@ The round trip reproduces the original frame:
 MODBUS TCP REQ -> | HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 6, Unit-ID: 1) | PDU: (FC: 01, Data: (0, 1))
 ```
 
-### Send a fragmented message
-
-`frag_size` is the point of this example: the request leaves in 8-byte pieces,
-and the response is reassembled from however many pieces arrive, by its
-declared length rather than by one socket read. This needs a Modbus server
-listening on port 502 — the server simulator below is one.
-
-```python
-import socket
-
-from pyomb.packets import ModbusHeader, ModbusRequestFC1
-from pyomb.packets import ModbusTcpRequest, ModbusTcpResponse
-from pyomb.stream import ModbusTcpStream
-
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect(("localhost", 502))
-
-pdu = ModbusRequestFC1(start_addr=0, quantity=1)
-header = ModbusHeader(unit_id=1, length=len(pdu) + 1)
-request = ModbusTcpRequest(header=header, pdu=pdu)
-
-stream = ModbusTcpStream(sock=sock, frag_size=8)
-stream.send(request.serialize())
-
-response = ModbusTcpResponse.deserialize(stream.receive())
-print(response)
-```
-
-The reassembled response carries one byte of coil data:
-
-```text
-MODBUS TCP RSP -> | HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 4, Unit-ID: 1) | PDU: (FC: 01, Data: (1, 255))
-```
-
-### Run the server and client simulators
-
-```python
-from pyomb import ModbusClientSimulator, ModbusServerSimulator
-
-server = ModbusServerSimulator(port=502)
-server.start()
-
-client = ModbusClientSimulator(port=502)
-client.connect()
-
-header, pdu = client.request(fc=1, read_address=0, read_count=10)
-print(header)
-print(pdu)
-
-client.disconnect()
-server.stop()
-```
-
-Reading 10 coils returns two data bytes:
-
-```text
-HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 5, Unit-ID: 1)
-PDU: (FC: 01, Data: (2, 255, 255))
-```
-
-### Ask a packet what it breaks
+### Inspect protocol violations
 
 The Modbus Application Protocol caps Read Holding Registers at 125 registers
 per request, so a quantity of 126 is one past the edge:
@@ -181,21 +187,17 @@ for finding in request.violations():
 print(request.serialize().hex())
 ```
 
-The violation is reported and the frame still goes out:
+The violation is reported, and the packet still serializes:
 
 ```text
 ModbusRequestFC3.quantity is 126; the specification requires 0x0001 to 0x007D
 030000007e
 ```
 
-The trailing `007e` is the disallowed quantity, on the wire. That is the
-point: `serialize()` reaches neither `violations()` nor `validate()`, so
-sending a frame a device should reject stays possible, which is how you find
-out whether the device rejects it. `validate()` is the same check with the
-opposite manners — it raises a `ModbusPacketError` where `violations()`
-returns a tuple of findings. A finding carries `field`, `value`, `rule` and
-`source`, so a harness can assert which bound was crossed rather than match
-on the message text.
+`violations()` reports findings without changing serialization. Call
+`validate()` when you want a `ModbusPacketError` instead. Each finding names
+its source, field, value and rule, so tests can inspect it without matching
+message text.
 
 ## Project structure
 
@@ -206,6 +208,7 @@ src/pyomb/              # The library
     pdu.py              # PDU classes, one pair per function code, and the parser
     framing.py          # MBAP header, CRC helpers, TCP and RTU frame wrappers
   stream.py             # Transport: length-driven framing and fragmentation
+  tls.py                # TLS settings and SSL context construction
   client_simulator.py   # Client simulator and request builder
   server_simulator.py   # Server simulator, select loop and response factory
   errors.py             # Modbus exception codes as a Python hierarchy
@@ -218,7 +221,7 @@ checks/                 # Gates over this repository's own conventions, not ship
 examples/               # Runnable usage patterns, executed by CI
 scripts/                # Certificate generation
 docs/                   # Guides, decisions, journal, audits
-  design/               # Direction notes the project has not adopted
+  design/               # Architecture and product design notes
   specs/                # Vendor Modbus specifications and the protocol tutorial
 assets/                 # Generated test certificates (gitignored)
 .github/                # CI, CodeQL and release workflows, Dependabot config
