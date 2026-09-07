@@ -9,6 +9,9 @@ from __future__ import annotations
 
 import enum
 import struct
+import time
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import ClassVar
 
 from pyomb.errors import ModbusPacketError, ModbusPduParseError
@@ -639,6 +642,83 @@ class RtuSide(enum.Enum):
     RESPONSE = "response"
 
 
+# A slave id, a function code and the checksum. Nothing shorter can carry a
+# frame, so nothing shorter is worth sizing.
+MIN_RTU_FRAME = 1 + 1 + CRC_SIZE
+
+
+@dataclass(frozen=True)
+class _RtuRead:
+    """What reading the head of a buffer as one direction produced.
+
+    A packet means a frame was read and length says how long it was. No
+    packet means none starts here, and incomplete says whether more bytes
+    could change that.
+    """
+
+    packet: ModbusRtuPacket | None
+    length: int
+    incomplete: bool
+
+
+def _pdu_class(func_code: int, side: RtuSide) -> type[ModbusPdu]:
+    """Return the PDU class a side reads a function code as."""
+    registry = ModbusPduParser.get_registry()
+
+    if side is RtuSide.REQUEST:
+        return registry.get(func_code, ModbusPdu)
+
+    # An exception is the one function code that states its own direction,
+    # and the error PDU is what 0x8000 answers for.
+    if func_code >= 0x80:
+        return ModbusError
+
+    return registry.get(func_code + 0x8000, ModbusPdu)
+
+
+def _read_rtu_frame(stream: bytes, side: RtuSide) -> _RtuRead:
+    """Read the frame at the head of a buffer as one direction.
+
+    Args:
+        stream (bytes) : The bytes held, starting at a candidate frame
+        side (RtuSide) : The direction to size the frame as
+
+    Returns:
+        _RtuRead : The frame where one was read, and why not where none was
+    """
+    if len(stream) < MIN_RTU_FRAME:
+        return _RtuRead(packet=None, length=0, incomplete=True)
+
+    prefix = stream[1:]
+
+    try:
+        size = _pdu_class(prefix[0], side).expected_size(prefix)
+
+    except ModbusPacketError:
+        # The layout states no size, so no boundary can be computed from this
+        # position at all, and no further byte changes that.
+        return _RtuRead(packet=None, length=0, incomplete=False)
+
+    # The count field has not arrived, so the size is not yet knowable.
+    if size is None:
+        return _RtuRead(packet=None, length=0, incomplete=True)
+
+    end = 1 + size + CRC_SIZE
+
+    if len(stream) < end:
+        return _RtuRead(packet=None, length=0, incomplete=True)
+
+    try:
+        packet = ModbusRtuPacket.deserialize(stream[:end])
+
+    except ModbusPacketError:
+        # The checksum did not land where the size said it would, so a frame
+        # did not start at this byte.
+        return _RtuRead(packet=None, length=0, incomplete=False)
+
+    return _RtuRead(packet=packet, length=end, incomplete=False)
+
+
 class ModbusRtuSplitter:
     """Cut whole RTU frames out of a stream of bytes.
 
@@ -666,9 +746,8 @@ class ModbusRtuSplitter:
         >>> assert found[0].serialize() == frame
     """
 
-    # A slave id, a function code and the checksum. Nothing shorter can carry a
-    # frame, so nothing shorter is worth sizing.
-    MIN_FRAME = 1 + 1 + CRC_SIZE
+    # Kept as the name the class documented; the value has one definition.
+    MIN_FRAME = MIN_RTU_FRAME
 
     def __init__(self, side: RtuSide) -> None:
         """Initialize the Modbus RTU Splitter.
@@ -722,20 +801,6 @@ class ModbusRtuSplitter:
 
         return found
 
-    def _lookup(self, func_code: int) -> type[ModbusPdu]:
-        """Return the PDU class this side reads a function code as."""
-        registry = ModbusPduParser.get_registry()
-
-        if self.side is RtuSide.REQUEST:
-            return registry.get(func_code, ModbusPdu)
-
-        # An exception is the one function code that states its own direction,
-        # and the error PDU is what 0x8000 answers for.
-        if func_code >= 0x80:
-            return ModbusError
-
-        return registry.get(func_code + 0x8000, ModbusPdu)
-
     def _discard(self) -> None:
         """Drop the leading byte and count it against the resynchronisations."""
         del self._buffer[:1]
@@ -743,39 +808,192 @@ class ModbusRtuSplitter:
 
     def _take(self) -> ModbusRtuPacket | None:
         """Return the next whole frame, or None while more bytes are needed."""
-        while len(self._buffer) >= self.MIN_FRAME:
-            prefix = bytes(self._buffer[1:])
+        while len(self._buffer) >= MIN_RTU_FRAME:
+            read = _read_rtu_frame(bytes(self._buffer), self.side)
 
-            try:
-                size = self._lookup(prefix[0]).expected_size(prefix)
+            if read.packet is not None:
+                del self._buffer[: read.length]
+                return read.packet
 
-            except ModbusPacketError:
-                # The layout states no size, so no boundary can be computed from
-                # this position at all. Resynchronise rather than stall.
-                self._discard()
-                continue
-
-            # The count field has not arrived, so the size is not yet knowable.
-            if size is None:
+            if read.incomplete:
                 return None
 
-            end = 1 + size + CRC_SIZE
+            self._discard()
 
-            if len(self._buffer) < end:
+        return None
+
+
+class RtuSyncState(enum.Enum):
+    """What a sniffer expects the next frame on the bus to be."""
+
+    SYNCING = "syncing"
+    EXPECT_REQUEST = "expect_request"
+    EXPECT_RESPONSE = "expect_response"
+
+
+@dataclass(frozen=True)
+class RtuSniffedFrame:
+    """A frame read off a bus, with the direction it was read as."""
+
+    side: RtuSide
+    packet: ModbusRtuPacket
+
+
+class ModbusRtuSniffer:
+    r"""Read frames off a bus nobody told the reader about.
+
+    A splitter is told which direction it decodes. A sniffer watching two
+    devices talk is told nothing, so it reads each frame both ways and keeps
+    whichever the checksum accepts. Where both are accepted the frame is
+    genuinely ambiguous, and the bus takes turns, so the expected direction
+    decides.
+
+    Args:
+        timeout (float)  : Seconds to wait for an answer before expecting a
+                           fresh request. Well above driver buffering, which
+                           is why this measurement is usable where an
+                           inter-frame gap is not
+        clock (callable) : The time source, for a suite that does not sleep
+
+    Example:
+        >>> sniffer = ModbusRtuSniffer()
+        >>>
+        >>> # A read of three holding registers, and the answer to it.
+        >>> found = sniffer.push(
+        ...     b"\x11\x03\x00\x6b\x00\x03\x76\x87"
+        ...     b"\x11\x03\x06\xae\x41\x56\x52\x43\x40\x49\xad"
+        ... )
+        >>>
+        >>> assert [frame.side for frame in found] == [
+        ...     RtuSide.REQUEST,
+        ...     RtuSide.RESPONSE,
+        ... ]
+    """
+
+    def __init__(self, timeout: float = 1.0, clock: Callable[[], float] | None = None) -> None:
+        """Initialize the Modbus RTU Sniffer.
+
+        Args:
+            timeout (float)  : Seconds to wait for an answer
+            clock (callable) : The time source; the monotonic clock by default
+        """
+        self.timeout = timeout
+        self._clock = clock if clock is not None else time.monotonic
+        self._buffer = bytearray()
+        self._resyncs = 0
+        self._state = RtuSyncState.SYNCING
+        self._last_seen = self._clock()
+
+    def __str__(self) -> str:
+        """Return a string representation of the Modbus RTU Sniffer."""
+        msg = "MODBUS RTU SNIFFER: (State: {0}, Pending: {1}, Resyncs: {2})"
+        return msg.format(self._state.value, self.pending, self.resyncs)
+
+    @property
+    def state(self) -> RtuSyncState:
+        """Return what the next frame is expected to be."""
+        return self._state
+
+    @property
+    def pending(self) -> int:
+        """Return the count of held bytes that are not yet a whole frame."""
+        return len(self._buffer)
+
+    @property
+    def resyncs(self) -> int:
+        """Return the count of bytes discarded resynchronising."""
+        return self._resyncs
+
+    def reset(self) -> None:
+        """Drop every held byte, the count, and what was expected next."""
+        self._buffer.clear()
+        self._resyncs = 0
+        self._state = RtuSyncState.SYNCING
+        self._last_seen = self._clock()
+
+    def push(self, data: bytes) -> list[RtuSniffedFrame]:
+        """Add received bytes and return the whole frames they complete.
+
+        Args:
+            data (bytes) : The bytes received since the last call
+
+        Returns:
+            list : The frames these bytes completed, in arrival order
+        """
+        self._buffer.extend(data)
+        self._expire()
+        found: list[RtuSniffedFrame] = []
+
+        while True:
+            frame = self._take()
+
+            if frame is None:
+                break
+
+            found.append(frame)
+
+        return found
+
+    def _expire(self) -> None:
+        """Expect a fresh request where no answer arrived in time."""
+        if self._state is not RtuSyncState.EXPECT_RESPONSE:
+            return
+
+        if self._clock() - self._last_seen > self.timeout:
+            self._state = RtuSyncState.EXPECT_REQUEST
+
+    def _discard(self) -> None:
+        """Drop the leading byte and count it against the resynchronisations."""
+        del self._buffer[:1]
+        self._resyncs += 1
+
+    def _choose(self, landed: list[RtuSide], slave_id: int) -> RtuSide:
+        """Pick the direction where more than one read was accepted."""
+        if len(landed) == 1:
+            return landed[0]
+
+        # Modicon Modbus Protocol Reference Guide PI-MBUS-300: address 0 is the
+        # broadcast every device recognises, and no server answers one.
+        if slave_id == 0x00:
+            return RtuSide.REQUEST
+
+        if self._state is RtuSyncState.EXPECT_RESPONSE:
+            return RtuSide.RESPONSE
+
+        return RtuSide.REQUEST
+
+    def _advance(self, side: RtuSide, slave_id: int) -> None:
+        """Move to whichever direction the bus should carry next."""
+        self._last_seen = self._clock()
+
+        # A broadcast is answered by nobody, so a request follows it.
+        if side is RtuSide.RESPONSE or slave_id == 0x00:
+            self._state = RtuSyncState.EXPECT_REQUEST
+            return
+
+        self._state = RtuSyncState.EXPECT_RESPONSE
+
+    def _take(self) -> RtuSniffedFrame | None:
+        """Return the next whole frame, or None while more bytes are needed."""
+        while len(self._buffer) >= MIN_RTU_FRAME:
+            held = bytes(self._buffer)
+            reads = {side: _read_rtu_frame(held, side) for side in RtuSide}
+            landed = [side for side, read in reads.items() if read.packet is not None]
+
+            if landed:
+                side = self._choose(landed, held[0])
+                read = reads[side]
+
+                if read.packet is not None:
+                    del self._buffer[: read.length]
+                    self._advance(side, held[0])
+
+                    return RtuSniffedFrame(side=side, packet=read.packet)
+
+            if any(read.incomplete for read in reads.values()):
                 return None
 
-            try:
-                packet = ModbusRtuPacket.deserialize(bytes(self._buffer[:end]))
-
-            except ModbusPacketError:
-                # The checksum did not land where the size said it would, so a
-                # frame did not start at this byte.
-                self._discard()
-                continue
-
-            del self._buffer[:end]
-
-            return packet
+            self._discard()
 
         return None
 
