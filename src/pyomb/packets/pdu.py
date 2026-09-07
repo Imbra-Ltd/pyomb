@@ -59,6 +59,10 @@ class ModbusPdu(ModbusPacketAbc):
     # or None where the layout is scalars only.
     PDU_TAIL: ClassVar[str | None] = None
 
+    # The field counting the payload bytes that follow it, always the last of
+    # PDU_FIELDS. None where the layout carries no such count.
+    PDU_COUNT: ClassVar[str | None] = None
+
     def __init__(self, fc: int, data: tuple[int, ...] | bytes | bytearray | None = None) -> None:
         """Initialize the Modbus PDU."""
         self.fc = fc
@@ -128,6 +132,46 @@ class ModbusPdu(ModbusPacketAbc):
     def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT.format(len(self.data)))
+
+    @classmethod
+    def expected_size(cls, prefix: bytes) -> int | None:
+        """Report how many bytes this PDU occupies, read from a frame's start.
+
+        An RTU frame declares no length, so a reader splitting a stream works
+        the boundary out from the content instead. This answers from the
+        declared layout, where __len__ answers from a parsed instance -- which
+        is the thing a reader is still trying to establish it can do.
+
+        Args:
+            prefix (bytes) : The frame from the function code onwards, whether
+                             or not it is complete
+
+        Returns:
+            int  : The size of the PDU in bytes
+            None : If the prefix stops before the count field, so the caller
+                   has to read more bytes and ask again
+
+        Raises:
+            ModbusPacketError : If the layout states no size. The Diagnostics
+                and Encapsulated Interface PDUs lead with a sub-function and
+                an MEI type, which discriminate rather than count, so no byte
+                of the prefix says where the frame ends
+        """
+        if "{0}" not in cls.PDU_FORMAT:
+            return struct.calcsize(cls.PDU_FORMAT)
+
+        if cls.PDU_COUNT is None:
+            message = f"{cls.__name__} carries no count field, so its size cannot be read from a prefix"
+            raise ModbusPacketError(message)
+
+        head = struct.calcsize(cls.PDU_FORMAT.split("{0}")[0])
+
+        if len(prefix) < head:
+            return None
+
+        # The count sits immediately ahead of the payload, so it is the last
+        # byte of the head, and it counts bytes rather than items.
+        return head + prefix[head - 1]
 
     def __str__(self) -> str:
         """Return a string representation of the PDU."""
@@ -628,6 +672,7 @@ class ModbusResponseFC1(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("byte_count",)
     PDU_TAIL = "output_status"
+    PDU_COUNT = "byte_count"
 
     def __init__(self, byte_count: int, output_status: tuple[int, ...]) -> None:
         """Hold the byte count and the coil states the response carries."""
@@ -820,6 +865,7 @@ class ModbusResponseFC2(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("byte_count",)
     PDU_TAIL = "input_status"
+    PDU_COUNT = "byte_count"
 
     def __init__(self, byte_count: int, input_status: tuple[int, ...]) -> None:
         """Initialize the Modbus Response FC2 PDU."""
@@ -1010,6 +1056,7 @@ class ModbusResponseFC3(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("byte_count",)
     PDU_TAIL = "values"
+    PDU_COUNT = "byte_count"
 
     def __init__(self, byte_count: int, values: tuple[int, ...]) -> None:
         """Initialize the Modbus Response FC3 PDU."""
@@ -1202,6 +1249,7 @@ class ModbusResponseFC4(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("byte_count",)
     PDU_TAIL = "values"
+    PDU_COUNT = "byte_count"
 
     def __init__(self, byte_count: int, values: tuple[int, ...]) -> None:
         """Initialize the Modbus Response FC4 PDU."""
@@ -2056,6 +2104,7 @@ class ModbusRequestFC15(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x07B0)}
     PDU_FIELDS = ("start_addr", "quantity", "byte_count")
     PDU_TAIL = "values"
+    PDU_COUNT = "byte_count"
 
     def __init__(self, start_addr: int, quantity: int, byte_count: int, values: tuple[int, ...]) -> None:
         """Initialize the Modbus Request FC15 PDU."""
@@ -2271,6 +2320,7 @@ class ModbusRequestFC16(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {"quantity": (0x0001, 0x007B)}
     PDU_FIELDS = ("start_addr", "quantity", "byte_count")
     PDU_TAIL = "values"
+    PDU_COUNT = "byte_count"
 
     def __init__(self, start_addr: int, quantity: int, byte_count: int, values: tuple[int, ...]) -> None:
         """Initialize the Modbus Request FC16 PDU."""
@@ -2668,6 +2718,7 @@ class ModbusRequestFC23(ModbusPdu):
     }
     PDU_FIELDS = ("read_start_addr", "read_quantity", "write_start_addr", "write_quantity", "write_byte_count")
     PDU_TAIL = "write_values"
+    PDU_COUNT = "write_byte_count"
 
     def __init__(
         self,
@@ -2819,6 +2870,7 @@ class ModbusResponseFC23(ModbusPdu):
     LIMITS: ClassVar[dict[str, tuple[int, int]]] = {}
     PDU_FIELDS = ("byte_count",)
     PDU_TAIL = "values"
+    PDU_COUNT = "byte_count"
 
     def __init__(self, byte_count: int, values: tuple[int, ...]) -> None:
         """Initialize the Modbus Response FC23 PDU."""
