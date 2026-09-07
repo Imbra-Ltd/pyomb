@@ -35,7 +35,9 @@ from pyomb.packets import (
     ModbusViolation,
 )
 
-SOURCE = pathlib.Path(packets.__file__)
+# Every module of the package: __init__ declares no class, so reading it
+# alone would report every class as not declaring its own LIMITS.
+SOURCE = sorted(pathlib.Path(packets.__file__).parent.glob("*.py"))
 
 
 class ASpecificationExampleIsConforming(unittest.TestCase):
@@ -241,11 +243,13 @@ class EveryPacketClassStatesWhatItWasReadFor(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
-
         cls.declared = set()
 
-        for node in tree.body:
+        nodes = []
+        for path in SOURCE:
+            nodes.extend(ast.parse(path.read_text(encoding="utf-8")).body)
+
+        for node in nodes:
             if not isinstance(node, ast.ClassDef):
                 continue
             for item in node.body:
