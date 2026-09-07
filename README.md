@@ -17,6 +17,13 @@ constructed and sent, using Python's standard library alone.
 
 ## Features
 
+> Note: the list below describes the target product. Not built in v0.6.0 —
+> serial RTU and RTU-over-TCP transport, client retries and reconnection,
+> server register maps and scripted response sequences, composed test
+> scenarios, traffic hooks and the capture format. Serial framing exists in
+> the codec only; reading frames off a serial line is tracked in
+> [#231](https://github.com/Imbra-Ltd/pyomb/issues/231).
+
 - **Modbus communication:** Connect over TCP, TLS, serial RTU or RTU-over-TCP,
   with configurable timeouts, retries and reconnection.
 - **Scriptable server:** Define register maps, attach Python handlers and
@@ -38,7 +45,7 @@ constructed and sent, using Python's standard library alone.
 - **Packet inspection and observation:** Inspect decoded fields and raw
   bytes, and observe traffic through public hooks carrying direction and
   timing. Exchange records using an open capture format.
-- **Lightweight core:** No runtime dependencies -- TCP, TLS and packet
+- **Lightweight core:** No runtime dependencies — TCP, TLS and packet
   processing use the standard library alone.
 
 ## Quick start
