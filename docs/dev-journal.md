@@ -4676,3 +4676,74 @@ package, per ADR-002. See `README.md` for usage and
   survives in the worktree at `C:/Workspace/pyomb-docs-workbench`; its content
   is on `main` in the same squash, so the branch is deletable once that
   worktree is free.
+
+## 2026-09-07 -- Split and sniff an RTU stream (late night)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Shipped the previous wrap (PR #375).** ADR-052 was written but
+    unmerged; it went first. The `docs/workbench-direction` branch and its
+    worktree were pruned once `git diff` showed its one commit touched only
+    `design_notes.md` and that file's blob matched `main` byte for byte.
+  - **Described how an RTU stream is split (PR #377).** Section 27 of the
+    design note, with three ASCII diagrams: the oracle/splitter/checksum
+    loop, a byte ruler showing both sizings of the same frame, and the
+    sniffer's state machine. Sections 5 and 9 said RTU frames are found by
+    measuring silence; both now point at 27 instead.
+  - **Cut whole RTU frames out of a byte stream (PR #378).**
+    `ModbusRtuSplitter` sizes each frame from the class the function code
+    names and verifies the checksum at that boundary. A rejection costs one
+    byte and the discards are counted. The two Diagnostics classes gained
+    their own `expected_size`, because the table they are already checked
+    against states a width for every sub-function except Return Query Data.
+  - **Recorded that splitting reads content, not silence (ADR-053).** Six
+    rules. Four describe the splitter; the other two exist so the next reader
+    does not conclude that a response timeout is unusable, or that framing and
+    transport are coupled by timing when they are not.
+  - **Worked out which way each frame was travelling (PR #380).**
+    `ModbusRtuSniffer` reads every frame both ways and keeps whichever the
+    checksum accepts, so the exception and the unmodelled code sort
+    themselves. Where both readings check out the turn decides. The sizing
+    step was lifted into one function both classes drive, with the splitter's
+    untouched suite as the oracle that the lift changed nothing.
+- **PRs merged:** #375, #377, #378, #379, #380.
+- **Issues closed/created:** created #376; closed #358 and #376. #231 stays
+  open: the serial byte source, its first layer, is untouched.
+- **Lesson:** the gate blindness from the previous entry repeated, on the same
+  day and in the same shape. `pytest checks/` passed locally over a new test
+  module and CI failed it on a three-line comment, because the module was not
+  staged and the gate reads git's index. Knowing the rule did not help; what
+  helps is staging before running a gate, which is now how the remaining three
+  changes were checked.
+- **Lesson:** a control script is code and can damage what it controls. The
+  first one reverted by matching `return RtuSide.REQUEST`, which occurs twice
+  in `_choose`, so it restored the wrong occurrence and left a block that
+  would not parse. The rewrite anchors on the whole block and refuses unless
+  the anchor appears exactly once.
+- **Lesson:** a syntax error is not a negative control. That same script's
+  first timeout plant broke indentation, and the run failed at collection
+  rather than at an assertion -- the harness answered, not the suite. The
+  plant that discriminates is a reversed comparison, which parses, runs and
+  fails three tests.
+- **Lesson:** the checksum retired a heuristic. A proposed state machine sized
+  read requests by a fixed eight bytes; a Read Coils response carrying three
+  bytes of data is also eight bytes with a valid checksum, so the rule was
+  wrong exactly where it was needed. Reading both ways and letting the
+  checksum decide needs no table and gets that case right.
+- **Upstream:** one candidate, recorded on ADR-053 and not filed. With the
+  domain skin off: a wire specification describes the wire, and a program
+  observes it through buffering layers, so a delimiter defined in time may be
+  unobservable -- check what the host can measure before designing on the
+  specification's model. `templates/base/core/quality.md` is the candidate
+  file.
+- **Not done:** the serial byte source, the layer #231 still owes and the one
+  that makes any of this reachable from real hardware.
+- **Not done:** the boilerplate collapse in `pdu.py`. Carried unchanged from
+  the previous entry.
+- **Pending:** the upstream issue above needs filing on another repository,
+  which is the owner's call rather than this session's.
+- **Pending:** the submodule pin sits at `v2.79.0`. It is off-limits, so the
+  bump needs a proposal carrying a rollback strategy. Carried from the
+  previous entry.
+- **Resolved:** the `docs/workbench-direction` branch and its worktree, both
+  flagged in the previous entry, are gone.

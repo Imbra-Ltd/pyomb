@@ -120,7 +120,7 @@ the certificate generator are reported on their own line.
 
 | Path | What it is |
 | --- | --- |
-| `src/pyomb/packets/` | The codec — `base.py` holds the abstractions, `pdu.py` one class per function code plus the registry, `framing.py` the MBAP header and the TCP and RTU frame wrappers |
+| `src/pyomb/packets/` | The codec — `base.py` holds the abstractions, `pdu.py` one class per function code plus the registry, `framing.py` the MBAP header, the TCP and RTU frame wrappers, and the splitter and sniffer that find RTU frames in a stream |
 | `src/pyomb/stream.py` | The transport — length-driven framing, deliberate fragmentation |
 | `src/pyomb/client_simulator.py` | Client simulator and the request builder |
 | `src/pyomb/server_simulator.py` | Server simulator, its select loop and the response factory |

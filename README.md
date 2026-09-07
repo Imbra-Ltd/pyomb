@@ -20,8 +20,9 @@ constructed and sent, using Python's standard library alone.
 > Note: the list below describes the target product. Not built in v0.6.0 —
 > serial RTU and RTU-over-TCP transport, client retries and reconnection,
 > server register maps and scripted response sequences, composed test
-> scenarios, traffic hooks and the capture format. Serial framing exists in
-> the codec only; reading frames off a serial line is tracked in
+> scenarios, traffic hooks and the capture format. The codec splits an RTU
+> byte stream into frames; opening the serial port that would supply those
+> bytes is tracked in
 > [#231](https://github.com/Imbra-Ltd/pyomb/issues/231).
 
 - **Modbus communication:** Connect over TCP, TLS, serial RTU or RTU-over-TCP,
@@ -32,7 +33,8 @@ constructed and sent, using Python's standard library alone.
 - **Scriptable client:** Build request sequences to prototype integrations
   and exercise devices or local simulators from ordinary Python scripts.
 - **Packet codecs:** Build, encode and decode TCP and RTU packets, including
-  RTU checksum generation and verification.
+  RTU checksum generation and verification. Cut whole RTU frames out of a
+  byte stream, with or without being told which direction they travel.
 - **Wire controls:** Send and receive raw bytes, configure TCP write chunks
   and control RTU timing. Inject delays, corruption, truncation and connection
   failures to test how a peer recovers.
@@ -171,6 +173,36 @@ The round trip reproduces the original frame:
 MODBUS TCP REQ -> | HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 6, Unit-ID: 1) | PDU: (FC: 01, Data: (0, 1))
 ```
 
+### Read frames off a stream
+
+An RTU frame carries no length field, so a reader works its boundary out
+from the content and checks the checksum there. Push bytes as they arrive
+and whole frames come back:
+
+```python
+from pyomb.packets import ModbusRtuSplitter, RtuSide
+
+splitter = ModbusRtuSplitter(side=RtuSide.RESPONSE)
+
+print(splitter.push(b"\x11\x03\x06\xae\x41"), splitter.pending)
+
+for frame in splitter.push(b"\x56\x52\x43\x40\x49\xad"):
+    print(frame)
+```
+
+Half a frame yields nothing and is held; the rest completes it:
+
+```text
+[] 5
+MODBUS RTU PCKT: (Slave ID: 17, PDU: (FC: 03, Data: (6, 174, 65, 86, 82, 67, 64)), CRC: 44361)
+```
+
+A splitter is told which direction it decodes, because a response echoes
+the request's function code and the two directions size differently. Use
+`ModbusRtuSniffer` where nobody can tell it -- watching two other devices
+talk -- and it reads each frame both ways, keeps whichever the checksum
+accepts, and reports the direction alongside the packet.
+
 ### Inspect protocol violations
 
 The Modbus Application Protocol caps Read Holding Registers at 125 registers
@@ -206,7 +238,7 @@ src/pyomb/              # The library
   packets/              # Codec, split by data-flow stage
     base.py             # Constraints and the abstract packet bases
     pdu.py              # PDU classes, one pair per function code, and the parser
-    framing.py          # MBAP header, CRC helpers, TCP and RTU frame wrappers
+    framing.py          # MBAP header, CRC helpers, frame wrappers, RTU splitting
   stream.py             # Transport: length-driven framing and fragmentation
   tls.py                # TLS settings and SSL context construction
   client_simulator.py   # Client simulator and request builder
