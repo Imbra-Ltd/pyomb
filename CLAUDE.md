@@ -286,6 +286,10 @@ follow the referenced templates. Project-specific additions only:
   fenced blocks and lines carrying a URL are exempt because none of them can be
   wrapped. Enforced by `checks/test_markdown_line_width.py`, which reads the
   declaration rather than restating it; see ADR-018
+- A numbered heading opens where the one above it left off, so a new section
+  takes its number from the tail of the document rather than the tail of the
+  diff. Enforced by `checks/test_numbered_headings_do_not_collide.py`, which
+  reads what it deliberately passes over; see PLAYBOOK 3.28
 - An issue or pull request body is written for a reader who has not seen the
   code: symptom before mechanism, every borrowed term expanded on first use,
   and a real example rather than a description of one. Nothing gates it,
