@@ -13,8 +13,7 @@ behavior, response delays and deliberate protocol errors as your experiment
 grows.
 
 Work with packet objects or raw bytes, with control over how messages are
-constructed and sent. The core uses only Python's standard library; serial
-communication is available through an optional extra.
+constructed and sent, using Python's standard library alone.
 
 ## Features
 
@@ -39,17 +38,18 @@ communication is available through an optional extra.
 - **Packet inspection and observation:** Inspect decoded fields and raw
   bytes, and observe traffic through public hooks carrying direction and
   timing. Exchange records using an open capture format.
-- **Lightweight core:** No runtime dependencies for TCP, TLS or packet
-  processing. Install the serial extra when you need serial communication.
+- **Lightweight core:** No runtime dependencies -- TCP, TLS and packet
+  processing use the standard library alone.
 
 ## Quick start
 
 Prerequisites: Python 3.10 or newer.
 
-Install from PyPI:
+pyomb is not on a package index. Every tagged release attaches a wheel to its
+record on GitHub, so install that:
 
 ```bash
-pip install pyomb
+pip install https://github.com/Imbra-Ltd/pyomb/releases/download/v0.6.0/pyomb-0.6.0-py3-none-any.whl
 ```
 
 Save this as `quickstart.py` and run it with `python quickstart.py`. It starts
@@ -83,14 +83,8 @@ PDU: (FC: 03, Data: (2, 65535))
 Change `read_address` or `read_count` to try another request, then add a
 register map or Python handler to model your device's behavior.
 
-For serial RTU communication, install the optional serial dependencies:
-
-```bash
-pip install "pyomb[serial]"
-```
-
-The [releases page](https://github.com/Imbra-Ltd/pyomb/releases) carries release
-artifacts and a CycloneDX software bill of materials (SBOM).
+The [releases page](https://github.com/Imbra-Ltd/pyomb/releases) carries an
+sdist and a CycloneDX software bill of materials (SBOM) beside each wheel.
 For installation from a checkout, see [Development setup](#development-setup).
 
 ## Usage
@@ -249,8 +243,7 @@ same checks in front of every commit.
 The toolchain is locked in `uv.lock`, and `--locked` installs exactly what it
 records rather than re-resolving, so a contributor and CI run the same
 versions. Installing the library needs no uv — that is the `pip install` in
-Quick start. The core has no runtime dependencies; the optional serial extra
-adds PySerial.
+Quick start, and there are no runtime dependencies to lock.
 
 The TLS tests need a certificate chain, which is generated rather than
 committed:
