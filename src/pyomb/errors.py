@@ -10,6 +10,15 @@ codes.
 The tree is in the exception hierarchy section of docs/PLAYBOOK.md.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+# The header type is needed for the annotation and not at runtime. Importing
+# it for real would close a cycle, since packets.py imports this module.
+if TYPE_CHECKING:
+    from pyomb.packets import ModbusHeader
+
 
 class ModbusBaseError(Exception):
     """Generic Modbus error.
@@ -359,6 +368,40 @@ class ModbusPacketError(ModbusBaseError):
 
     def __init__(self, message: str, extended_info: str = "") -> None:
         """Forward the caller's message and extended information unchanged."""
+        super().__init__(message=message, extended_info=extended_info)
+
+
+class ModbusPduParseError(ModbusPacketError):
+    """A PDU that would not parse, behind an MBAP header that did.
+
+    The header carries the transaction, protocol and unit identifiers a
+    response has to echo, so a caller holding one of these can answer the peer
+    with an exception response instead of dropping it. A plain
+    ModbusPacketError says only that the frame is unusable, which is the right
+    answer when the header itself is unreadable or its length field
+    contradicts the bytes received.
+
+    Args:
+        message         (unicode)       : A description of the error.
+        header          (ModbusHeader)  : The header the response echoes.
+        fc              (int)           : The function code the request carried.
+        extended_info   (unicode)       : Additional information.
+
+    Example:
+        try:
+            request = ModbusTcpRequest.deserialize(stream)
+
+        # The header survived, so the peer can be told what was wrong.
+        except ModbusPduParseError as e:
+            reply = ModbusError(fc=e.fc, exc_code=OMB_EXCEPTION_ILLEGAL_DATA_VALUE)
+            print(e.header.trans_id)
+    """
+
+    def __init__(self, message: str, header: ModbusHeader, fc: int, extended_info: str = "") -> None:
+        """Record the header and function code beside the caller's message."""
+        self.header = header
+        self.fc = fc
+
         super().__init__(message=message, extended_info=extended_info)
 
 

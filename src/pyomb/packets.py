@@ -17,7 +17,7 @@ import warnings
 from abc import ABCMeta, abstractmethod
 from typing import ClassVar
 
-from .errors import ModbusPacketError
+from .errors import ModbusPacketError, ModbusPduParseError
 
 ################################################################################
 # CONSTRAINTS
@@ -3956,15 +3956,29 @@ class ModbusTcpRequest(ModbusPacketAbc):
             # Get the header
             header = ModbusHeader.deserialize(stream[: ModbusHeader.SIZE])
 
-            # Reject a length field that contradicts the received ADU
+            # A length field that contradicts the ADU puts the frame boundary
+            # in doubt, so nothing after the header is usable.
             validate_mbap_length(header, stream)
 
+        except ModbusPacketError as e:
+            message = f"Error deserializing the TCP Request header: {e}"
+            raise ModbusPacketError(message) from e
+
+        pdu_bytes = stream[ModbusHeader.SIZE :]
+
+        try:
             # Get the concrete request PDU
-            pdu = cls._pdu_parser.parse_request(stream[ModbusHeader.SIZE :])
+            pdu = cls._pdu_parser.parse_request(pdu_bytes)
 
         except ModbusPacketError as e:
             message = f"Error deserializing the TCP Request PDU: {e}"
-            raise ModbusPacketError(message) from e
+
+            # An empty PDU names no function code, so an exception response
+            # has nothing to report and the caller can only drop the peer.
+            if not pdu_bytes:
+                raise ModbusPacketError(message) from e
+
+            raise ModbusPduParseError(message, header=header, fc=pdu_bytes[0]) from e
 
         # Return a new instance of the class
         return cls(header=header, pdu=pdu)
