@@ -595,8 +595,8 @@ number written down in a document goes stale without anyone editing it.
 ### 3.4 Lint and format (ruff)
 
 ```bash
-python -m ruff check src tests scripts examples
-python -m ruff format src tests scripts examples
+python -m ruff check src tests checks scripts examples
+python -m ruff format src tests checks scripts examples
 ```
 
 Configuration is in `pyproject.toml`. The `per-file-ignores` table that froze
@@ -649,7 +649,7 @@ there, with `# noqa` naming it and the reason above; anything else is fixed.
 The third home, the freeze table, is gone. ADR-025 draws the line.
 
 ```bash
-grep -rn '# noqa' src tests scripts examples
+grep -rn '# noqa' src tests checks scripts examples
 ```
 
 Pass condition: every line it prints names a rule, as `# noqa: B017`, with the
@@ -741,7 +741,7 @@ in the checks list and mean opposite things.
 ### 3.8 Static analysis (bandit)
 
 ```bash
-python -m bandit -c pyproject.toml -r src scripts tests examples
+python -m bandit -c pyproject.toml -r src tests checks scripts examples
 ```
 
 The `-c` is not optional. Bandit reads nothing from `pyproject.toml` unless
@@ -1432,6 +1432,34 @@ a line is a comment in both formats, including inside a YAML block scalar
 where the shell is the one reading it. Each corpus carries its own floor, so a
 listing that stops reaching one fails separately from the rule.
 
+### 3.27 Documented commands against the pipeline (pytest)
+
+```bash
+pytest checks/test_documented_commands_match_the_pipeline.py
+```
+
+Which directories the checkers open is one fact written in two places: the
+path list inside each `ci.yml` step, and the commands a reader copies out of
+`CLAUDE.md`, this document and the onboarding guide. A sibling module gates
+the pipeline's half. This one gates the documented half, and compares the two.
+
+It reads every fenced line in those three documents that invokes `ruff check`,
+`ruff format`, `bandit` or the `# noqa` sweep, takes the directories each
+names, and fails any that differ from the set its pipeline step passes. Paths
+are recognised from a fixed vocabulary of the top-level directories, so a flag
+or a config file is not mistaken for one.
+
+Nothing else reports this drift. Both halves exit zero — a checker reports on
+the paths it is given, never on the one it was not — so the first signal is a
+pipeline going red on a change that looked clean locally, which is the
+shift-left principle running backwards. It happened once: the gates moved to
+`checks/` and nine documented commands kept naming only the directory they
+left.
+
+Two reds are worth telling apart, as in 3.22. The floor failing means the
+fence pattern, the tool list or the document list drifted, so the comparison
+would have read almost nothing. The comparison failing names the document, the
+line, both path sets and the command.
 
 ## 4. Maintenance
 
