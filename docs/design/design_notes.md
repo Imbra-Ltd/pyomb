@@ -1,5 +1,15 @@
 # PyOMB Architecture Direction
 
+> **Pruned 2026-09-07.** This note is a proposal and binds nothing;
+> ADR-035 settled what it contributes. Modbus ASCII is removed at the
+> owner's direction, and every refused capability now carries a marker
+> in place of its proposal: validation modes (ADR-031 rule 6), and
+> deterministic fuzzing, capture and replay, proxy mode, PCAP export
+> and the conformance framework (ADR-035 rule 2). The headings are
+> kept so the section numbers cited by ADR-031, ADR-035 and ADR-036
+> still resolve. ADR-035 describes this file as it stood before this
+> pruning, including its length.
+
 ## 1. Project Philosophy
 
 PyOMB is a **testing-first Modbus library that is also suitable for
@@ -38,8 +48,7 @@ PyOMB should eventually provide four major operating modes:
                                   │
                                OBSERVE
                                   │
-                          Proxy / Capture /
-                          Decode / Replay
+                            Decode / Inspect
 ```
 
 ### CONNECT
@@ -49,13 +58,12 @@ Normal production Modbus communication:
 -   Modbus TCP
 -   Modbus TLS
 -   Modbus RTU
--   Modbus ASCII
 -   RTU-over-TCP
 -   Custom/vendor function codes
 -   Timeouts
 -   Reconnection
 -   Retry policies
--   Synchronous and asynchronous operation
+-   Synchronous operation
 
 ### SIMULATE
 
@@ -67,27 +75,21 @@ simulation.
 Protocol testing capabilities including:
 
 -   malformed frames
--   invalid CRC/LRC
+-   invalid CRC
 -   invalid MBAP fields
 -   fragmentation
 -   timing violations
 -   truncation
 -   corruption
 -   connection failures
--   deterministic fuzzing
 -   boundary testing
--   conformance testing
 
 ### OBSERVE
 
 Tools for understanding existing Modbus communication:
 
--   proxy mode
 -   packet inspection
--   capture
--   replay
 -   protocol decoding
--   PCAP export
 -   traffic mutation
 
 ## 3. Architectural Layers
@@ -98,22 +100,22 @@ byte transport.
 ``` text
 ┌──────────────────────────────────────────────────────────┐
 │                 Testing / Scenarios                      │
-│ fuzz │ faults │ assertions │ replay │ proxy │ compliance│
+│ faults │ assertions                                      │
 ├──────────────────────────────────────────────────────────┤
 │                    Client / Server                       │
-│ sync │ async │ retries │ reconnect │ datastore │ TLS    │
+│ sync │ retries │ reconnect │ datastore │ TLS             │
 ├──────────────────────────────────────────────────────────┤
 │                         PDU                              │
-│ function codes │ requests │ responses │ exceptions      │
+│ function codes │ requests │ responses │ exceptions       │
 ├──────────────────────────────────────────────────────────┤
 │                       Framing                            │
-│ TCP │ RTU │ ASCII │ raw/malformed                      │
+│ TCP │ RTU │ raw/malformed                                │
 ├──────────────────────────────────────────────────────────┤
 │                    Channel / Wire                        │
-│ fragmentation │ delays │ corruption │ timing │ faults   │
+│ fragmentation │ delays │ corruption │ timing │ faults    │
 ├──────────────────────────────────────────────────────────┤
 │                      Transport                           │
-│ TCP │ TLS │ Serial │ Memory │ Replay │ Custom           │
+│ TCP │ TLS │ Serial │ Memory │ Custom                     │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -145,7 +147,7 @@ request = ReadHoldingRegisters(
 )
 ```
 
-The same request should work with TCP, RTU, or ASCII.
+The same request should work with TCP or RTU.
 
 Core function-code support should eventually include at least:
 
@@ -185,16 +187,12 @@ The primary framers would be:
 ``` text
 TcpFramer
 RtuFramer
-AsciiFramer
 ```
 
 **TCP** uses the MBAP header and its length field.
 
 **RTU** uses the unit address, PDU, CRC, serial timing, inter-character
 timing, and inter-frame timing.
-
-**ASCII** uses `:` frame start, ASCII hexadecimal representation, LRC,
-and CRLF termination.
 
 The Modbus PDU should not need to know which framer is being used.
 
@@ -221,7 +219,6 @@ SocketTransport
 TlsTransport
 SerialTransport
 MemoryTransport
-ReplayTransport
 CustomTransport
 ```
 
@@ -240,19 +237,6 @@ client = ModbusClient(
         parity="E",
     ),
     framer=RtuFramer(),
-)
-```
-
-Modbus ASCII simply changes the framer:
-
-``` python
-client = ModbusClient(
-    transport=SerialTransport(
-        port="COM3",
-        baudrate=9600,
-        parity="E",
-    ),
-    framer=AsciiFramer(),
 )
 ```
 
@@ -365,35 +349,10 @@ This enables tests for:
 
 ## 10. Validation Modes
 
-Validation should be configurable.
-
-Suggested modes:
-
-``` text
-STRICT
-PERMISSIVE
-RAW
-```
-
-### STRICT
-
-Production behavior. All known protocol constraints are validated.
-
-### PERMISSIVE
-
-Allows unusual or non-standard values useful for interoperability
-testing.
-
-### RAW
-
-Allows arbitrary wire representations.
-
-A fundamental design rule should be:
-
-> **Serialization must not inherently imply validation.**
-
-It must remain possible to construct and serialize malformed frames
-intentionally.
+Refused. ADR-031 rule 6 states there is no validation mode: every
+component declares its own constraints, `violations()` reports them and
+`validate()` raises. One rule this section proposed was adopted rather
+than refused -- serialization never validates, which is ADR-031 rule 4.
 
 ## 11. Packet Mutation
 
@@ -534,98 +493,24 @@ after deliberately malformed traffic.
 
 ## 15. Deterministic Fuzzing
 
-PyOMB should eventually support both:
-
-``` text
-structure-aware fuzzing
-byte-level fuzzing
-```
-
-Structure-aware fuzzing understands protocol fields instead of merely
-generating arbitrary bytes.
-
-Every fuzzing failure must be reproducible:
-
-``` text
-FAILED case #8127
-
-seed: 12345
-mutation: mbap.length = 0
-request: 000100000000010300000001
-```
-
-Then:
-
-``` bash
-pyomb replay failure.json
-```
+Refused. ADR-035 rule 2 neither adopts nor tracks a capability that
+traces to no requirement this project has stated. The heading is kept
+so that the section numbers cited by the decision records still
+resolve.
 
 ## 16. Capture and Replay
 
-PyOMB should be able to record communication:
-
-``` text
-10:02:01.001 C → S  00010000000601030000000a
-10:02:01.013 S → C  ...
-10:02:02.001 C → S  ...
-```
-
-Captured information should include:
-
--   timestamp
--   direction
--   raw bytes
--   decoded frame
--   decoded PDU
--   connection information
--   timing
-
-A capture should be replayable:
-
-``` python
-session = Capture.load("plant-session.pyomb")
-
-session.replay(
-    target="localhost",
-    timing=True,
-)
-```
-
-Captured production traffic could then become regression-test input.
+Refused. ADR-035 rule 2 neither adopts nor tracks a capability that
+traces to no requirement this project has stated. The heading is kept
+so that the section numbers cited by the decision records still
+resolve.
 
 ## 17. Proxy Mode
 
-PyOMB should eventually operate as an inline Modbus proxy:
-
-``` text
-SCADA / PLC
-     │
-     ▼
-┌─────────────┐
-│    PyOMB    │
-│    Proxy    │
-└─────────────┘
-     │
-     ▼
-Modbus Device
-```
-
-Normally traffic passes unchanged. Rules could modify behavior:
-
-``` python
-proxy.on_response(fc=3).delay(2.0)
-```
-
-or:
-
-``` python
-proxy.on_response(fc=3).mutate(
-    transaction_id=lambda value: value + 1
-)
-```
-
-This combines observation, capture, and fault injection against real
-implementations.
+Refused. ADR-035 rule 2 neither adopts nor tracks a capability that
+traces to no requirement this project has stated. The heading is kept
+so that the section numbers cited by the decision records still
+resolve.
 
 ## 18. Packet Inspection
 
@@ -657,20 +542,10 @@ Modbus TCP Request
 
 ## 19. PCAP / Wireshark Integration
 
-Captures should eventually be exportable to PCAP/PCAPNG:
-
-``` python
-capture.export("failure.pcapng")
-```
-
-This allows failures generated by PyOMB to be inspected directly in
-Wireshark.
-
-Importing captures could eventually also be supported:
-
-``` python
-capture = Capture.from_pcap("modbus.pcapng")
-```
+Refused. ADR-035 rule 2 neither adopts nor tracks a capability that
+traces to no requirement this project has stated. The heading is kept
+so that the section numbers cited by the decision records still
+resolve.
 
 ## 20. Production API
 
@@ -691,7 +566,6 @@ Convenience classes such as:
 ``` text
 ModbusTcpClient
 ModbusRtuClient
-ModbusAsciiClient
 ```
 
 should be thin constructors around the common architecture, not
@@ -738,46 +612,10 @@ This makes protocol testing possible without physical serial hardware.
 
 ## 22. Conformance Testing
 
-A longer-term objective should be a Modbus validation framework.
-
-``` bash
-pyomb test tcp 192.168.1.50
-```
-
-Example output:
-
-``` text
-Modbus TCP Test Report
-
-Protocol
-────────────────────────────────────
-MBAP framing                    PASS
-Transaction matching            PASS
-Fragmented request              PASS
-Coalesced requests              FAIL
-Invalid protocol ID             PASS
-Invalid MBAP length             FAIL
-
-FC03
-────────────────────────────────────
-Minimum address                 PASS
-Maximum address                 PASS
-Quantity = 0                    PASS
-Quantity = 125                  PASS
-Quantity = 126                  FAIL
-
-Robustness
-────────────────────────────────────
-Truncated request               PASS
-Slow request                    PASS
-Connection reset recovery       PASS
-
-Result: 47/50
-```
-
-Reports could eventually support HTML, JSON, JUnit XML, and PCAPNG,
-making PyOMB suitable for CI/CD, FAT/SAT, and automated device
-validation.
+Refused. ADR-035 rule 2 neither adopts nor tracks a capability that
+traces to no requirement this project has stated. The heading is kept
+so that the section numbers cited by the decision records still
+resolve.
 
 ## 23. Property-Based Testing
 
@@ -802,16 +640,12 @@ A possible roadmap is:
   Version   Main Goal
   --------- --------------------------------------------------
   0.4       Transport/framer architecture + raw packet model
-  0.5       Validation modes + mutation API
+  0.5       Mutation API
   0.6       Production TCP client cleanup + core FC coverage
   0.7       Serial transport + Modbus RTU
-  0.8       Modbus ASCII + advanced RTU timing
+  0.8       Advanced RTU timing
   0.9       Programmable server behavior
-  0.10      Capture and replay
-  0.11      Proxy and fault injection
-  0.12      Deterministic structured fuzzing
-  0.13      Async API
-  0.14+     Conformance framework
+  0.11      Fault injection
   1.0       Stable public API and production/test platform
 
 The exact version numbers are less important than maintaining the
@@ -826,7 +660,9 @@ architectural progression.
 5.  **Serialization must not automatically imply validation.**
 6.  **Normal production usage must remain simple.**
 7.  **Fault injection should be deterministic and reproducible.**
-8.  **Real traffic should be capturable and replayable.**
+8.  Refused by ADR-035 rule 2; the rule proposed here was that real
+    traffic be capturable and replayable. The number is kept so the
+    rules below it do not renumber.
 9.  **Custom/vendor behavior should be easy to implement.**
 10. **Avoid unnecessary runtime dependencies.**
 11. **Convenience clients should wrap common primitives rather than
@@ -857,14 +693,12 @@ Deterministic mutation
      +
 Programmable simulation
      +
-Capture/replay
-     +
 Fault injection
 ```
 
 That creates a coherent platform where the same protocol implementation
 can be used for normal production communication, device simulation,
-debugging, robustness testing, and automated conformance testing.
+debugging and robustness testing.
 
 The long-term differentiator is simple:
 
