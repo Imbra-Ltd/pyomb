@@ -4541,3 +4541,71 @@ package, per ADR-002. See `README.md` for usage and
 - **Pending:** unchanged. ADR-035 rule 1 forbids the split that merged as
   #362 and no superseding record was written; the submodule pin sits at
   `v2.79.0`, fifty-five commits behind, and is off-limits.
+
+## 2026-09-07 -- Ratify the split, clear three cleanups (continued)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Ratified the codec split (ADR-051, PR #366).** The previous entry left
+    a live MUST NOT disagreeing with the tree. The record decides three
+    things: a package splits on a seam a command reports, never on a proposal
+    document's vocabulary; a submodule name follows its content and confers
+    no authority, so `pdu.py` and `framing.py` keep the names that describe
+    them; and the second-transport revisit trigger keeps only its `stream.py`
+    half. No supersession, because five of the six rules in the record
+    carrying rule 1 are current.
+  - **Imported the exception codes (PR #367).** `errors.py` wrote a wire
+    constant from memory at nine sites while `defines.py` named all nine. The
+    codes were checked against the exception-code table on pages 48 and 49 of
+    the application protocol rather than against the literals they replace,
+    and a new test pins each class to that table from a vector typed out of
+    it. A second test fails when a protocol exception class carries no row.
+  - **Bounded the Diagnostics sub-function (PR #368).** `sub_func` was the
+    one field FC8 is actually about and the one field nothing checked. An
+    enumerated set is a third shape beside the ranges and the across-field
+    rules, and `LIMITS` cannot hold it, so both classes took the override
+    Write Single Coil already uses.
+  - **Gated numbered headings (PR #369, PLAYBOOK 3.28).** Every tracked
+    document, grouped by parent and heading level, reporting a number that
+    repeats or skips its neighbour and naming both lines. Three things it
+    reads past, each stated where it is written: the vendored specifications,
+    a heading spanning a range, and a run that does not start at one.
+  - **Stated that rule in the context file (PR #370).** It shipped with a
+    gate and a playbook section and no line in section 3, where every other
+    document-form convention sits beside the gate enforcing it.
+- **PRs merged:** #366, #367, #368, #369, #370.
+- **Issues closed/created:** #191, #262 and #324 closed on merge, each
+  verified against the closed list sorted by closing time. Created none.
+- **Lesson:** the heading gate caught its own author before it existed. The
+  new playbook section was numbered 3.27 from the issue's account of the
+  file, and section 3 had reached 3.27 since that issue was written. This is
+  the defect the gate exists to catch, committed by the change adding it, and
+  the tail of the file is what settled it.
+- **Lesson:** reading `git status` in the same command as the commit is not
+  reading it. `git add -A` swept another worktree's uncommitted work into a
+  commit; the status printed correctly and the commit ran regardless. The
+  second occurrence was worse -- two explicit paths were staged and the file
+  rode in anyway, because the pre-commit stash had left it in the index from
+  the first. The fix is a separate call that prints the index, read before
+  deciding to commit.
+- **Lesson:** a proposed rule is run against the tree before it is adopted.
+  The heading check as written upstream reported a gap in a decision record
+  whose heading reads `### 1 to 3.`, which covers three sections rather than
+  skipping two. Adopting it unmeasured would have gated working prose, and
+  the range form is now handled rather than the record excluded.
+- **Upstream:** two candidates named and neither filed, pending the owner's
+  call. The first is that a prohibition written against a proposal document
+  binds the justification and not the shape, so a later change made on
+  independent grounds reads as a violation and is not one. The second is the
+  owner's own: a rule set requiring a record for a directory that moves no
+  logical boundary asks for records nobody needs. Both target a template set
+  that is being reworked for the second reason.
+- **Not done:** the boilerplate collapse in `pdu.py`. Carried unchanged from
+  the previous entry.
+- **Pending:** the submodule pin sits at `v2.79.0`, fifty-five commits behind
+  its remote. It is off-limits, so the bump needs a proposal carrying a
+  rollback strategy. Carried from the previous entry.
+- **Pending:** `README.md` and `examples/README.md` carry uncommitted edits
+  that repositioning work wrote into this working tree. That work has its own
+  branch in a linked worktree at `C:/Workspace/pyomb-docs-workbench`, so the
+  copies here are strays to reconcile there.
