@@ -4433,3 +4433,73 @@ package, per ADR-002. See `README.md` for usage and
 - **Pending:** #356 shows no closing-issue reference, because GitHub registers
   those only for a pull request targeting the default branch. It should appear
   when #355 merges and #356 retargets; confirm rather than assume.
+
+## 2026-09-07 -- Merge the queue, split the codec (evening)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Merged the four-PR queue.** #355 first, which retargeted #356 onto
+    `main` and left it `DIRTY`: the base had squash-merged, so the branch
+    carried the same content under a different commit and every file both
+    touched read as modified on both sides. Comparing the conflict stages
+    showed the branch side adding five lines and removing none, so resolving
+    to it discarded nothing, and the merged tree came back byte-identical to
+    the branch tip. #360 merged alongside, being disjoint; #357 waited,
+    sharing `docs/PLAYBOOK.md` with #356.
+  - **Pruned the design note of ASCII and of refused work (PR #361).** The
+    note still proposed validation modes, deterministic fuzzing, capture and
+    replay, proxy mode, PCAP export and a conformance framework, and its
+    roadmap listed two of them as scheduled versions. A planning document is
+    a delayed write, so each refused section keeps its heading and loses its
+    proposal. The headings stay because ADR-031, ADR-035 and ADR-036 cite
+    the file by section number and cannot be edited to repair a dangling
+    reference.
+  - **Split `packets.py` into a package (PR #362).** 4135 lines became
+    `base.py`, `pdu.py` and `framing.py`, imports running one way only.
+    Every line carried verbatim; the evidence is a syntax-tree comparison
+    against `main` in which all 43 top-level definitions are identical.
+  - **Measured what a PDU can say about its own length.** For the RTU
+    splitter #231 needs. Fifteen classes are fixed, eight carry a byte count,
+    FC43's request is fixed at four bytes and its response is a walkable
+    object list. Only FC8 sub-function `0x0000` can never answer.
+- **PRs merged:** #355, #356, #357, #360, #361, #362, #363.
+- **Issues closed/created:** #352, #353 and #318 closed on merge. Created
+  none. #358 was closed in error and reopened -- see the first lesson.
+- **Lesson:** a closing keyword fires through its own negation. PR #361's
+  body said it does *not* close #358, and the merge closed #358 anyway,
+  because the host matches the bare substring. `CLAUDE.md` states this rule
+  and the body was written by an agent that had read it that morning. The
+  wrap-up caught it only because the closed-issue list was reconciled against
+  the work actually shipped rather than against memory.
+- **Lesson:** the untouched suite is an oracle for a split only while nothing
+  in it introspects module identity. Five sites bound to `packets` being one
+  file, and each failed by reading *nothing* rather than by failing:
+  `tests/helpers/packet_hierarchy.py` filtered on `__module__` equalling the
+  package, so three contract tests asserted against an empty list; the
+  doctest gate walked the top level only and reached one example against a
+  floor of thirty; the constraint test parsed `packets.__file__`, now an
+  `__init__` declaring no class, so all thirty-four classes read as declaring
+  no `LIMITS`. The syntax-tree comparison, not the suite, is what actually
+  proved the split neutral.
+- **Lesson:** read the specification's detail tables, not its summary. The
+  FC8 request summary says `Data N x 2 Bytes`, which reads as unbounded, and
+  that was reported as four function codes being unsplittable. Section 6.8.1
+  then fixes the data field at two bytes for every sub-function except
+  `0x00`. The undeterminable set is one sub-function of one function code,
+  and the owner caught the error by asking whether the PDF said otherwise.
+- **Lesson:** citing records is not analysing code. Several design answers
+  this session led with which record refused what and which revisit trigger
+  had not fired, and the owner named it. #359 already measures the cost --
+  forty-eight records in twenty-one days with no index.
+- **Upstream:** none filed. The split and the prune are both specific to this
+  tree's history.
+- **Not done:** the boilerplate collapse the measurement exposes. Fourteen
+  `serialize` and fifteen `__len__` overrides are identical bar their error
+  message, and differ from the inherited body only by whether `PDU_FORMAT`
+  carries `{0}`, which the class already declares.
+- **Pending:** ADR-035 rule 1 forbids splitting `packets.py`, and PR #362 did
+  it on file size. A live MUST NOT now disagrees with the tree, and no
+  superseding record was written; PR #362 flags it for a decision.
+- **Pending:** the submodule pin sits at `v2.79.0`, fifty-five commits behind
+  its remote. It is off-limits, so the bump needs a proposal carrying a
+  rollback strategy. Carried from the previous entry.
