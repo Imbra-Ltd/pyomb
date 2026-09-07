@@ -8,6 +8,10 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `ModbusRtuPacket`, the RTU counterpart to `ModbusTcpPacket`. It reads a
+  frame without being told whether the frame is a request or a response, and
+  verifies the checksum on read. See #231
+
 - `ModbusPduParseError`, raised when a PDU will not parse behind an MBAP
   header that did. It carries that header and the function code, so a caller
   can answer the peer. It subclasses `ModbusPacketError`. See #352, ADR-049
