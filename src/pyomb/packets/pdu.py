@@ -1839,6 +1839,50 @@ _DIAGNOSTIC_SUB_FUNCTIONS = frozenset(
 # document rather than against a list of fifteen numbers.
 _DIAGNOSTIC_SUB_FUNCTION_RULE = "0x0000 to 0x0004, 0x000A to 0x0012, or 0x0014"
 
+# Return Query Data echoes whatever the client sent, so its data field has no
+# stated width. Every other listed sub-function carries one 16-bit word.
+_DIAGNOSTIC_ECHO_SUB_FUNCTION = 0x0000
+
+# The function code, the sub-function, and that single data word.
+_DIAGNOSTIC_SIZE = struct.calcsize(">BHH")
+
+
+def _diagnostic_size_from_prefix(name: str, prefix: bytes) -> int | None:
+    """Size a Diagnostics PDU from the sub-function ahead of its data.
+
+    Args:
+        name (str)     : The class being sized, named in a refusal
+        prefix (bytes) : The frame from the function code onwards
+
+    Returns:
+        int  : The size of the PDU in bytes
+        None : If the prefix stops before the sub-function
+
+    Raises:
+        ModbusPacketError : If the sub-function states no width, so no byte
+            of the prefix says where the frame ends
+    """
+    head = struct.calcsize(">BH")
+
+    if len(prefix) < head:
+        return None
+
+    sub_func = struct.unpack(">H", prefix[1:head])[0]
+
+    # A reserved sub-function is sized by nothing: the table is the only
+    # statement of what the data field holds.
+    if sub_func == _DIAGNOSTIC_ECHO_SUB_FUNCTION:
+        reason = "echoes the query data back"
+
+    elif sub_func not in _DIAGNOSTIC_SUB_FUNCTIONS:
+        reason = f"carries sub-function 0x{sub_func:04X}, which is reserved"
+
+    else:
+        return _DIAGNOSTIC_SIZE
+
+    message = f"{name} {reason}, so its size cannot be read from a prefix"
+    raise ModbusPacketError(message)
+
 
 class ModbusRequestFC8(ModbusPdu):
     """Request FC8 PDU (Diagnostics).
@@ -1888,6 +1932,26 @@ class ModbusRequestFC8(ModbusPdu):
     def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT.format(len(self.subfunc_data)))
+
+    @classmethod
+    def expected_size(cls, prefix: bytes) -> int | None:
+        """Report how many bytes this PDU occupies, read from a frame's start.
+
+        Modbus Application Protocol v1.1b3 section 6.8: the sub-function
+        discriminates rather than counts, so the base class refuses. The table
+        it is checked against states a width for all but one of them.
+
+        Args:
+            prefix (bytes) : The frame from the function code onwards
+
+        Returns:
+            int  : The size of the PDU in bytes
+            None : If the prefix stops before the sub-function
+
+        Raises:
+            ModbusPacketError : If the sub-function states no width
+        """
+        return _diagnostic_size_from_prefix(cls.__name__, prefix)
 
     def violations(self) -> tuple[ModbusViolation, ...]:
         """Report the bounds, and the sub-function set the specification enumerates.
@@ -2001,6 +2065,26 @@ class ModbusResponseFC8(ModbusPdu):
     def __len__(self) -> int:
         """Return the length of the PDU data."""
         return struct.calcsize(self.PDU_FORMAT.format(len(self.subfunc_data)))
+
+    @classmethod
+    def expected_size(cls, prefix: bytes) -> int | None:
+        """Report how many bytes this PDU occupies, read from a frame's start.
+
+        Modbus Application Protocol v1.1b3 section 6.8: the sub-function
+        discriminates rather than counts, so the base class refuses. The table
+        it is checked against states a width for all but one of them.
+
+        Args:
+            prefix (bytes) : The frame from the function code onwards
+
+        Returns:
+            int  : The size of the PDU in bytes
+            None : If the prefix stops before the sub-function
+
+        Raises:
+            ModbusPacketError : If the sub-function states no width
+        """
+        return _diagnostic_size_from_prefix(cls.__name__, prefix)
 
     def violations(self) -> tuple[ModbusViolation, ...]:
         """Report the bounds, and the sub-function set the specification enumerates.

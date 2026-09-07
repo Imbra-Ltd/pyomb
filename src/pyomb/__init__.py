@@ -43,10 +43,12 @@ from .packets import (
     ModbusRtuPacket,
     ModbusRtuRequest,
     ModbusRtuResponse,
+    ModbusRtuSplitter,
     ModbusTcpPacket,
     ModbusTcpRequest,
     ModbusTcpResponse,
     ModbusViolation,
+    RtuSide,
 )
 from .stream import ModbusFragmenter, ModbusTcpReceiver, ModbusTcpSender, ModbusTcpStream
 
@@ -97,6 +99,8 @@ __all__ = [  # noqa: RUF022
     "ModbusRtuPacket",
     "ModbusRtuRequest",
     "ModbusRtuResponse",
+    "ModbusRtuSplitter",
+    "RtuSide",
     "ModbusViolation",
     # Stream
     "ModbusTcpStream",

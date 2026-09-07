@@ -1,18 +1,19 @@
 """Framing: how a PDU is represented on a transport.
 
 The MBAP header and the TCP ADU classes, the RTU ADU classes and the
-checksum they carry. Each class reads and writes exactly one complete frame;
-finding that frame's boundary in a stream is not done here.
+checksum they carry. Each class reads and writes exactly one complete frame,
+and the RTU splitter finds those frames in a stream arriving in pieces.
 """
 
 from __future__ import annotations
 
+import enum
 import struct
 from typing import ClassVar
 
 from pyomb.errors import ModbusPacketError, ModbusPduParseError
 from pyomb.packets.base import ModbusPacketAbc, ModbusPduParserAbc
-from pyomb.packets.pdu import ModbusPdu, ModbusPduParser
+from pyomb.packets.pdu import ModbusError, ModbusPdu, ModbusPduParser
 
 
 class ModbusHeader(ModbusPacketAbc):
@@ -624,6 +625,159 @@ class ModbusRtuPacket(ModbusPacketAbc):
 ################################################################################
 # MODBUS TCP PACKETS
 ################################################################################
+
+
+class RtuSide(enum.Enum):
+    """Which direction the frames in a stream are travelling.
+
+    A normal response echoes the request's function code, so the byte says
+    nothing about direction while the two directions size differently. A
+    reader is therefore told which side it decodes rather than inferring it.
+    """
+
+    REQUEST = "request"
+    RESPONSE = "response"
+
+
+class ModbusRtuSplitter:
+    """Cut whole RTU frames out of a stream of bytes.
+
+    Bytes are pushed in as they arrive and whole frames come back. An RTU frame
+    declares no length, so the boundary is computed from the content: the PDU
+    class states how long its frame is, and the checksum at that boundary either
+    confirms the answer or rejects it. A rejected frame costs one byte, which is
+    discarded before the search resumes.
+
+    Args:
+        side (RtuSide) : Which direction the frames travel
+
+    Example:
+        >>> from pyomb.packets import ModbusRequestFC3, ModbusRtuRequest
+        >>>
+        >>> pdu = ModbusRequestFC3(start_addr=0x006B, quantity=3)
+        >>> frame = ModbusRtuRequest(slave_id=0x11, pdu=pdu).serialize()
+        >>>
+        >>> splitter = ModbusRtuSplitter(side=RtuSide.REQUEST)
+        >>>
+        >>> # Half a frame yields nothing; the rest of it yields the frame.
+        >>> assert splitter.push(frame[:4]) == []
+        >>> found = splitter.push(frame[4:])
+        >>> assert len(found) == 1
+        >>> assert found[0].serialize() == frame
+    """
+
+    # A slave id, a function code and the checksum. Nothing shorter can carry a
+    # frame, so nothing shorter is worth sizing.
+    MIN_FRAME = 1 + 1 + CRC_SIZE
+
+    def __init__(self, side: RtuSide) -> None:
+        """Initialize the Modbus RTU Splitter.
+
+        Args:
+            side (RtuSide) : Which direction the frames travel
+        """
+        self.side = side
+        self._buffer = bytearray()
+        self._resyncs = 0
+
+    def __str__(self) -> str:
+        """Return a string representation of the Modbus RTU Splitter."""
+        msg = "MODBUS RTU SPLITTER: (Side: {0}, Pending: {1}, Resyncs: {2})"
+        return msg.format(self.side.value, self.pending, self.resyncs)
+
+    @property
+    def pending(self) -> int:
+        """Return the count of held bytes that are not yet a whole frame."""
+        return len(self._buffer)
+
+    @property
+    def resyncs(self) -> int:
+        """Return the count of bytes discarded resynchronising."""
+        return self._resyncs
+
+    def reset(self) -> None:
+        """Drop every held byte and zero the resynchronisation count."""
+        self._buffer.clear()
+        self._resyncs = 0
+
+    def push(self, data: bytes) -> list[ModbusRtuPacket]:
+        """Add received bytes and return the whole frames they complete.
+
+        Args:
+            data (bytes) : The bytes received since the last call
+
+        Returns:
+            list : The frames these bytes completed, in arrival order
+        """
+        self._buffer.extend(data)
+        found: list[ModbusRtuPacket] = []
+
+        while True:
+            packet = self._take()
+
+            if packet is None:
+                break
+
+            found.append(packet)
+
+        return found
+
+    def _lookup(self, func_code: int) -> type[ModbusPdu]:
+        """Return the PDU class this side reads a function code as."""
+        registry = ModbusPduParser.get_registry()
+
+        if self.side is RtuSide.REQUEST:
+            return registry.get(func_code, ModbusPdu)
+
+        # An exception is the one function code that states its own direction,
+        # and the error PDU is what 0x8000 answers for.
+        if func_code >= 0x80:
+            return ModbusError
+
+        return registry.get(func_code + 0x8000, ModbusPdu)
+
+    def _discard(self) -> None:
+        """Drop the leading byte and count it against the resynchronisations."""
+        del self._buffer[:1]
+        self._resyncs += 1
+
+    def _take(self) -> ModbusRtuPacket | None:
+        """Return the next whole frame, or None while more bytes are needed."""
+        while len(self._buffer) >= self.MIN_FRAME:
+            prefix = bytes(self._buffer[1:])
+
+            try:
+                size = self._lookup(prefix[0]).expected_size(prefix)
+
+            except ModbusPacketError:
+                # The layout states no size, so no boundary can be computed from
+                # this position at all. Resynchronise rather than stall.
+                self._discard()
+                continue
+
+            # The count field has not arrived, so the size is not yet knowable.
+            if size is None:
+                return None
+
+            end = 1 + size + CRC_SIZE
+
+            if len(self._buffer) < end:
+                return None
+
+            try:
+                packet = ModbusRtuPacket.deserialize(bytes(self._buffer[:end]))
+
+            except ModbusPacketError:
+                # The checksum did not land where the size said it would, so a
+                # frame did not start at this byte.
+                self._discard()
+                continue
+
+            del self._buffer[:end]
+
+            return packet
+
+        return None
 
 
 def validate_mbap_length(header: ModbusHeader, stream: bytes) -> None:
