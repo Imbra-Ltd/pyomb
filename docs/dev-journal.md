@@ -4609,3 +4609,70 @@ package, per ADR-002. See `README.md` for usage and
   that repositioning work wrote into this working tree. That work has its own
   branch in a linked worktree at `C:/Workspace/pyomb-docs-workbench`, so the
   copies here are strays to reconcile there.
+
+## 2026-09-07 -- Reposition the README, start RTU reading (night)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Shipped the README repositioning (PR #372).** The previous entry left
+    `README.md` and `examples/README.md` carrying strays from the linked
+    worktree; they arrived here as three commits fast-forwarded onto local
+    `main`, unpushed and with no pull request. Local `main` was returned to
+    `origin/main` and the work went through a branch. Two of its install
+    commands did not work: `pip install pyomb` answers 404 at the index this
+    project publishes nothing to, and `pip install "pyomb[serial]"` names an
+    extra `pyproject.toml` does not declare. The release-wheel install is
+    back, pinned to the version the package reports, and the feature list now
+    opens with a note naming the nine capabilities absent from `src/`.
+  - **Read an RTU frame without being told its direction (PR #373).**
+    `ModbusRtuPacket` is the RTU counterpart to `ModbusTcpPacket`: it takes
+    the slave id and the checksum, hands the payload to `ModbusPdu` and
+    declines to interpret it. Its wire output matches the direction-specific
+    class for the same frame, pinned against the vectors the checksum tests
+    already carry.
+  - **Reported a PDU's size from a prefix (PR #374).** `expected_size()`
+    answers from the declared layout where `__len__` answers from a parsed
+    instance, which is what a splitter cannot have. Eight layouts carry a byte
+    count and declare it in a new `PDU_COUNT`; Diagnostics and the
+    Encapsulated Interface lead with a discriminator and raise rather than
+    guess. Sizes are pinned against the specification's worked examples in
+    sections 6.3, 6.11 and 6.12.
+  - **Recorded how a splitter learns the direction (ADR-052).** A framer is
+    constructed for one side rather than inferring the side per frame. The
+    passive monitor is separate work and is not designed here.
+- **PRs merged:** #372, #373, #374.
+- **Issues closed/created:** none closed, none created. #231 stays open
+  deliberately -- see the lesson below.
+- **Lesson:** acceptance criteria can be complete while the ticket is not.
+  All six of #231's criteria are met by PR #373 alone, because they were
+  written for the third of the three layers the body describes. Its title is
+  that nothing can read frames off a serial line, and its body says not to
+  build that layer alone. Closing on the criteria would have retired a ticket
+  whose stated problem is untouched.
+- **Lesson:** the function code carries no direction, and the specification
+  says so in one sentence -- a server "simply echoes to the request the
+  original function code". The splitter question had been framed as a timing
+  problem and then as a byte problem; it is neither, it is a question about
+  which side the reader is on.
+- **Lesson:** a gate reading git's index says nothing about a file that is not
+  staged. `pytest checks/` passed locally over a new test module and CI then
+  failed it for two three-line comment blocks. The rule is already in the
+  context file; what this adds is that it fires on a file created minutes
+  earlier, not only on a document someone forgot.
+- **Upstream:** one candidate, judged not reusable and recorded as `none` on
+  ADR-052. A reader taking its direction from construction rather than from
+  the bytes is thin as a standalone rule, and one project meeting it is not
+  evidence it generalizes.
+- **Not done:** the frame splitter and the serial byte source, the two layers
+  #231 still owes. The splitter has no home yet: `framing.py` opens by saying
+  boundary-finding is not done there.
+- **Not done:** the boilerplate collapse in `pdu.py`. Carried unchanged from
+  the previous entry.
+- **Pending:** the submodule pin sits at `v2.79.0`. It is off-limits, so the
+  bump needs a proposal carrying a rollback strategy. Carried from the
+  previous entry.
+- **Resolved:** the README strays the previous entry flagged. They shipped in
+  PR #372. The `docs/workbench-direction` branch that carried the design note
+  survives in the worktree at `C:/Workspace/pyomb-docs-workbench`; its content
+  is on `main` in the same squash, so the branch is deletable once that
+  worktree is free.
