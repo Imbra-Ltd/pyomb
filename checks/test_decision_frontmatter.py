@@ -1,10 +1,10 @@
 """Every decision record carries well-formed YAML front matter.
 
-Front matter is the source of truth for a record's status, its date and its
-supersession links. Before it, a status lived in prose, so a supersession
-updated one side of a pair and nothing noticed the other was stale -- two of
-this project's records supersede an earlier one, and neither of the earlier
-ones pointed forward until the migration wired both directions.
+Front matter is the source of truth for a record's status, its date and the
+links between records. Before it, a status lived in prose, so a supersession
+updated one side of a pair and nothing noticed the other was stale. A
+correction is the second such link, and it leaves the corrected record's
+status alone, because every decision in that record still holds.
 
 The parser accepts only what the schema allows and refuses anything else, which
 is stricter than a real YAML reader rather than looser. PLAYBOOK 3.16 carries
@@ -233,6 +233,60 @@ class DecisionFrontMatter(unittest.TestCase):
             [],
             "supersession links that disagree. A record that replaces another "
             "updates both sides in the same change:\n  " + "\n  ".join(offenders),
+        )
+
+    def test_correction_links_agree_in_both_directions(self):
+        """Each corrects entry is answered by a corrected_by entry, and back."""
+
+        offenders = []
+
+        by_id = {fields["id"]: (name, fields) for name, fields in self.parsed.items() if fields and "id" in fields}
+
+        # A correction moves no status, so neither field has a second
+        # statement of the same fact to be checked against. Both are walked.
+        for name, fields in self.parsed.items():
+            if fields is None:
+                continue
+
+            for field, answer in (("corrects", "corrected_by"), ("corrected_by", "corrects")):
+                for other in fields.get(field, []):
+                    if other not in by_id:
+                        offenders.append(f"{name}: {field} names {other!r}, which is not a record")
+                        continue
+
+                    if fields["id"] not in by_id[other][1].get(answer, []):
+                        offenders.append(
+                            f"{name}: {field} names {other!r}, but {by_id[other][0]} does not "
+                            f"list {fields['id']!r} in {answer}"
+                        )
+
+        self.assertEqual(
+            offenders,
+            [],
+            "correction links that disagree. A record correcting another "
+            "updates both sides in the same change, and a reader of the "
+            "corrected record meets the link only if it is there:\n  " + "\n  ".join(offenders),
+        )
+
+    def test_one_pair_of_records_carries_one_relation(self):
+        """A record does not both replace and correct the same record."""
+
+        offenders = []
+
+        for name, fields in self.parsed.items():
+            if fields is None:
+                continue
+
+            for replaced, corrected in (("supersedes", "corrects"), ("superseded_by", "corrected_by")):
+                for other in sorted(set(fields.get(replaced, [])) & set(fields.get(corrected, []))):
+                    offenders.append(f"{name}: {replaced} and {corrected} both name {other!r}")
+
+        self.assertEqual(
+            offenders,
+            [],
+            "record pairs carrying both relations, which says the earlier "
+            "record's decisions are dead and live at once. A replacement and "
+            "a correction are different acts:\n  " + "\n  ".join(offenders),
         )
 
 

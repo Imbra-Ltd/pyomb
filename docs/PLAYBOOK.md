@@ -1051,6 +1051,15 @@ defines. The check reads it back: `id` matches the filename, `status` and
 present, and a supersession names the same pair from both sides. ADR-019
 records the schema and this project's category set.
 
+A correction is the second relation between records, and it is optional on
+both sides: `corrects` on the record making the correction, `corrected_by`
+on the record receiving it. The check reads it from both sides, because a
+correction moves no status and so has no second statement of itself to be
+checked against. It also refuses a pair of records naming each other in a
+supersession field and a correction field at once, which would say the
+earlier record's decisions are dead and live together. ADR-052 records why
+a corrected record keeps `status: Accepted`.
+
 A new category is a decision that takes its own record. Widening the set in
 `CATEGORIES` to make a record pass inverts that, which is the move the two
 retired freezes were built to prevent and ADR-047 and ADR-048 record.
@@ -1699,6 +1708,13 @@ sections. Keep every sentence to 40 words and every paragraph to 80; 3.14 and
 Superseding an earlier record updates both sides in the same change: the new
 record lists it in `supersedes`, and the old one gets `status: Superseded` and
 the new id in `superseded_by`. 3.16 fails if either side is missing.
+
+Correcting an earlier record without superseding it takes the other pair. It
+applies where a claim the record argues from turns out to be wrong, or one of
+its rules reaches further than it should, and every decision in it still
+holds. The new record lists it in `corrects`, the corrected record gets the
+new id in `corrected_by`, and its status and its prose stay as they merged.
+3.16 fails if either side is missing, or if one pair carries both relations.
 
 A record that defers something carries its revisit trigger on a line opening
 `**Revisit trigger:**`, or `**Revisit trigger for (N):**` where the record
