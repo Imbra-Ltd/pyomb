@@ -177,3 +177,8 @@ assets/certificates/
 # follow are in CLAUDE.md, which is tracked; only the per-machine overrides
 # are ignored, so a shared .claude/settings.json can still be committed.
 .claude/settings.local.json
+
+# Scratch space. Work in progress that belongs to no commit -- a package being
+# extracted, a probe's output, a comparison tree kept while a change is read.
+tmp/
+temp/
