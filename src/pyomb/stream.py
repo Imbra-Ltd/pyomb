@@ -330,6 +330,88 @@ class ModbusTcpStream(ModbusStreamAbc):
 
         return b"".join(chunks)
 
+    def _receive_header(self) -> bytes:
+        """Read the MBAP header, or nothing where the peer closed cleanly.
+
+        Returns:
+            bytes: The header, or empty where nothing arrived at all
+
+        Raises:
+            ModbusNetworkError: If the peer closed part way through the header
+        """
+        header_bytes = self._recv_exactly(HEADER_SIZE)
+
+        # A clean close between frames, as opposed to during one
+        if not header_bytes:
+            return b""
+
+        if len(header_bytes) < HEADER_SIZE:
+            reason = f"The peer closed the connection after {len(header_bytes)} of the {HEADER_SIZE} header byte(s)"
+            raise ModbusNetworkError(message=reason)
+
+        return header_bytes
+
+    @staticmethod
+    def _pdu_length(header_bytes: bytes) -> int:
+        """Return how many PDU bytes the header says follow it.
+
+        Args:
+            header_bytes (bytes): A complete MBAP header
+
+        Returns:
+            int: The PDU byte count
+
+        Raises:
+            ModbusPacketError: If the declared length describes no frame
+        """
+        header = ModbusHeader.deserialize(header_bytes)
+
+        # The header read already consumed the unit identifier, which the
+        # length field counts, so length - 1 PDU bytes remain.
+        pdu_length = header.length - 1
+
+        # The field arrives from the network and is never trusted on its own.
+        # A length of zero or less describes no frame at all.
+        if pdu_length < 0:
+            reason = f"The MBAP length field declares {header.length} byte(s), too few to cover the unit identifier"
+            raise ModbusPacketError(reason)
+
+        return pdu_length
+
+    def _receive_pdu(self, pdu_length: int) -> list[bytes]:
+        """Read the PDU, fragment-sized where one is configured.
+
+        The split never changes how many bytes arrive.
+
+        Args:
+            pdu_length (int): The byte count the header declared
+
+        Returns:
+            list: The chunks read, in arrival order
+
+        Raises:
+            ModbusNetworkError: If the peer closed part way through the PDU
+        """
+        fragments = []
+        pending = pdu_length
+
+        while pending > 0:
+            chunk_size = min(self.frag_size, pending) if self.frag_size else pending
+            chunk = self._recv_exactly(chunk_size)
+
+            if len(chunk) < chunk_size:
+                reason = (
+                    "The peer closed the connection "
+                    f"{pdu_length - pending + len(chunk)} byte(s) into a "
+                    f"frame declaring {pdu_length} byte(s) of PDU"
+                )
+                raise ModbusNetworkError(message=reason)
+
+            fragments.append(chunk)
+            pending -= len(chunk)
+
+        return fragments
+
     def receive(self) -> bytes:
         """Receives one complete Modbus message from the connected socket.
 
@@ -351,58 +433,14 @@ class ModbusTcpStream(ModbusStreamAbc):
         try:
             # A frame always opens with the MBAP header, which carries the
             # length needed to find where the frame ends.
-            header_bytes = self._recv_exactly(HEADER_SIZE)
+            header_bytes = self._receive_header()
 
             # A clean close between frames, as opposed to during one
             if not header_bytes:
                 return b""
 
-            if len(header_bytes) < HEADER_SIZE:
-                reason = f"The peer closed the connection after {len(header_bytes)} of the {HEADER_SIZE} header byte(s)"
-
-                # The guard below re-raises this unchanged, so it is not the
-                # hidden control flow TRY301 exists to report.
-                raise ModbusNetworkError(message=reason)  # noqa: TRY301
-
-            # Deserialize the header
-            header = ModbusHeader.deserialize(header_bytes)
-
-            # The header read above already consumed the unit identifier, which
-            # the length field counts, so length - 1 PDU bytes remain.
-            pdu_length = header.length - 1
-
-            # The field arrives from the network and is never trusted on its
-            # own. A length of zero or less describes no frame at all.
-            if pdu_length < 0:
-                reason = f"The MBAP length field declares {header.length} byte(s), too few to cover the unit identifier"
-
-                # The guard below re-raises this unchanged, so it is not the
-                # hidden control flow TRY301 exists to report.
-                raise ModbusPacketError(reason)  # noqa: TRY301
-
-            # Add the header to the fragments list
-            fragments = [header_bytes]
-            pending = pdu_length
-
-            # Read the PDU, fragment-sized where one is configured and in one
-            # read otherwise. The split never changes how many bytes arrive.
-            while pending > 0:
-                chunk_size = min(self.frag_size, pending) if self.frag_size else pending
-                chunk = self._recv_exactly(chunk_size)
-
-                if len(chunk) < chunk_size:
-                    reason = (
-                        "The peer closed the connection "
-                        f"{pdu_length - pending + len(chunk)} byte(s) into a "
-                        f"frame declaring {pdu_length} byte(s) of PDU"
-                    )
-
-                    # The guard below re-raises this unchanged, so it is not
-                    # the hidden control flow TRY301 exists to report.
-                    raise ModbusNetworkError(message=reason)  # noqa: TRY301
-
-                fragments.append(chunk)
-                pending -= len(chunk)
+            pdu_length = self._pdu_length(header_bytes)
+            fragments = [header_bytes, *self._receive_pdu(pdu_length)]
 
             # Assemble the fragments into a complete message
             message = self.fragmenter.assemble(fragments)
