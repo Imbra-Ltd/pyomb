@@ -281,14 +281,16 @@ follow the referenced templates. Project-specific additions only:
 - A readability edit to a merged decision record that changes no claim is a
   format migration, not a new decision; say so in the commit and show it with a
   word-level diff. An edit that changes a claim needs a new record; see ADR-017
-- Moving or splitting content between documents is editorial housekeeping,
-  recorded in the pull request description and never in a decision record. Two
-  bound templates disagree here: `core/docs.md` says it is housekeeping and
-  `workflow/scope.md`'s end-of-session audit says each move needs a record.
-  `docs.md` governs, because it owns the decision log and reasons the rule from
-  what makes a decision worth an immutable record, where the other states it in
-  passing in a checklist. Creating a directory is still a decision and still
-  needs one
+- Moving or splitting content between documents needs no decision record, and
+  is recorded in the pull request description instead. A record is owed where
+  the decision changes what a user observes without reading this repository's
+  internals, and a move changes nothing they can see. The pinned templates
+  disagree with each other on this — `core/docs.md` calls it housekeeping and
+  `workflow/scope.md`'s end-of-session audit asks for a record — and `docs.md`
+  governs, because it owns the decision log. Upstream settled it the same way
+  at v2.88.0 by having that audit defer to the threshold, so this rule survives
+  the pin bump unchanged. Creating a directory is still a decision and still
+  needs a record
 - Markdown wraps at the width `.editorconfig` declares under its Markdown
   section, which is the only place that number is written down. Table rows,
   fenced blocks and lines carrying a URL are exempt because none of them can be
