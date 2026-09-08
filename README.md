@@ -17,7 +17,7 @@ constructed and sent, using Python's standard library alone.
 
 ## Features
 
-> Note: the list below describes the target product. Not built in v0.6.0 —
+> Note: the list below describes the target product. Not built in v0.7.0 —
 > serial RTU and RTU-over-TCP transport, client retries and reconnection,
 > server register maps and scripted response sequences, composed test
 > scenarios, traffic hooks and the capture format. Serial framing exists in
