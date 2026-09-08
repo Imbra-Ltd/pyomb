@@ -4829,3 +4829,33 @@ package, per ADR-002. See `README.md` for usage and
 - **Resolved:** the wrapped tracker text flagged this session. Issue and pull
   request bodies are written unwrapped from here; the eighty-column rule binds
   tracked Markdown, which no tracker text is.
+
+## 2026-09-08 -- Move the extracted package into the tree (close-out)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Gave scratch work a home in the checkout (PR #393).** `tmp/` and
+    `temp/` are ignored. Neither was, so work in progress that belongs to no
+    commit had nowhere to sit inside the repository and ended up in a session
+    temporary directory instead.
+  - **Moved the extracted package there.** `tmp/pyomb-sniffer/` now holds all
+    eleven files -- manifest, licence, README, gitignore, the module, its two
+    test modules and the three documents that left with it. Its suite passes
+    from the new location against the trimmed library.
+- **PRs merged:** #393.
+- **Issues closed/created:** none.
+- **Lesson:** the entry above this one recorded a complete package living only
+  in a session scratchpad and called that pending. It was closer to a fault
+  than a pending item: nothing would have reported the loss, and the next
+  session would have found the work gone with no trace of what it had been.
+  A directory the repository ignores costs one line and removes the whole
+  class.
+- **Resolved:** the scratchpad half of the pending item the previous entry
+  raised. The package survives the session now.
+- **Pending:** the private repository still does not exist, which is the other
+  half and needs the owner. Until it does, `tmp/pyomb-sniffer/` is the only
+  copy and it is ignored, so no clone of this repository carries it.
+- **Pending:** the splitter restoration, filed as #391 during the previous
+  pass and still unstarted. Carried.
+- **Pending:** the three upstream candidates and the submodule pin, both
+  carried unchanged from the previous entry.
