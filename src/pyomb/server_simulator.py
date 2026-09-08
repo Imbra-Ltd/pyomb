@@ -277,10 +277,12 @@ class ModbusServerSimulator(threading.Thread):
 
     ############################################################################
 
-    def run(self) -> None:
-        """Run the Modbus server until stopped."""
-        self.log.info("Server starting")
+    def _open_listener(self) -> socket.socket | None:
+        """Bind and listen, or record why not and hand back nothing.
 
+        Returns:
+            socket.socket : The listening socket, or None where the bind failed
+        """
         # An empty host binds every interface, deliberately: the device
         # under test is elsewhere. See PLAYBOOK, static analysis.
         srv = socket.socket()
@@ -294,7 +296,7 @@ class ModbusServerSimulator(threading.Thread):
             self.startup_error = error
             self.log.exception("Server could not bind %s:%s", self.host, self.port)
             srv.close()
-            return
+            return None
 
         srv.setblocking(False)
         srv.listen(self.connection_limit)
@@ -303,145 +305,174 @@ class ModbusServerSimulator(threading.Thread):
         # learn which. Assigned before the started event, so waiters see it.
         self.port = srv.getsockname()[1]
 
-        # Add the server socket to the read list
         self.read_list.append(srv)
+
+        return srv
+
+    def _accept(self, srv: socket.socket, now: float, last_activity_time: dict[socket.socket, float]) -> None:
+        """Accept one connection, or refuse it where the limit is reached.
+
+        Args:
+            srv (socket.socket)       : The listening socket
+            now (float)               : The time this pass through the loop began
+            last_activity_time (dict) : When each connection was last heard from
+        """
+        # The read list holds the listening socket plus one entry per
+        # client, so the client count is one short of its length.
+        client_count = len(self.read_list) - 1
+
+        # Refuse the connection rather than leave the loop, which let any
+        # peer stop the server by exceeding the limit.
+        if client_count >= self.connection_limit:
+            refused, refused_addr = srv.accept()
+            self.log.info(f"Connection limit of {self.connection_limit} reached. Refusing {refused_addr}.")
+            refused.close()
+            return
+
+        conn, addr = srv.accept()
+        self.log.info(f"Connection request from {addr}")
+
+        if self.tls is not None:
+            try:
+                conn = self.ssl_context.wrap_socket(conn, server_side=True)
+                self.peercerts[conn] = conn.getpeercert()
+
+            except ssl.SSLError as e:
+                self.log.info(e)
+
+        # Recorded in both modes: accept() reports it to a caller outside
+        # the thread, which never enters the list.
+        self.peer_names[conn] = addr
+
+        # Stored either way; only the processing mode reads from it here.
+        if self.process_connections:
+            self.read_list.append(conn)
+            last_activity_time[conn] = now
+
+        self.clients.append(conn)
+        self.new_connection_event.set()
+
+    def _serve(self, conn: socket.socket, now: float, last_activity_time: dict[socket.socket, float]) -> None:
+        """Read one client's frame and hand it to the data handler.
+
+        Args:
+            conn (socket.socket)      : The client connection that is readable
+            now (float)               : The time this pass through the loop began
+            last_activity_time (dict) : When each connection was last heard from
+        """
+        try:
+            self.log.info(f"Connection.recv() - {self.peer_names.get(conn)}.")
+            stream = ModbusTcpStream(sock=conn, frag_delay=self.frag_delay, frag_size=self.frag_size)
+            data = stream.receive()
+
+        # receive() wraps every transport failure in a ModbusBaseError,
+        # which is not an OSError.
+        except (OSError, ModbusBaseError) as e:
+            self.forget(conn, last_activity_time)
+            self.log.info(f"Socket Error - {e}.")
+            return
+
+        # An empty read is the peer closing the connection.
+        if not data:
+            self.forget(conn, last_activity_time)
+            self.log.info("Connection closed by the peer.")
+            return
+
+        last_activity_time[conn] = now
+
+        try:
+            self.on_data(data, conn)
+
+        # The top-level loop CLAUDE.md 2.2 carves out: a data_handler is a
+        # caller's and raises anything.
+        except Exception as e:  # noqa: BLE001
+            # Read before forget(), which drops the entry.
+            peer = self.peer_names.get(conn)
+
+            self.forget(conn, last_activity_time)
+            self.log.info(f"Dropping {peer} - {e}.")
+
+    def _sweep_inactive(self, srv: socket.socket, now: float, last_activity_time: dict[socket.socket, float]) -> None:
+        """Close every connection that has been silent past the timeout.
+
+        Args:
+            srv (socket.socket)       : The listening socket, which is skipped
+            now (float)               : The time this pass through the loop began
+            last_activity_time (dict) : When each connection was last heard from
+        """
+        # Over a copy: closing one removes it from the list being walked,
+        # which would skip the entry after it.
+        for conn in list(self.read_list):
+            if conn is srv:
+                continue
+
+            # A connection the simulator never registered has no activity to
+            # measure, so it is left alone rather than timed out.
+            last_seen = last_activity_time.get(conn)
+
+            if last_seen is None:
+                continue
+
+            if (last_seen + self.inactive_timeout) < now:
+                self.log.info(f"{self.peer_names.get(conn)} inactive for {self.inactive_timeout} seconds. Closing.")
+                self.forget(conn, last_activity_time)
+
+    def _close_listener(self, srv: socket.socket) -> None:
+        """Close every client connection and then the listening socket.
+
+        Args:
+            srv (socket.socket) : The listening socket
+        """
+        for conn in self.read_list:
+            if conn is not srv:
+                self.log.info(f"Closing client socket {conn.getsockname()}.")
+                self.disconnect(conn)
+
+        self.log.info(f"Closing server socket {srv.getsockname()}.")
+        srv.close()
+
+    def run(self) -> None:
+        """Run the Modbus server until stopped."""
+        self.log.info("Server starting")
+
+        srv = self._open_listener()
+
+        # The reason is on self.startup_error, which start() reports.
+        if srv is None:
+            return
 
         # Keyed by the connection itself. getsockname() names the server on
         # every accepted socket, and a peer address is not unique either.
-        last_activity_time = {}
+        last_activity_time: dict[socket.socket, float] = {}
 
         last_print_time = time.time()
 
         self.log.info("Server listening.")
         self.started_event.set()
 
-        # Run the server until the quit event is set
         while not self.quit_event.is_set():
-            # Wait for incoming connections or data from clients
-            select_timeout = 1
             # Nothing is ever put on the write or error lists, so select can
             # only ever report readability back.
+            select_timeout = 1
             ready_to_read, _, _ = select.select(self.read_list, [], [], select_timeout)
 
-            # Check if the server socket is ready to accept a new connection
             current_time = time.time()
+
             if srv in ready_to_read:
-                # The read list holds the listening socket plus one entry per
-                # client, so the client count is one short of its length.
-                client_count = len(self.read_list) - 1
+                self._accept(srv, current_time, last_activity_time)
 
-                # Refuse the connection rather than leave the loop, which
-                # let any peer stop the server by exceeding the limit.
-                if client_count >= self.connection_limit:
-                    refused, refused_addr = srv.accept()
-                    self.log.info(f"Connection limit of {self.connection_limit} reached. Refusing {refused_addr}.")
-                    refused.close()
-
-                # Wait for a new connection
-                else:
-                    # Accept the new connection after 3-way handshake
-                    conn, addr = srv.accept()
-                    self.log.info(f"Connection request from {addr}")
-                    # conn.setblocking(False)
-
-                    # If the server is secure, wrap the connection in an SSL context
-                    if self.tls is not None:
-                        try:
-                            conn = self.ssl_context.wrap_socket(conn, server_side=True)
-                            self.peercerts[conn] = conn.getpeercert()
-                        except ssl.SSLError as e:
-                            self.log.info(e)
-
-                    # Recorded in both modes: accept() reports it to a
-                    # caller outside the thread, which never enters the list.
-                    self.peer_names[conn] = addr
-
-                    # Add the new connection to the read list
-                    if self.process_connections:
-                        # The connection will be processed by the simulator
-                        # otherwise it is just stored and may be later processed from outside
-                        self.read_list.append(conn)
-                        last_activity_time[conn] = current_time
-
-                    # Notify that a new cleint has connected
-                    self.clients.append(conn)
-                    self.new_connection_event.set()
-
-            # Process the incoming data from the clients
             for conn in ready_to_read:
-                # Only client connections are processed
                 if conn is not srv:
-                    try:
-                        self.log.info(f"Connection.recv() - {self.peer_names.get(conn)}.")
+                    self._serve(conn, current_time, last_activity_time)
 
-                        # Create a Modbus TCP stream
-                        stream = ModbusTcpStream(sock=conn, frag_delay=self.frag_delay, frag_size=self.frag_size)
-
-                        # Receive the data from the client
-                        data = stream.receive()
-
-                    # receive() wraps every transport failure in a
-                    # ModbusBaseError, which is not an OSError.
-                    except (OSError, ModbusBaseError) as e:
-                        self.forget(conn, last_activity_time)
-                        self.log.info(f"Socket Error - {e}.")
-
-                    # If no exception occurred, process the data
-                    else:
-                        # If the socket is closed by the peer, disconnect
-                        if not data:
-                            self.forget(conn, last_activity_time)
-                            self.log.info("Connection closed by the peer.")
-
-                        # Process the incoming data. The call needs a guard of
-                        # its own: an else: branch is outside the try above it.
-                        else:
-                            last_activity_time[conn] = current_time
-
-                            try:
-                                self.on_data(data, conn)
-
-                            # The top-level loop CLAUDE.md 2.2 carves out: a
-                            # data_handler is a caller's and raises anything.
-                            except Exception as e:  # noqa: BLE001
-                                # Read before forget(), which drops the entry.
-                                peer = self.peer_names.get(conn)
-
-                                self.forget(conn, last_activity_time)
-                                self.log.info(f"Dropping {peer} - {e}.")
-
-            # Over a copy: closing one removes it from the list being
-            # walked, which would skip the entry after it.
-            for conn in list(self.read_list):
-                if conn is srv:
-                    continue
-
-                # A connection the simulator never registered has no activity
-                # to measure, so it is left alone rather than timed out.
-                last_seen = last_activity_time.get(conn)
-
-                if last_seen is None:
-                    continue
-
-                # Check if the connection is inactive for the specified timeout
-                if (last_seen + self.inactive_timeout) < current_time:
-                    self.log.info(f"{self.peer_names.get(conn)} inactive for {self.inactive_timeout} seconds. Closing.")
-                    self.forget(conn, last_activity_time)
+            self._sweep_inactive(srv, current_time, last_activity_time)
 
             # Print the connections status once in a while
             if (last_print_time + 1 < current_time) and self.process_connections:
                 self.log.info(f"{list(self.peer_names.values())}: Clients connected {len(self.get_peers())}")
                 last_print_time = current_time
 
-        # After the server is stopped, close all client connections
-        for conn in self.read_list:
-            if conn is not srv:
-                self.log.info(f"Closing client socket {conn.getsockname()}.")
-                self.disconnect(conn)
-
-        # Close the server socket
-        self.log.info(f"Closing server socket {srv.getsockname()}.")
-        srv.close()
+        self._close_listener(srv)
 
         self.started_event.clear()
         self.log.info("Server stopped.")
