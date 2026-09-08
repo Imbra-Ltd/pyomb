@@ -215,8 +215,12 @@ src/pyomb/              # The library
   logger.py             # Logger that writes to stdout and optionally a file
   defines.py            # Protocol constants
 tests/                  # Tests for the library; a bare pytest runs this tier
+  codec/                # The wire format: ADU classes, header, checksum, contracts
   helpers/              # Doubles and reflection helpers shared across the tiers
   integration/          # Opens real sockets and starts threads; pytest -m integration
+  pdu/                  # One module per function code, and response value shaping
+  simulators/           # The client and server, exercised without a socket
+  transport/            # Stream framing, the sender and receiver loops, failures
 checks/                 # Gates over this repository's own conventions, not shipped
 examples/               # Runnable usage patterns, executed by CI
 scripts/                # Certificate generation

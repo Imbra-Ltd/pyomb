@@ -4859,3 +4859,64 @@ package, per ADR-002. See `README.md` for usage and
   pass and still unstarted. Carried.
 - **Pending:** the three upstream candidates and the submodule pin, both
   carried unchanged from the previous entry.
+
+## 2026-09-08 -- Take the non-RTU backlog (task sweep)
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Adopted the release-ordering check (PR #395).** PLAYBOOK 5 told
+    operators nothing enforced the ordering rule while a check for it had been
+    bound since the v2.61.0 pin and the procedure never invoked it. It is now
+    step 7, with its pass condition beside it, run in the form it ships from
+    the release commit and from a detached worktree at the tag.
+  - **Settled which template governs a content move (PR #396, corrected in
+    #399 and again in #400).** Three passes, and the first two argued from
+    text rather than stating the rule.
+  - **Bucketed the tests by subject (PR #397).** All 53 modules placed from a
+    script that refuses on any gap in either direction. Collection identical
+    on both sides.
+  - **Split the two functions no complexity gate could accept (PR #398).**
+    `ModbusServerSimulator.run` went 47 to 13 and `ModbusTcpStream.receive` 17
+    to under 9. The tree now measures 322 functions with none over the
+    threshold, so the gate #149 wants needs no baseline at all.
+  - **Bumped the templates pin to v2.88.0 (PR #400).** Nine tags, driven by
+    #304 rather than by the tags existing.
+- **PRs merged:** #395, #396, #397, #398, #399, #400.
+- **Issues closed/created:** closed #217, #319 and #304. #311 re-verified and
+  left deferred; #149 measured and carries a proposal.
+- **Lesson:** verifying external state before a visible action paid for
+  itself. #304 asked for an upstream filing and the filing was not owed --
+  upstream had already swept the conflict two tags past our pin. Filing would
+  have re-derived a fix that existed, on somebody's public tracker.
+- **Lesson:** a rule that argues from quoted text ages with the text. The
+  content-move rule was written twice against sentences that upstream then
+  retired, and each rewrite was found by reading the source rather than by any
+  gate. The third version states the threshold instead, and there is nothing
+  left in it to go stale.
+- **Lesson:** the bump falsified a rule this session had written an hour
+  earlier. v2.88.0 lists directory creation among the things that end in the
+  pull request, and CLAUDE.md still said a new directory needs a record. The
+  only reason it surfaced is that reading the far side of a cross-reference
+  was the point of the check -- confirming `scope.md` had moved was not enough.
+- **Lesson:** two changes this session shipped without the document edit they
+  owed, and both were caught by the wrap rather than by review. The typed
+  marker changed what a consumer's type checker sees and added no changelog
+  entry; the test buckets changed the tree and left the README structure map
+  naming two directories where there are six. Neither has a gate.
+- **Not done:** the second half of #149. The tool cannot be added from this
+  machine, because CI installs with `uv sync --locked` and no `uv` is present
+  to regenerate the lock.
+- **Not done:** the RTU line. #391 and #231 are untouched by design.
+- **Not done:** the boilerplate collapse in `pdu.py`. Carried unchanged from
+  the previous three entries.
+- **Pending:** the CI job for the complexity gate. The proposal is on #149
+  naming the job, its place under the fan-in, the rollback and the two
+  controls that would catch a regression; `.github/workflows/` is off-limits
+  so it waits on approval.
+- **Resolved:** the submodule pin, carried as pending across three entries,
+  now sits at v2.88.0.
+- **Resolved:** the upstream filings the previous entry carried. Item 10 of
+  the end-of-session audit changed with the pin: upstream work is proposed for
+  a demonstrated shared defect, and a reusable-looking preference alone needs
+  no issue and no `Upstream:` bookkeeping. The three candidates recorded
+  earlier today were preferences of that kind.
