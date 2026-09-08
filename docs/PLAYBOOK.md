@@ -542,6 +542,14 @@ value and issues the same sequence. Reading the port back is what made this
 possible — `run()` once bound whatever it was given without reading the
 result, so a server asked for port 0 bound one and went on reporting 0.
 
+An exception crossing a thread boundary fails the run. The manifest promotes
+`PytestUnhandledThreadExceptionWarning` to an error, because left a warning it
+prints a traceback beside a passing summary and a suite that always prints one
+teaches its reader to skip the next. Three tests produced one for months, all
+of them making a bind fail on purpose, and the fix was to stop the thread dying
+rather than to silence the report -- `start()` now names the reason the bind
+failed and chains it as the cause.
+
 Wait on the server rather than sleeping. `start()` returns once the listener
 accepts, bounded by its own timeout and raising if the thread dies, so a sleep
 after it waits a second time for what was already waited for. `stop()` only
@@ -1502,6 +1510,37 @@ heading pattern drifted from the convention the documents use, or a document
 was written and not staged, so the rule would have read almost nothing. The
 rule failing names the offending heading, the one it collides with, and the
 line each sits on.
+
+### 3.29 Typed marker (pytest)
+
+```bash
+pytest checks/test_typed_marker_ships.py
+```
+
+Every public symbol here is annotated and 3.5 runs mypy strict over all of
+`src/`, and none of that reaches a consumer without one empty file. PEP 561
+says an installed package advertises its inline annotations with a `py.typed`
+marker inside the package directory, and a checker that does not find one
+treats every imported name as `Any`.
+
+The package shipped without it from the first release to v0.7.0 inclusive. No
+gate here could see it: mypy in this repository reads `src/` directly and a
+source tree needs no marker, so the one check that would notice is the one a
+library does not run on itself. It surfaced when a second package first
+imported this one, and cost that package four errors, three of which were not
+its own.
+
+The gate reads the tree rather than building a distribution. It asserts the
+marker exists, that git carries it -- a file on disk and absent from the index
+reaches no clone and no build -- and that the wheel target still names the
+directory the marker sits in, which is what packages it. 3.17 covers the
+archive side, and 3.11 builds what a consumer installs.
+
+Four reds, and the first is the one to read before the others. The listing
+failing means git reached no file under the package at all, so the three rules
+below it would have passed against an unread tree. The other three name the
+marker and what is wrong with it.
+
 
 ## 4. Maintenance
 

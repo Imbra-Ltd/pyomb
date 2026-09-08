@@ -4747,3 +4747,85 @@ package, per ADR-002. See `README.md` for usage and
   previous entry.
 - **Resolved:** the `docs/workbench-direction` branch and its worktree, both
   flagged in the previous entry, are gone.
+
+## 2026-09-08 -- Withdraw the sniffer, release, and fix both bugs
+
+- **Tool:** Claude Code (Opus 5, 1M context).
+- **Key changes:**
+  - **Shipped the previous wrap, minus half of it (PR #382).** PR #381 carried
+    the session entry plus forty lines of README documenting the RTU splitter
+    and sniffer. Those classes were about to leave, so the branch was closed
+    and the entry re-cut on its own.
+  - **Moved the RTU stream reader out of the library (PR #384).** The owner
+    decided the capability is paid. Five public names, the private sizing
+    helpers, two test modules, two decision records and a design section left
+    together. No tag carried them -- they landed after v0.6.0 -- so the
+    withdrawal bounded what the next release would publish rather than
+    recalling anything. The extracted package builds, its 33 tests pass
+    against the trimmed library, and it reaches the library only through
+    names already in `__all__`.
+  - **Removed ADR-054 (PR #386).** It asserted the whole reader ships
+    separately, which the owner's next instruction contradicted. Deleted
+    rather than superseded: no replacement decision exists yet, and a record
+    stating a boundary that is being redrawn is one every later reader has to
+    set aside.
+  - **Cut v0.7.0 (PR #387).** The pre-release sequence ran and is recorded in
+    the pull request. The 360 audit was declined, and the record says plainly
+    that the case is weaker than the last decline's -- that one rested on no
+    source module having changed, and here every module in `src/` did.
+  - **Fixed the missing typed marker (PR #389).** Every public symbol is
+    annotated and none of it reached a consumer: PEP 561 asks for a `py.typed`
+    file and the package had none, so every imported name arrived as `Any`.
+  - **Fixed the bind that died in the thread (PR #390).** The failure is now
+    caught where it happens, and `start()` names the operating system's reason
+    and chains it. `PytestUnhandledThreadExceptionWarning` is an error
+    tree-wide, so the class cannot return quietly.
+- **PRs merged:** #382, #384, #386, #387, #388, #389, #390.
+- **Issues closed/created:** created #383, #385 and #391; closed #383, #385
+  and #210. #231 stays open and is now blocked by #391.
+- **Lesson:** the extraction took one class too many, and the question that
+  would have caught it was never asked. Which classes are paid was settled
+  from the code -- everything that reads a stream -- rather than from what the
+  free library still has to do. A splitter is told its direction and never
+  guesses, which is what an ordinary client or server needs; only the sniffer
+  infers. One sentence about the use case would have drawn the line correctly
+  the first time, and it took a release to find out.
+- **Lesson:** a library's own gates cannot see what its consumers see. The
+  typed marker was absent from the first release to v0.7.0 and nothing here
+  could report it, because mypy reads `src/` directly and a source tree needs
+  no marker. The first package to import this one hit it in a single run, and
+  three of the four errors it reported were not its own.
+- **Lesson:** a warning that reports a real defect is promoted, not silenced.
+  The issue had been groomed three times and each pass framed the remaining
+  question as presentation -- suppress it at the tests, or accept it. Both
+  answers preserved a thread dying and taking the diagnosis with it. Reading
+  the warning as true made the fix obvious and smaller than either option.
+- **Lesson:** ticking acceptance criteria in a pull request is not ticking
+  them in the tracker. #210 auto-closed as completed with all four boxes
+  empty, which reads as work abandoned rather than finished.
+- **Upstream:** three candidates, none filed. With the domain skin off: a
+  merge to a public repository under a permissive licence publishes
+  irrevocably, so a capability meant to be withheld is withdrawn before the
+  next tag rather than before the next merge -- `templates/base/core/git.md`.
+  A project whose every gate reads its own source tree cannot observe a
+  property that exists only in the installed artifact, so the first external
+  consumer is the first real test of one -- `templates/stack/python-lib.md`.
+  A warning naming a real defect is promoted to an error, never suppressed at
+  the site that raises it -- `templates/base/core/testing.md`.
+- **Not done:** the splitter restoration, filed as #391 and agreed but not
+  started. v0.7.0 shipped without it, so the RTU story is incomplete for one
+  release.
+- **Not done:** the boilerplate collapse in `pdu.py`. Carried unchanged from
+  the previous two entries.
+- **Pending:** the private repository does not exist. The extracted package is
+  complete -- manifest, licence, README, gitignore, suite -- and lives only in
+  a session scratchpad, which does not survive the session. It needs the owner
+  to create the repository.
+- **Pending:** the three upstream candidates above need filing on another
+  repository, which is the owner's call rather than this session's.
+- **Pending:** the submodule pin sits at `v2.79.0` against `v2.87.0` upstream,
+  eight tags behind. It is off-limits, so the bump needs a proposal carrying a
+  rollback strategy. Carried from the previous two entries.
+- **Resolved:** the wrapped tracker text flagged this session. Issue and pull
+  request bodies are written unwrapped from here; the eighty-column rule binds
+  tracked Markdown, which no tracker text is.
