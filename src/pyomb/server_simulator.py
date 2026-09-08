@@ -141,6 +141,10 @@ class ModbusServerSimulator(threading.Thread):
         self.daemon = daemon
         self.quit_event = threading.Event()
         self.started_event = threading.Event()
+
+        # Why the listener never came up, for start() to report. The thread
+        # is where a bind fails and the caller is not there to see it.
+        self.startup_error: OSError | None = None
         self.new_connection_event = threading.Event()
         self.read_list: list[socket.socket] = []
         self.clients: list[socket.socket] = []
@@ -280,7 +284,18 @@ class ModbusServerSimulator(threading.Thread):
         # An empty host binds every interface, deliberately: the device
         # under test is elsewhere. See PLAYBOOK, static analysis.
         srv = socket.socket()
-        srv.bind((self.host, self.port))
+
+        # Raised here the exception ends the thread with the reason on
+        # stderr, where the caller waiting on start() cannot reach it.
+        try:
+            srv.bind((self.host, self.port))
+
+        except OSError as error:
+            self.startup_error = error
+            self.log.exception("Server could not bind %s:%s", self.host, self.port)
+            srv.close()
+            return
+
         srv.setblocking(False)
         srv.listen(self.connection_limit)
 
@@ -596,6 +611,10 @@ class ModbusServerSimulator(threading.Thread):
         # Set the processing mode
         self.process_connections = process_connections
 
+        # Cleared before the thread runs, so a restart cannot report why the
+        # previous attempt failed.
+        self.startup_error = None
+
         # Start the server thread
         super().start()
 
@@ -607,6 +626,11 @@ class ModbusServerSimulator(threading.Thread):
         while not self.started_event.is_set():
             if not self.is_alive():
                 message = f"The server thread ended before the listener on port {self.port} came up"
+
+                if self.startup_error is not None:
+                    message = f"{message}: {self.startup_error}"
+                    raise ModbusNetworkError(message=message) from self.startup_error
+
                 raise ModbusNetworkError(message=message)
 
             if time.time() >= deadline:

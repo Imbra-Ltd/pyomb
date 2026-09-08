@@ -124,6 +124,10 @@ addopts = [
     "not integration",
 ]
 
+# An exception crossing a thread boundary is a defect wherever it happens.
+# Left a warning it prints a traceback beside a passing summary.
+filterwarnings = ["error::pytest.PytestUnhandledThreadExceptionWarning"]
+
 # The one marker, applied by the hook rather than written on a test. An
 # unregistered name still deselects, so the warning is the only signal.
 markers = [

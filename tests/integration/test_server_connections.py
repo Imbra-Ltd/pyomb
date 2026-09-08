@@ -179,8 +179,13 @@ class TestStartup(ServerFixture):
         self.server = ModbusServerSimulator(port=self.port)
         self.server.daemon = True
 
-        with self.assertRaises(ModbusNetworkError):
+        with self.assertRaises(ModbusNetworkError) as raised:
             self.server.start(timeout=3.0)
+
+        # The bind fails in the thread, so without this the reason reaches
+        # stderr and the caller is told only that the thread ended.
+        self.assertIsInstance(raised.exception.__cause__, OSError)
+        self.assertIn(str(raised.exception.__cause__), str(raised.exception))
 
     def test_start_gives_up_quickly_when_the_thread_is_gone(self):
         # The liveness check should end the wait well inside the timeout.
