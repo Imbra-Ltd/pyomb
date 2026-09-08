@@ -1874,17 +1874,59 @@ To cut a release:
    it on this branch is what keeps the README inside the tagged sdist naming
    its own release rather than the one before it
 6. Open the pull request, merge it, and wait for CI to pass on `main`
-7. Tag with `git tag -a`, never a lightweight tag, or `git describe` reports a
+7. Run the release-ordering check below, from the release commit and before
+   the tag. Every pull request it lists is a decision to record rather than
+   something that happens to land first
+8. Tag with `git tag -a`, never a lightweight tag, or `git describe` reports a
    stale version to consumers
-8. Push the tag
+9. Push the tag
 
 Merge the release pull request before any other pull request that is ready,
 and tag before merging the rest. The `CHANGELOG.md` entry written in step 4
 describes the tree as of the release commit, so anything merged between that
-commit and the tag ships inside the release with no entry naming it. The
-ordering is not enforced by anything — both pull requests are green and
-mergeable in either order, and the wrong order produces a correct build whose
-changelog is quietly incomplete.
+commit and the tag ships inside the release with no entry naming it.
+
+Nothing blocks the wrong order. Both pull requests are green and mergeable
+either way, branch protection does not require branches to be up to date, and
+the wrong order produces a correct build whose changelog is quietly
+incomplete. What step 7 adds is not a block but a reading: the operator is
+shown every pull request that could land in the gap, and has to decide each
+one. `templates/base/core/git.md` calls this the release-ordering check and
+this is that check, run from here rather than left in the template:
+
+```bash
+previous=$(git describe --tags --abbrev=0)
+if git describe --tags --exact-match HEAD >/dev/null 2>&1; then
+  echo "HEAD is $previous; no release is in preparation, so this check does not apply"
+  exit 3
+fi
+echo "preceding tag: $previous"
+git log --format='  carries: %s' "$previous..HEAD"
+echo "commits carried: $(git log --format='%s' "$previous..HEAD" | wc -l)"
+ready='select(.mergeStateStatus=="CLEAN")'
+fmt='"  ready but unmerged: #\(.number) \(.title)"'
+gh pr list --state open --json number,title,mergeStateStatus --jq ".[] | $ready | $fmt"
+```
+
+Pass condition: it names the preceding tag, lists every commit the release
+will carry with a count of them, then lists every open pull request that is
+ready to merge. Each carried commit needs an entry in the changelog or a
+reason it earns none, and each pull request listed is merged into this release
+and recorded, or held until the tag is pushed. A carried count of zero is a
+failure rather than a clean result — it means the tag would land on the same
+commit as its predecessor.
+
+The command answers first whether a release is in preparation, because that
+reading holds only then. With the tag already at HEAD it reports that it does
+not apply and stops on exit status 3, rather than printing the failure-shaped
+zero its own pass condition describes. Emptiness is not the detector: a
+carried count of zero the day after a release reads the same the day after
+that, with nothing fixed in between.
+
+Requiring branches to be up to date would block the wrong order outright and
+is deliberately not done. It would refuse every second merge of a batch on
+staleness rather than on content, which costs an update-and-rerun cycle per
+pull request to prevent a mistake this reading already surfaces.
 
 Pushing the tag is the last manual step. `.github/workflows/release.yml` fires
 on any `v*` tag and does the rest: it refuses a tag that does not name the
