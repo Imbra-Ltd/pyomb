@@ -6,6 +6,17 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-08
+
+Modbus RTU reaches the codec. An RTU frame can be built, read and checksum-
+verified without being told whether it is a request or a response, and a PDU
+now reports how many bytes it will occupy before anything has parsed it. The
+byte source that would feed those from a serial line is not here yet.
+
+The server simulator stops dropping a peer over a PDU it cannot parse, and
+routes a request by its class rather than by the function code field. The two
+deprecated simulator aliases are gone.
+
 ### Added
 
 - `ModbusPdu.expected_size()`, reporting how many bytes a PDU occupies from
@@ -633,7 +644,8 @@ no upgrade path to describe and no consumer to break.
   committed chain was rotated; it was self-signed and installed in no trust
   store
 
-[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.4.4...v0.5.0
