@@ -6,6 +6,12 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- `ModbusServerSimulator.start()` reports why the listener did not come up. A
+  bind that fails names the operating system's reason in the message and
+  chains it as the cause, where it previously reached only stderr. See #210
+
 ## [0.7.0] - 2026-09-08
 
 Modbus RTU reaches the codec. An RTU frame can be built, read and checksum-
