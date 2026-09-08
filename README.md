@@ -56,7 +56,7 @@ pyomb is not on a package index. Every tagged release attaches a wheel to its
 record on GitHub, so install that:
 
 ```bash
-pip install https://github.com/Imbra-Ltd/pyomb/releases/download/v0.6.0/pyomb-0.6.0-py3-none-any.whl
+pip install https://github.com/Imbra-Ltd/pyomb/releases/download/v0.7.0/pyomb-0.7.0-py3-none-any.whl
 ```
 
 Save this as `quickstart.py` and run it with `python quickstart.py`. It starts

@@ -80,7 +80,7 @@ _RENAMED = {
     "ModbusGatewayTargetDeviceFailedToRespond": "ModbusGatewayTargetDeviceFailedToRespondError",
 }
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 # Grouped by the submodule each name comes from. Sorting interleaves the
 # groups and strands every comment below it.
