@@ -6,6 +6,12 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- The package ships a PEP 561 `py.typed` marker, so a type checker reads the
+  annotations `pyomb` declares instead of treating every imported name as
+  `Any`. Consuming code needs no change. See #385
+
 ### Changed
 
 - `ModbusServerSimulator.start()` reports why the listener did not come up. A
