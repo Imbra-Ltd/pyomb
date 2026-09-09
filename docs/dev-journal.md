@@ -5033,3 +5033,22 @@ package, per ADR-002. See `README.md` for usage and
 - **Pending:** the epic's own definition of done names a shipped release
   carrying the new layout. #405-#411 are closed and the network check is
   green, but no 0.8.0 has been tagged. The owner's call.
+
+## 2026-09-09 (wrap-up) -- End-of-session audit on the executed epic
+
+- **Tool:** Claude Code (Sonnet 5).
+- **Key changes:** ran the full end-of-session audit and found two stale
+  references the per-task PRs missed. ONBOARDING's Key Files table still
+  named `src/pyomb/packets/` as the codec; repointed at `pdu/`, `adu/` and
+  `transport/`, and named `packets/` for what it now is. PLAYBOOK 2.1 still
+  sent a function-code implementer to `src/pyomb/client_simulator.py` and
+  `src/pyomb/server_simulator.py` for the request/response factories, and to
+  `tests/test_server_dispatch.py` and `tests/test_client_requests.py` for
+  the dispatch tables -- the second pair stale since before this epic, from
+  the test-tree tiering that moved them into `tests/simulators/`.
+- **PRs merged:** none yet; both fixes are staged for this pass's commit.
+- **Lesson:** a grep for the old paths across `src/`, `tests/`, `examples/`
+  and the three docs each PR was supposed to update still missed two hits,
+  because both sat inside prose that named a path without importing it --
+  the mechanical searches this session ran were import-shaped, and a
+  documentation cross-reference is not an import.
