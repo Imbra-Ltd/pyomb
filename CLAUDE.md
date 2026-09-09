@@ -73,15 +73,22 @@ outstanding — read them rather than inferring the gap.
 The directory map lives in the README "Project structure" section; never
 duplicate it here. Create that section if it is missing.
 
-- Wire encoding and decoding goes in the codec package; nothing there may
-  import a socket
-- Anything that reads or writes a socket goes in the transport package
-- The client and server simulators depend on the codec and the transport, and
-  nothing depends on them
+- Wire encoding and decoding goes in the `pdu` and `adu` packages — the
+  message and the envelope a transport puts around it; neither may import
+  a socket. `pdu` groups its function codes the way the specification
+  groups them: bit access, register access, diagnostics, encapsulated
+  interface, plus one file for the shared parts. `adu` keeps TCP and RTU
+  in separate files; see ADR-054
+- Anything that reads or writes a socket goes in the `transport` package
+- The client and server simulators live in the `simulators` package and
+  depend on `pdu`, `adu` and `transport`; nothing depends on them
+- The four old flat modules and the `packets` package forward to the new
+  layout and warn on import; they are removed one release after the move,
+  never widened with new content — see ADR-054
 - A test module's home follows its subject, never its imports — a simulator
-  test that builds a frame through the codec is still a simulator test.
-  Regression tests for a fixed defect get their own module named for the
-  behaviour, not the issue; see ADR-044
+  test that builds a frame through the pdu and adu packages is still a
+  simulator test. Regression tests for a fixed defect get their own module
+  named for the behaviour, not the issue; see ADR-044
 - A test of the library goes in `tests/`; a gate over this repository's own
   conventions goes in `checks/`. The two are told apart by subject, never by
   what a module imports: a gate exercises no source module and never will.
