@@ -5,6 +5,7 @@ date: 2026-09-07
 category: repository
 supersedes: []
 superseded_by: []
+corrects: ["035"]
 ---
 
 # ADR-051: A package splits on a measured seam, not on a vocabulary

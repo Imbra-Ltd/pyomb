@@ -308,8 +308,12 @@ follow the referenced templates. Project-specific additions only:
   takes its own record. Enforced by `checks/test_decision_frontmatter.py`; see
   ADR-019
 - Superseding a record updates both sides in the same change: `supersedes` on
-  the new one, `status` and `superseded_by` on the old. That metadata edit is
-  the one change a merged record accepts beyond readability; see ADR-019
+  the new one, `status` and `superseded_by` on the old. Correcting a record
+  without superseding it is the second such pair, `corrects` and
+  `corrected_by`, written when every decision in the corrected record still
+  holds -- its status and its prose stay as they merged. Those two metadata
+  edits are the only changes a merged record accepts beyond readability; see
+  ADR-019 and ADR-052
 - A decision record numbered 020 or above names no other record in its prose:
   a supersession goes in the front matter and a context-only pointer goes in a
   closing `## Related` section. Records below that number keep the prose
