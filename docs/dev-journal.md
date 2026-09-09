@@ -4976,3 +4976,60 @@ package, per ADR-002. See `README.md` for usage and
   stays a documented limitation. The owner's call.
 - **Resolved:** the second half of #149 and the CI job proposal, both carried
   from the previous entry.
+
+## 2026-09-09 (execution) -- Lay the library out the way the specification does
+
+- **Tool:** Claude Code (Sonnet 5).
+- **Key changes:**
+  - **Split the codec into `pdu/` and `adu/`** (PRs #415-#417). Each split
+    verified byte-identical against the pre-move source by an AST comparison;
+    the one deviation per PR was a relocated doctest import.
+  - **Moved the network and simulator code** into `transport/` and
+    `simulators/` (PRs #418, #419), each deferring its ssl-touching submodule
+    through its own `__getattr__` rather than an eager import -- the first
+    `transport/__init__.py` draft imported `pyomb.transport.tls` at module
+    top and broke the "plain import loads no ssl" regression test before it
+    reached a PR.
+  - **Added the network-boundary check** (PR #420): a `pdu`/`adu` import of
+    `socket`, `ssl` or `pyomb.transport` now fails `pytest`. Negative-
+    controlled by planting `import socket` in `bits.py`, confirming the
+    failure named the line, then reverting.
+  - **Mirrored the new packages in the test tree** (PR #421). `tests/codec/`
+    dissolved into `tests/pdu/` and a new `tests/adu/`, by subject rather
+    than by import -- two tests exercising both pdu- and adu-side classes to
+    prove a shared base mechanism stayed in `tests/pdu/`, since that
+    mechanism is defined in `pdu.common`.
+  - **Backfilled the changelog and one PLAYBOOK section** (PRs #422, #423)
+    that the per-task PRs missed: none of #406-#409 added a `Deprecated`
+    entry for the five paths they retired, and PLAYBOOK 3.18's re-measurement
+    command still named the pre-move paths.
+  - Eight old import paths now forward through a per-name `__getattr__`,
+    warning once and naming both paths -- the shape #412 deletes.
+- **PRs merged:** #415, #416, #417, #418, #419, #420, #421, #422, #423.
+- **Issues closed/created:** closed #405, #406, #407, #408, #409, #410, #411.
+- **Lesson:** a package split that turns a flat module into a package changes
+  what its own `dir()` shows. Four tests reached into the module namespace
+  directly -- a `mock.patch.object` on a name the shim never imports, a
+  `dir()`-based class walk over a shim with nothing eagerly bound -- and each
+  failed structurally rather than just picking up a warning. Cosmetic and
+  structural breakage look identical in a warnings summary; only running the
+  suite tells them apart.
+- **Lesson:** moving a file complexipy's snapshot already names needs the
+  snapshot's `path` field re-keyed in the same change. CI failed with
+  "exceeds 15 but was not part of the snapshot" -- the same message a genuine
+  new violation produces -- and a local Windows run showed the identical
+  symptom for the unrelated, already-known separator quirk, which is exactly
+  what could have made the real failure read as the familiar one.
+- **Lesson:** `git checkout -b` before the first edit, not before the commit.
+  One PR's work landed on `main` directly because the branch was never cut;
+  recovered without a force-push by branching at the bad commit, then moving
+  `main` back with `git branch -f` from a different branch, since `reset
+  --hard` on the checked-out branch was refused as destructive.
+- **Not done:** the boilerplate across the function-code classes. #406 moved
+  it into four files without collapsing it, same as the four entries before
+  this one recorded for the single file it used to be.
+- **Not done:** the RTU line. #391 and #231 remain untouched and out of
+  scope, as #413 states.
+- **Pending:** the epic's own definition of done names a shipped release
+  carrying the new layout. #405-#411 are closed and the network check is
+  green, but no 0.8.0 has been tagged. The owner's call.
