@@ -1589,6 +1589,17 @@ before committing:
 sed -i 's#\\\\#/#g' complexipy-snapshot.json
 ```
 
+### 3.31 Network boundary (pytest)
+
+```bash
+pytest checks/test_pdu_and_adu_do_not_touch_the_network.py
+```
+
+Parses every file under `src/pyomb/pdu/` and `src/pyomb/adu/` and fails on
+an import of `socket`, `ssl`, or anything from `pyomb.transport` -- the
+network-free half of the split ADR-054 made, and the CLAUDE.md 1.2 rule
+this enforces. Collected by a bare `pytest` like every other module under
+`checks/`, so it runs on every push without a separate CI step.
 
 ## 4. Maintenance
 
