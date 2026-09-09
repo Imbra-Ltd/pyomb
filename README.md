@@ -203,17 +203,23 @@ message text.
 
 ```text
 src/pyomb/              # The library
-  packets/              # Codec, split by data-flow stage
-    base.py             # Constraints and the abstract packet bases
-    pdu.py              # PDU classes, one pair per function code, and the parser
-    framing.py          # MBAP header, CRC helpers, TCP and RTU frame wrappers
-  stream.py             # Transport: length-driven framing and fragmentation
-  tls.py                # TLS settings and SSL context construction
-  client_simulator.py   # Client simulator and request builder
-  server_simulator.py   # Server simulator, select loop and response factory
-  errors.py             # Modbus exception codes as a Python hierarchy
-  logger.py             # Logger that writes to stdout and optionally a file
-  defines.py            # Protocol constants
+  pdu/                  # The message itself, grouped by specification group
+    common.py           # Constraints, abstract bases, ModbusPdu, the parser
+    bits.py              # Bit-access function codes
+    registers.py          # Register-access function codes
+    diagnostics.py         # FC7 and FC8
+    encapsulated.py         # FC43, the encapsulated interface transport
+  packets/               # Deprecated forwarding shims; removed in 0.9.0
+    base.py               # Forwards to pyomb.pdu.common
+    pdu.py                 # Forwards to pyomb.pdu's group modules
+    framing.py              # MBAP header, CRC helpers, TCP and RTU frame wrappers
+  stream.py              # Transport: length-driven framing and fragmentation
+  tls.py                 # TLS settings and SSL context construction
+  client_simulator.py    # Client simulator and request builder
+  server_simulator.py    # Server simulator, select loop and response factory
+  errors.py              # Modbus exception codes as a Python hierarchy
+  logger.py              # Logger that writes to stdout and optionally a file
+  defines.py             # Protocol constants
 tests/                  # Tests for the library; a bare pytest runs this tier
   codec/                # The wire format: ADU classes, header, checksum, contracts
   helpers/              # Doubles and reflection helpers shared across the tiers
