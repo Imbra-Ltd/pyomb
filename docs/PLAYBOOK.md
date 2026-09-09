@@ -388,19 +388,21 @@ inside them.
    `deserialize(cls, stream)`, per ADR-009. Reach the packing helper with
    `self.pack(fmt)` rather than accepting a format from the caller — a
    function code's layout is fixed by the specification.
-   `tests/test_packet_signature_contract.py` fails on a class that diverges.
+   `tests/pdu/test_packet_signature_contract.py` fails on a class that diverges.
 2. Register both at the bottom of that same group file, where every other
    class in it is registered, and add both to `pdu/__init__.py`'s imports
    and `__all__`.
-3. Add a builder to `RequestFactory` in `src/pyomb/client_simulator.py` and a
-   branch to `send_request`.
-4. Add a responder to `ResponseFactory` in `src/pyomb/server_simulator.py` and a
-   branch to `on_data`. Import the request class and test it with `isinstance`
+3. Add a builder to `RequestFactory` in
+   `src/pyomb/simulators/client_simulator.py` and a branch to `send_request`.
+4. Add a responder to `ResponseFactory` in
+   `src/pyomb/simulators/server_simulator.py` and a branch to `on_data`.
+   Import the request class and test it with `isinstance`
    rather than comparing the function code field — the factory reads fields
    only that class declares, and a caller can register a different class
    against the same code. See ADR-050.
-5. Add the code to the tables in `tests/test_server_dispatch.py` and
-   `tests/test_client_requests.py`; both iterate a table, so one row each.
+5. Add the code to the tables in `tests/simulators/test_server_dispatch.py`
+   and `tests/simulators/test_client_requests.py`; both iterate a table, so
+   one row each.
 6. Assert the wire bytes against a vector from the specification in `docs/`,
    never against this library's own output.
 

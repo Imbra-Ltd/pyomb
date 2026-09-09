@@ -125,10 +125,12 @@ a broken setup; PLAYBOOK 3.30 says why and how the baseline is regenerated.
 
 | Path | What it is |
 | --- | --- |
-| `src/pyomb/packets/` | The codec — `base.py` holds the abstractions, `pdu.py` one class per function code plus the registry, `framing.py` the MBAP header and the TCP and RTU frame wrappers |
-| `src/pyomb/stream.py` | The transport — length-driven framing, deliberate fragmentation |
-| `src/pyomb/client_simulator.py` | Client simulator and the request builder |
-| `src/pyomb/server_simulator.py` | Server simulator, its select loop and the response factory |
+| `src/pyomb/pdu/` | The message — `common.py` holds the abstractions, the parser and the registry; `bits.py`, `registers.py`, `diagnostics.py` and `encapsulated.py` group the function codes the way the specification does |
+| `src/pyomb/adu/` | The envelope — `tcp.py` the MBAP header and TCP frame wrappers, `rtu.py` the CRC-16 checksum and RTU frame wrappers |
+| `src/pyomb/transport/` | The socket layer — length-driven framing, deliberate fragmentation, TLS settings |
+| `src/pyomb/simulators/client_simulator.py` | Client simulator and the request builder |
+| `src/pyomb/simulators/server_simulator.py` | Server simulator, its select loop and the response factory |
+| `src/pyomb/packets/` | Deprecated forwarding shims for the old codec layout; removed in 0.9.0 |
 | `src/pyomb/errors.py` | Modbus exception codes as a Python exception hierarchy |
 | `tests/helpers/stub_socket.py` | The socket doubles most tests build on |
 | `checks/` | Gates over this repository's own conventions, kept out of the library suite and out of the source archive |
