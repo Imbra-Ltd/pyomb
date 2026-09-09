@@ -1123,8 +1123,8 @@ The module also pins the deferral the simulators rest on.
 package's `__getattr__` rather than imported at the top, because importing
 them costs every caller the ssl import for a transport most callers never
 open — roughly 13ms against the package's own 35ms. `TlsSettings` and
-`TlsRole` sit behind the same resolver, because `pyomb.tls` reaches ssl too
-and binding it eagerly would put the cost straight back. A plain
+`TlsRole` sit behind the same resolver, because `pyomb.transport.tls` reaches
+ssl too and binding it eagerly would put the cost straight back. A plain
 `import pyomb` must therefore load neither simulator, nor the settings, nor
 ssl.
 
@@ -1140,7 +1140,7 @@ there would always answer yes.
 Re-measure before treating the numbers above as current:
 
 ```bash
-python -X importtime -c "import pyomb; import pyomb.client_simulator; import pyomb.server_simulator"
+python -X importtime -c "import pyomb; import pyomb.simulators.client_simulator; import pyomb.simulators.server_simulator"
 ```
 
 Read the cumulative column on the `pyomb` line and on the two that follow it.
