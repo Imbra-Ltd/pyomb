@@ -8,30 +8,36 @@ instead, through the functions below.
 
 import inspect
 
-from pyomb import packets
-from pyomb.packets import ModbusPacketAbc
+from pyomb import pdu
+from pyomb.packets import framing
+from pyomb.pdu import ModbusPacketAbc
+
+# Every module a packet class can currently be defined in, read from the
+# canonical location rather than through the deprecated pyomb.packets.
+_HOMES = (pdu, framing)
 
 
 def packet_classes():
     """Every packet class this library declares, the abstract base included.
 
     Returns:
-        list : The packet classes defined in pyomb.packets
+        list : The packet classes defined under any home in _HOMES
     """
 
     found = []
 
-    for name in dir(packets):
-        candidate = getattr(packets, name)
+    for home in _HOMES:
+        for name in dir(home):
+            candidate = getattr(home, name)
 
-        # Match the package prefix, not the package: the classes live in
-        # its submodules and report those as their module.
-        own = inspect.isclass(candidate) and candidate.__module__.startswith(packets.__name__)
-        if not own:
-            continue
+            # Match the home's own prefix, not the home itself: the classes
+            # live in its submodules and report those as their module.
+            own = inspect.isclass(candidate) and candidate.__module__.startswith(home.__name__)
+            if not own:
+                continue
 
-        if issubclass(candidate, ModbusPacketAbc):
-            found.append(candidate)
+            if issubclass(candidate, ModbusPacketAbc):
+                found.append(candidate)
 
     return found
 

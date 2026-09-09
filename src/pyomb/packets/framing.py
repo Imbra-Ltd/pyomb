@@ -11,8 +11,7 @@ import struct
 from typing import ClassVar
 
 from pyomb.errors import ModbusPacketError, ModbusPduParseError
-from pyomb.packets.base import ModbusPacketAbc, ModbusPduParserAbc
-from pyomb.packets.pdu import ModbusPdu, ModbusPduParser
+from pyomb.pdu import ModbusPacketAbc, ModbusPdu, ModbusPduParser, ModbusPduParserAbc
 
 
 class ModbusHeader(ModbusPacketAbc):

@@ -17,7 +17,7 @@ import inspect
 import pathlib
 import unittest
 
-import pyomb.packets as packets
+import pyomb.pdu as pdu
 from pyomb.errors import ModbusPacketError
 from pyomb.packets import (
     ModbusHeader,
@@ -35,11 +35,12 @@ from pyomb.packets import (
     ModbusRtuRequest,
     ModbusTcpRequest,
     ModbusViolation,
+    framing,
 )
 
-# Every module of the package: __init__ declares no class, so reading it
-# alone would report every class as not declaring its own LIMITS.
-SOURCE = sorted(pathlib.Path(packets.__file__).parent.glob("*.py"))
+# Both homes a packet class can be defined in; reading either alone would
+# report the other's classes as not declaring their own LIMITS.
+SOURCE = [*sorted(pathlib.Path(pdu.__file__).parent.glob("*.py")), pathlib.Path(framing.__file__)]
 
 
 # The Diagnostics sub-function codes of Modbus Application Protocol v1.1b3
@@ -304,8 +305,11 @@ class EveryPacketClassStatesWhatItWasReadFor(unittest.TestCase):
 
         cls.concrete = [
             name
-            for name, value in inspect.getmembers(packets, inspect.isclass)
-            if issubclass(value, packets.ModbusPacketAbc) and value is not packets.ModbusPacketAbc
+            for home in (pdu, framing)
+            for name, value in inspect.getmembers(home, inspect.isclass)
+            if value.__module__.startswith(home.__name__)
+            and issubclass(value, pdu.ModbusPacketAbc)
+            and value is not pdu.ModbusPacketAbc
         ]
 
     def test_the_enumeration_reached_the_classes(self):

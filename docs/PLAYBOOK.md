@@ -379,16 +379,19 @@ inside them.
 
 ### 2.1 Add a function code
 
-1. Add the request and response PDU classes to `src/pyomb/packets/pdu.py`,
-   following the existing pairs — `PDU_FORMAT`, `PDU_ID`, `serialize` and
-   `deserialize`.
+1. Add the request and response PDU classes to the `src/pyomb/pdu/` module for
+   the code's group — `bits.py` for a coil or discrete input, `registers.py`
+   for a holding or input register, `diagnostics.py`, or `encapsulated.py` for
+   the MEI transport — following the existing pairs in that file: `PDU_FORMAT`,
+   `PDU_ID`, `serialize` and `deserialize`.
    The last two carry a fixed signature: `serialize(self)` and the classmethod
    `deserialize(cls, stream)`, per ADR-009. Reach the packing helper with
    `self.pack(fmt)` rather than accepting a format from the caller — a
    function code's layout is fixed by the specification.
    `tests/test_packet_signature_contract.py` fails on a class that diverges.
-2. Register both at the bottom of `pdu.py`, where every other class is
-   registered.
+2. Register both at the bottom of that same group file, where every other
+   class in it is registered, and add both to `pdu/__init__.py`'s imports
+   and `__all__`.
 3. Add a builder to `RequestFactory` in `src/pyomb/client_simulator.py` and a
    branch to `send_request`.
 4. Add a responder to `ResponseFactory` in `src/pyomb/server_simulator.py` and a

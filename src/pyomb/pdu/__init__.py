@@ -1,69 +1,57 @@
-"""Modbus Packet Classes.
+"""Modbus Protocol Data Unit classes.
 
-Packet classes for Modbus TCP and Modbus RTU, split by data-flow stage:
-base declares the abstractions, pdu carries the function-code classes,
-framing carries the MBAP header and the two ADU families. Every name is
-re-exported here, so the import path is unchanged.
+The message itself, independent of the transport that delivers it. Grouped
+the way the Modbus Application Protocol groups its function codes: bit
+access, register access, diagnostics, and the encapsulated interface
+transport, plus one module for the shared parts every group depends on.
 
 A custom PDU subclasses ModbusPdu and registers with ModbusPduParser,
 giving its format string, function code and PDU identifier. See
 docs/PLAYBOOK.md for the identifier ranges.
 """
 
-from pyomb.packets.framing import (
-    CRC_FMT,
-    CRC_SIZE,
-    ModbusHeader,
-    ModbusRtuPacket,
-    ModbusRtuRequest,
-    ModbusRtuResponse,
-    ModbusTcpPacket,
-    ModbusTcpRequest,
-    ModbusTcpResponse,
-    calc_crc16,
-    validate_crc,
-    validate_mbap_length,
+from pyomb.pdu.bits import (
+    ModbusRequestFC1,
+    ModbusRequestFC2,
+    ModbusRequestFC5,
+    ModbusRequestFC15,
+    ModbusResponseFC1,
+    ModbusResponseFC2,
+    ModbusResponseFC5,
+    ModbusResponseFC15,
 )
-from pyomb.pdu import (
+from pyomb.pdu.common import (
     ModbusError,
     ModbusPacketAbc,
     ModbusPdu,
     ModbusPduParser,
     ModbusPduParserAbc,
-    ModbusRequestFC1,
-    ModbusRequestFC2,
-    ModbusRequestFC3,
-    ModbusRequestFC4,
-    ModbusRequestFC5,
-    ModbusRequestFC6,
+    ModbusViolation,
+)
+from pyomb.pdu.diagnostics import (
     ModbusRequestFC7,
     ModbusRequestFC8,
-    ModbusRequestFC15,
+    ModbusResponseFC7,
+    ModbusResponseFC8,
+)
+from pyomb.pdu.encapsulated import ModbusRequestFC43, ModbusResponseFC43
+from pyomb.pdu.registers import (
+    ModbusRequestFC3,
+    ModbusRequestFC4,
+    ModbusRequestFC6,
     ModbusRequestFC16,
     ModbusRequestFC22,
     ModbusRequestFC23,
-    ModbusRequestFC43,
-    ModbusResponseFC1,
-    ModbusResponseFC2,
     ModbusResponseFC3,
     ModbusResponseFC4,
-    ModbusResponseFC5,
     ModbusResponseFC6,
-    ModbusResponseFC7,
-    ModbusResponseFC8,
-    ModbusResponseFC15,
     ModbusResponseFC16,
     ModbusResponseFC22,
     ModbusResponseFC23,
-    ModbusResponseFC43,
-    ModbusViolation,
 )
 
 __all__ = [
-    "CRC_FMT",
-    "CRC_SIZE",
     "ModbusError",
-    "ModbusHeader",
     "ModbusPacketAbc",
     "ModbusPdu",
     "ModbusPduParser",
@@ -94,14 +82,5 @@ __all__ = [
     "ModbusResponseFC22",
     "ModbusResponseFC23",
     "ModbusResponseFC43",
-    "ModbusRtuPacket",
-    "ModbusRtuRequest",
-    "ModbusRtuResponse",
-    "ModbusTcpPacket",
-    "ModbusTcpRequest",
-    "ModbusTcpResponse",
     "ModbusViolation",
-    "calc_crc16",
-    "validate_crc",
-    "validate_mbap_length",
 ]
