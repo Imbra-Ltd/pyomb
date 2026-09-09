@@ -16,7 +16,8 @@ import socket
 import sys
 
 from pyomb import ModbusServerSimulator
-from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest, ModbusTcpResponse
+from pyomb.adu import ModbusHeader, ModbusTcpRequest, ModbusTcpResponse
+from pyomb.pdu import ModbusRequestFC1
 from pyomb.stream import ModbusTcpStream
 
 # Seconds to wait for the listener and for the exchange. Bounded rather than

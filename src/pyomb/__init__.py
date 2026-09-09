@@ -4,10 +4,10 @@ Serialization and deserialization of Modbus TCP and RTU packets, fragmented
 stream transport, and a scriptable server/client pair for testing Modbus
 implementations.
 
-The names re-exported here are the supported public API, alongside one
-submodule that is equally public: pyomb.packets, for the function-code packet
-classes. The simulators and the TLS settings they take are re-exported too,
-bound on first use rather than on import.
+The names re-exported here are the supported public API, alongside two
+equally public submodules: pyomb.pdu for the function-code classes, and
+pyomb.adu, most of whose classes are also re-exported here. The
+simulators and the TLS settings are re-exported too, bound on first use.
 
 UNSET travels with them. It is what every optional TLS setting carries until a
 caller chooses one, so comparing against it tells a choice from a default.
@@ -17,6 +17,15 @@ import warnings
 from importlib import import_module
 from typing import TYPE_CHECKING
 
+from .adu import (
+    ModbusHeader,
+    ModbusRtuPacket,
+    ModbusRtuRequest,
+    ModbusRtuResponse,
+    ModbusTcpPacket,
+    ModbusTcpRequest,
+    ModbusTcpResponse,
+)
 from .errors import (
     ModbusAcknowledgeError,
     ModbusBaseError,
@@ -35,19 +44,7 @@ from .errors import (
     ModbusSlaveDeviceFailureError,
 )
 from .logger import Logger
-from .packets import (
-    ModbusError,
-    ModbusHeader,
-    ModbusPdu,
-    ModbusPduParser,
-    ModbusRtuPacket,
-    ModbusRtuRequest,
-    ModbusRtuResponse,
-    ModbusTcpPacket,
-    ModbusTcpRequest,
-    ModbusTcpResponse,
-    ModbusViolation,
-)
+from .pdu import ModbusError, ModbusPdu, ModbusPduParser, ModbusViolation
 from .stream import ModbusFragmenter, ModbusTcpReceiver, ModbusTcpSender, ModbusTcpStream
 
 # Named below but not imported: they reach ssl, and __getattr__ binds them on

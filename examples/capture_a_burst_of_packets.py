@@ -15,7 +15,8 @@ open and calls `stop()` instead.
 import socket
 import sys
 
-from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusRequestFC3, ModbusTcpRequest
+from pyomb.adu import ModbusHeader, ModbusTcpRequest
+from pyomb.pdu import ModbusRequestFC1, ModbusRequestFC3
 from pyomb.stream import ModbusTcpReceiver, ModbusTcpSender
 
 # Seconds to wait on either socket. Bounded rather than blocking, so a

@@ -8,13 +8,12 @@ instead, through the functions below.
 
 import inspect
 
-from pyomb import pdu
-from pyomb.packets import framing
+from pyomb import adu, pdu
 from pyomb.pdu import ModbusPacketAbc
 
 # Every module a packet class can currently be defined in, read from the
 # canonical location rather than through the deprecated pyomb.packets.
-_HOMES = (pdu, framing)
+_HOMES = (pdu, adu)
 
 
 def packet_classes():

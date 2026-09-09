@@ -17,8 +17,8 @@ import time
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
 
+from .adu import ModbusHeader, ModbusTcpPacket
 from .errors import ModbusBaseError, ModbusNetworkError, ModbusPacketError
-from .packets import ModbusHeader, ModbusTcpPacket
 
 # Modbus MBAP header size
 HEADER_SIZE = ModbusHeader.SIZE
@@ -110,8 +110,8 @@ class ModbusFragmenter(ModbusFragmenterAbc):
      - Fragment n: PDU (m Bytes)
 
     Example:
-        >>> from pyomb.packets import ModbusHeader, ModbusRequestFC1
-        >>> from pyomb.packets import ModbusTcpRequest
+        >>> from pyomb.adu import ModbusHeader, ModbusTcpRequest
+        >>> from pyomb.pdu import ModbusRequestFC1
         >>> from pyomb.stream import ModbusFragmenter
         >>>
         >>> # Create a Modbus message

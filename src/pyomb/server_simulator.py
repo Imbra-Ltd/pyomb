@@ -16,6 +16,7 @@ import threading
 import time
 from collections.abc import Callable
 
+from .adu import ModbusHeader, ModbusTcpRequest, ModbusTcpResponse
 from .defines import OMB_EXCEPTION_ILLEGAL_DATA_VALUE, OMB_EXCEPTION_SLAVE_DEVICE_FAILURE
 from .errors import (
     ModbusBaseError,
@@ -25,9 +26,8 @@ from .errors import (
     ModbusSlaveDeviceFailureError,
 )
 from .logger import Logger
-from .packets import (
+from .pdu import (
     ModbusError,
-    ModbusHeader,
     ModbusPdu,
     ModbusRequestFC1,
     ModbusRequestFC2,
@@ -53,8 +53,6 @@ from .packets import (
     ModbusResponseFC22,
     ModbusResponseFC23,
     ModbusResponseFC43,
-    ModbusTcpRequest,
-    ModbusTcpResponse,
 )
 from .stream import ModbusTcpStream
 from .tls import TlsRole, TlsSettings

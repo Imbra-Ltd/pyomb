@@ -15,10 +15,10 @@ import sys
 from collections.abc import Iterable
 from typing import cast
 
+from .adu import ModbusHeader, ModbusTcpRequest, ModbusTcpResponse
 from .errors import ModbusIllegalDataValueError, ModbusIllegalFunctionError, ModbusNetworkError
 from .logger import Logger
-from .packets import (
-    ModbusHeader,
+from .pdu import (
     ModbusPdu,
     ModbusRequestFC1,
     ModbusRequestFC2,
@@ -32,8 +32,6 @@ from .packets import (
     ModbusRequestFC22,
     ModbusRequestFC23,
     ModbusRequestFC43,
-    ModbusTcpRequest,
-    ModbusTcpResponse,
 )
 from .stream import ModbusTcpStream
 from .tls import TlsRole, TlsSettings
