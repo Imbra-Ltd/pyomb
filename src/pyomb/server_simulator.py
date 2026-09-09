@@ -54,8 +54,7 @@ from .pdu import (
     ModbusResponseFC23,
     ModbusResponseFC43,
 )
-from .stream import ModbusTcpStream
-from .tls import TlsRole, TlsSettings
+from .transport import ModbusTcpStream, TlsRole, TlsSettings
 
 # What a caller's handler is called with and what its answer means: false
 # makes the server answer with an exception response instead of a reply.

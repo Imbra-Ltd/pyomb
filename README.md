@@ -212,12 +212,15 @@ src/pyomb/              # The library
   adu/                  # The envelope a transport puts around a PDU
     tcp.py               # MBAP header, MBAP length check, TCP frame classes
     rtu.py                # CRC-16 checksum, RTU frame classes
+  transport/             # Everything that reads or writes a socket
+    stream.py            # Length-driven TCP framing and fragmentation
+    tls.py                # TLS settings and SSL context construction
   packets/               # Deprecated forwarding shims; removed in 0.9.0
     base.py               # Forwards to pyomb.pdu.common
     pdu.py                 # Forwards to pyomb.pdu's group modules
     framing.py              # Forwards to pyomb.adu's tcp and rtu modules
-  stream.py              # Transport: length-driven framing and fragmentation
-  tls.py                 # TLS settings and SSL context construction
+  stream.py               # Forwards to pyomb.transport.stream
+  tls.py                   # Forwards to pyomb.transport.tls
   client_simulator.py    # Client simulator and request builder
   server_simulator.py    # Server simulator, select loop and response factory
   errors.py              # Modbus exception codes as a Python hierarchy

@@ -17,7 +17,7 @@ import sys
 
 from pyomb.adu import ModbusHeader, ModbusTcpRequest
 from pyomb.pdu import ModbusRequestFC1, ModbusRequestFC3
-from pyomb.stream import ModbusTcpReceiver, ModbusTcpSender
+from pyomb.transport import ModbusTcpReceiver, ModbusTcpSender
 
 # Seconds to wait on either socket. Bounded rather than blocking, so a
 # failure here reports itself instead of hanging with nothing on the screen.

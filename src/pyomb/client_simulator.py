@@ -33,8 +33,7 @@ from .pdu import (
     ModbusRequestFC23,
     ModbusRequestFC43,
 )
-from .stream import ModbusTcpStream
-from .tls import TlsRole, TlsSettings
+from .transport import ModbusTcpStream, TlsRole, TlsSettings
 
 
 class ModbusClientSimulator:

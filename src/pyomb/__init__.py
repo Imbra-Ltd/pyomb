@@ -45,23 +45,23 @@ from .errors import (
 )
 from .logger import Logger
 from .pdu import ModbusError, ModbusPdu, ModbusPduParser, ModbusViolation
-from .stream import ModbusFragmenter, ModbusTcpReceiver, ModbusTcpSender, ModbusTcpStream
+from .transport import ModbusFragmenter, ModbusTcpReceiver, ModbusTcpSender, ModbusTcpStream
 
 # Named below but not imported: they reach ssl, and __getattr__ binds them on
 # first access instead. See PLAYBOOK, deferred imports, for the measurement.
 if TYPE_CHECKING:
     from .client_simulator import ModbusClientSimulator
     from .server_simulator import ModbusServerSimulator
-    from .tls import UNSET, TlsRole, TlsSettings
+    from .transport.tls import UNSET, TlsRole, TlsSettings
 
 # Each deferred name against the submodule defining it. The TLS settings join
-# the simulators because pyomb.tls reaches ssl for the same reason.
+# the simulators because pyomb.transport.tls reaches ssl for the same reason.
 _DEFERRED = {
     "ModbusClientSimulator": "client_simulator",
     "ModbusServerSimulator": "server_simulator",
-    "TlsSettings": "tls",
-    "TlsRole": "tls",
-    "UNSET": "tls",
+    "TlsSettings": "transport.tls",
+    "TlsRole": "transport.tls",
+    "UNSET": "transport.tls",
 }
 
 # The spelling each protocol error carried before it took the Error suffix
@@ -95,7 +95,7 @@ __all__ = [  # noqa: RUF022
     "ModbusRtuRequest",
     "ModbusRtuResponse",
     "ModbusViolation",
-    # Stream
+    # Transport
     "ModbusTcpStream",
     "ModbusTcpSender",
     "ModbusTcpReceiver",

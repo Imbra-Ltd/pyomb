@@ -14,7 +14,7 @@ supertype promised was one the subtype refused. This module is what keeps the
 import inspect
 import unittest
 
-from pyomb import stream
+from pyomb.transport import stream
 from tests.helpers.signatures import caller_parameters
 
 VARIADIC = (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
@@ -24,7 +24,7 @@ def declared_classes():
     """Every class stream.py declares, imports excluded.
 
     Returns:
-        list : The classes defined in pyomb.stream
+        list : The classes defined in pyomb.transport.stream
     """
 
     found = []
