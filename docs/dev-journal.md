@@ -4920,3 +4920,59 @@ package, per ADR-002. See `README.md` for usage and
   a demonstrated shared defect, and a reusable-looking preference alone needs
   no issue and no `Upstream:` bookkeeping. The three candidates recorded
   earlier today were preferences of that kind.
+
+## 2026-09-09 -- Bind the complexity gate, plan the spec-shaped layout
+
+- **Tool:** Claude Code (Sonnet 5, then Fable 5.1 from the layout discussion
+  on; 1M context).
+- **Key changes:**
+  - **Merged the two stacked decision records (PRs #402, #403).** ADR-052 on
+    correcting a merged record and ADR-053 on where the repository gates live.
+    The stack's upper PR was retargeted onto `main` by the automatic branch
+    deletion, and its required `codeql` check had never run: `codeql.yml`
+    triggers on pull requests against `main`, and the base had been the other
+    branch. Merging `main` in was what fired it.
+  - **Bound the cognitive-complexity gate to complexipy (PR #404).** Pinned to
+    a minor range in the `test` extra, scoped to `src/` like mypy, run as its
+    own CI job under the fan-in, and ratcheted against a committed snapshot
+    the tool generates itself. Two entries: `send_request` at 19 and `on_data`
+    at 20. CLAUDE.md carries the never-widen rule; PLAYBOOK 3.30 the recipe.
+  - **Closed #311 as wontdo** on the owner's call rather than leaving it
+    deferred on its triggers.
+  - **Filed the spec-shaped layout as an epic (#413, tasks #405 to #412).**
+    Protocol-first at the top level was scored against layer-first and lost on
+    the codec/transport rule and on migration risk; the layer split stays and
+    the specification's names -- `pdu`, `adu`, `transport`, `simulators` --
+    go on the packages. The bodies were rewritten once, shorter, for a
+    business reader; the preference is in memory.
+- **PRs merged:** #402, #403, #404.
+- **Issues closed/created:** closed #149, #311, #334, #359. Created #405 to
+  #413.
+- **Lesson:** the previous entry recorded 322 functions with none over the
+  threshold, so the gate "needs no baseline at all". complexipy found two at
+  19 and 20. Whatever took that measurement was not the tool the gate binds, so
+  the number was evidence about a different metric. A measurement names its
+  instrument or it is a guess with a decimal point.
+- **Lesson:** complexipy's snapshot keys each function on the literal path
+  string the tool computes, with no separator normalisation. A baseline made
+  on Windows fails every entry on Linux CI. Docker was not reachable to
+  generate it on the CI OS, so the matching code was read in the tool's own
+  source and the separators rewritten by hand; the Linux job was the proof.
+  The same fact makes the committed baseline fail on every Windows run, which
+  ONBOARDING now says out loud.
+- **Lesson:** a retargeted stacked pull request keeps its old check results and
+  never re-triggers a workflow filtered on the base branch. It reads as
+  `BLOCKED` with every listed check green, and the missing one is the one the
+  list does not show.
+- **Not done:** the boilerplate collapse in `pdu.py`. Carried unchanged from
+  the previous four entries; #406 moves that file and does not reshape it.
+- **Not done:** the RTU line. #391 and #231 are untouched by design, and #413
+  lists them as out of scope.
+- **Pending:** an upstream note that `base-python-tooling` binds complexipy
+  without the snapshot-portability caveat, which every Windows-development,
+  Linux-CI consumer inherits. No existing issue names it. Waits on
+  authorisation.
+- **Pending:** whether the Windows-side failure earns a follow-up issue or
+  stays a documented limitation. The owner's call.
+- **Resolved:** the second half of #149 and the CI job proposal, both carried
+  from the previous entry.

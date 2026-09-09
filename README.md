@@ -231,6 +231,7 @@ assets/                 # Generated test certificates (gitignored)
 .github/                # CI, CodeQL and release workflows, Dependabot config
 .vscode/                # Shared editor settings that mirror the CI gates
 pyproject.toml          # Packaging metadata and tool configuration
+complexipy-snapshot.json # Cognitive-complexity baseline; ratchets, never hand-edited
 ```
 
 MBAP expands to Modbus Application Protocol, the header that precedes every
@@ -246,10 +247,10 @@ uv run pre-commit install
 uv run pytest
 ```
 
-The `test` extra carries what the gates need — pytest, pytest-cov, ruff, mypy
-and bandit — and is what CI installs. The `dev` extra adds the hook runner and
-the build tools on top of it. `pre-commit install` is a one-off that puts the
-same checks in front of every commit.
+The `test` extra carries what the gates need — pytest, pytest-cov, ruff, mypy,
+complexipy and bandit — and is what CI installs. The `dev` extra adds the hook
+runner and the build tools on top of it. `pre-commit install` is a one-off
+that puts the same checks in front of every commit.
 
 The toolchain is locked in `uv.lock`, and `--locked` installs exactly what it
 records rather than re-resolving, so a contributor and CI run the same
