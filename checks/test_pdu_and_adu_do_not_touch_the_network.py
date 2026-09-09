@@ -13,14 +13,12 @@ import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
-# The two packages the rule binds, read from the source tree rather than
-# hardcoded elsewhere, so a third package added later inherits the check
-# only once it is added here.
+# The two packages the rule binds. A third package added later inherits
+# the check only once it names itself here too.
 ROOTS = ("pdu", "adu")
 
-# A dotted module name is forbidden if it equals one of these, or if it
-# starts with one of these followed by a dot -- socket.socket as much as
-# socket, pyomb.transport.tls as much as pyomb.transport.
+# Forbidden if a dotted import name equals one of these or starts with one
+# followed by a dot -- socket.socket as much as socket.
 FORBIDDEN = ("socket", "ssl", "pyomb.transport")
 
 # What the tree held when this floor was set: five files across the two
