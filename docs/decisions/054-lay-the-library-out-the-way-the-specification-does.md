@@ -111,17 +111,18 @@ tasks.
 5. **`client_simulator.py` and `server_simulator.py` move into
    `simulators/` without being renamed.** Both names already describe
    what they hold; only their directory changes.
-6. **Every old import path keeps working through 0.8.0.** `pyomb.packets`,
-   `pyomb.packets.base`, `pyomb.packets.pdu`, `pyomb.packets.framing`,
-   `pyomb.stream`, `pyomb.tls`, `pyomb.client_simulator` and
-   `pyomb.server_simulator` become forwarding modules: each imports the
-   names it used to define from their new home and re-exports them, and
-   each raises `DeprecationWarning` naming the new path on import. A
-   consumer's `isinstance` and identity checks are unaffected -- the
-   forwarding module binds the same class object, not a copy.
+6. **Every old import path keeps working through 0.8.0.** The eight paths
+   are: `pyomb.packets`, `pyomb.packets.base`, `pyomb.packets.pdu`,
+   `pyomb.packets.framing`, `pyomb.stream`, `pyomb.tls`,
+   `pyomb.client_simulator` and `pyomb.server_simulator`. Each becomes a
+   forwarding module: it imports the names it used to define from their
+   new home and re-exports them, and it raises `DeprecationWarning` naming
+   the new path on import. A consumer's `isinstance` and identity checks
+   are unaffected, because the forwarding module binds the same class
+   object, not a copy.
 7. **The forwarding modules are deleted in 0.9.0.** 0.8.0 is the first
-   release to carry the new layout; #412 removes the eight files above
-   and their entries in the release that follows it, and is deliberately
+   release to carry the new layout. #412 removes the eight files above and
+   their entries in the release that follows it. That task is deliberately
    not part of this epic's definition of done.
 8. **The public API surface at `pyomb` itself is unchanged.** Every name
    `pyomb/__init__.py` re-exports today keeps resolving from the same
@@ -157,7 +158,7 @@ tasks.
   that import working, unmodified, through 0.8.0, and sees one
   `DeprecationWarning` naming `pyomb.pdu.bits` the first time they do.
 - The measured independence in Context is what a later split needs to
-  repeat, not what this one alone establishes going forward: a ninth
+  repeat, not what this one alone establishes going forward. A ninth
   function code added to `pdu/registers.py` that reaches into
   `pdu/bits.py` would erode the same property this record measured, and
   nothing here checks for that automatically.
