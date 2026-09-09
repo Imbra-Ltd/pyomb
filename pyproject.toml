@@ -45,6 +45,7 @@ test = [
     "pytest-cov",
     "ruff>=0.16,<0.17",
     "mypy>=2.3,<2.4",
+    "complexipy>=8.0,<8.1",
     "bandit[toml]>=1.9,<1.10",
 ]
 
@@ -96,6 +97,13 @@ convention = "google"
 # stood here for the four that predate the gate is retired; see ADR-048.
 strict = true
 files = ["src"]
+
+[tool.complexipy]
+
+# Scoped to src only, like mypy: checks/ and tests/ are project tooling, not
+# the shipped library, and are exempt from this category here.
+paths = ["src"]
+max-complexity-allowed = 15
 
 [tool.bandit]
 

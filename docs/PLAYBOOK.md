@@ -1550,6 +1550,42 @@ failing means git reached no file under the package at all, so the three rules
 below it would have passed against an unread tree. The other three name the
 marker and what is wrong with it.
 
+### 3.30 Cognitive complexity (complexipy)
+
+```bash
+complexipy
+```
+
+No arguments: `paths` and `max-complexity-allowed` both live in
+`[tool.complexipy]` in `pyproject.toml`, scoped to `src/` only, so a local run
+and the gate cannot resolve to different checks.
+
+A plain run compares every function against `complexipy-snapshot.json`,
+committed alongside the source. It passes a function already in the snapshot
+that has not gotten worse, passes one that improved and drops it from the
+snapshot, and fails a function that is new over the threshold or has
+increased past its recorded value. The snapshot is never hand-edited to add
+or widen an entry -- CLAUDE.md states why -- and the two current entries
+double as a refactor priority list against the threshold of 15.
+
+Regenerate it only after fixing or refactoring one of the recorded functions,
+never to make a new violation disappear:
+
+```bash
+rm complexipy-snapshot.json
+complexipy --snapshot-create=true --quiet=true
+```
+
+The snapshot match is a literal string on the path complexipy computes, with
+no separator normalization, and CI runs on Linux while this project develops
+on Windows. A snapshot regenerated here carries backslashes and fails every
+entry on the next CI run -- rewrite each `path` field to forward slashes
+before committing:
+
+```bash
+sed -i 's#\\\\#/#g' complexipy-snapshot.json
+```
+
 
 ## 4. Maintenance
 

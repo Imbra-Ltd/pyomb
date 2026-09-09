@@ -106,6 +106,7 @@ pre-commit install               # run the gates before every commit
 pytest                           # run the fast tier
 pytest -m integration            # run the tier that opens sockets
 mypy                             # type check; settings in pyproject.toml
+complexipy                       # cognitive complexity gate; settings in pyproject.toml
 bandit -c pyproject.toml -r src tests checks scripts examples   # static analysis
 ruff check src tests checks scripts examples     # lint
 ruff format src tests checks scripts examples    # format
@@ -258,6 +259,17 @@ follow the referenced templates. Project-specific additions only:
   the analysis that produces it — turning off a strict sub-flag stops the
   checker looking and discards findings the module already has. Both tables
   hid real defects behind two codes that read as missing annotations
+- Cognitive complexity (threshold 15 per function, `src/` only) is gated by
+  `complexipy`, ratcheted against `complexipy-snapshot.json` rather than
+  frozen in `pyproject.toml`: the committed snapshot is never added to or
+  widened to make the gate pass, and it shrinks on its own the moment a
+  recorded function drops back under the threshold. A genuine new offender
+  gets fixed, not recorded. The two current entries are a refactor priority
+  list against that threshold, not a suppression
+- The snapshot match is a literal string on the path complexipy computes, not
+  normalized across path separators — a snapshot generated on Windows will
+  not match on the Linux CI that gates merges. `docs/PLAYBOOK.md` carries the
+  regeneration recipe
 - Suppress a bandit finding at the line with `# nosec <ID>` naming the one
   check, and put the reason above it. Never add to the config-level `skips`,
   which stops the check firing tree-wide; see ADR-012

@@ -1,0 +1,22 @@
+[
+  {
+    "path": "src/pyomb/client_simulator.py",
+    "file_name": "client_simulator.py",
+    "functions": [
+      {
+        "name": "ModbusClientSimulator::send_request",
+        "complexity": 19
+      }
+    ]
+  },
+  {
+    "path": "src/pyomb/server_simulator.py",
+    "file_name": "server_simulator.py",
+    "functions": [
+      {
+        "name": "ModbusServerSimulator::on_data",
+        "complexity": 20
+      }
+    ]
+  }
+]
