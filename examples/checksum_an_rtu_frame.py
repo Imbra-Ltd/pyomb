@@ -15,7 +15,7 @@ The algorithm is in the RTU checksum section of docs/PLAYBOOK.md.
 import struct
 import sys
 
-from pyomb.packets import CRC_FMT, calc_crc16
+from pyomb.adu import CRC_FMT, calc_crc16
 
 # Complete frames from crccalc.com and the Modbus over Serial Line reference
 # implementation, written out rather than computed. See the module docstring.

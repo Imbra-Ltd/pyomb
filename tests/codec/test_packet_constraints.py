@@ -17,10 +17,11 @@ import inspect
 import pathlib
 import unittest
 
+import pyomb.adu as adu
 import pyomb.pdu as pdu
+from pyomb.adu import ModbusHeader, ModbusRtuRequest, ModbusTcpRequest
 from pyomb.errors import ModbusPacketError
-from pyomb.packets import (
-    ModbusHeader,
+from pyomb.pdu import (
     ModbusPdu,
     ModbusRequestFC1,
     ModbusRequestFC3,
@@ -32,15 +33,12 @@ from pyomb.packets import (
     ModbusRequestFC43,
     ModbusResponseFC3,
     ModbusResponseFC8,
-    ModbusRtuRequest,
-    ModbusTcpRequest,
     ModbusViolation,
-    framing,
 )
 
 # Both homes a packet class can be defined in; reading either alone would
 # report the other's classes as not declaring their own LIMITS.
-SOURCE = [*sorted(pathlib.Path(pdu.__file__).parent.glob("*.py")), pathlib.Path(framing.__file__)]
+SOURCE = sorted(pathlib.Path(pdu.__file__).parent.glob("*.py")) + sorted(pathlib.Path(adu.__file__).parent.glob("*.py"))
 
 
 # The Diagnostics sub-function codes of Modbus Application Protocol v1.1b3
@@ -305,7 +303,7 @@ class EveryPacketClassStatesWhatItWasReadFor(unittest.TestCase):
 
         cls.concrete = [
             name
-            for home in (pdu, framing)
+            for home in (pdu, adu)
             for name, value in inspect.getmembers(home, inspect.isclass)
             if value.__module__.startswith(home.__name__)
             and issubclass(value, pdu.ModbusPacketAbc)

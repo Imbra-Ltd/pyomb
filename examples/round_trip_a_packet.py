@@ -14,7 +14,8 @@ could not fail.
 
 import sys
 
-from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest
+from pyomb.adu import ModbusHeader, ModbusTcpRequest
+from pyomb.pdu import ModbusRequestFC1
 
 # Function code 1, one coil from address 0, unit 1, transaction 0. Written out
 # rather than captured, so it disagrees when the codec changes.

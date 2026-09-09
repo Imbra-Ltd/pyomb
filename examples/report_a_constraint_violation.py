@@ -15,7 +15,7 @@ Nothing here opens a socket: the codec does not import one.
 import sys
 
 from pyomb.errors import ModbusPacketError
-from pyomb.packets import ModbusRequestFC3
+from pyomb.pdu import ModbusRequestFC3
 
 
 def main() -> None:

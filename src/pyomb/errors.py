@@ -30,9 +30,9 @@ from pyomb.defines import (
 )
 
 # The header type is needed for the annotation and not at runtime. Importing
-# it for real would close a cycle, since the packets package imports this module.
+# it for real would close a cycle, since pyomb.adu imports this module.
 if TYPE_CHECKING:
-    from pyomb.packets import ModbusHeader
+    from pyomb.adu import ModbusHeader
 
 
 class ModbusBaseError(Exception):

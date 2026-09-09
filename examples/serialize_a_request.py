@@ -11,7 +11,8 @@ identifier, then the PDU.
 
 import sys
 
-from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest
+from pyomb.adu import ModbusHeader, ModbusTcpRequest
+from pyomb.pdu import ModbusRequestFC1
 
 
 def main() -> None:

@@ -209,10 +209,13 @@ src/pyomb/              # The library
     registers.py          # Register-access function codes
     diagnostics.py         # FC7 and FC8
     encapsulated.py         # FC43, the encapsulated interface transport
+  adu/                  # The envelope a transport puts around a PDU
+    tcp.py               # MBAP header, MBAP length check, TCP frame classes
+    rtu.py                # CRC-16 checksum, RTU frame classes
   packets/               # Deprecated forwarding shims; removed in 0.9.0
     base.py               # Forwards to pyomb.pdu.common
     pdu.py                 # Forwards to pyomb.pdu's group modules
-    framing.py              # MBAP header, CRC helpers, TCP and RTU frame wrappers
+    framing.py              # Forwards to pyomb.adu's tcp and rtu modules
   stream.py              # Transport: length-driven framing and fragmentation
   tls.py                 # TLS settings and SSL context construction
   client_simulator.py    # Client simulator and request builder
