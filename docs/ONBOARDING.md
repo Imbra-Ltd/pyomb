@@ -46,11 +46,11 @@ uv run pre-commit install
 uv run python scripts/gen_test_certs.py
 ```
 
-The `test` extra carries pytest, pytest-cov, ruff, mypy and bandit, which is
-what CI installs; `dev` adds the hook runner and the build tools on top of it
-and is what a contributor wants. The library itself has no runtime
-dependencies, so `pyproject.toml` is the only place this project declares a
-dependency.
+The `test` extra carries pytest, pytest-cov, ruff, mypy, complexipy and
+bandit, which is what CI installs; `dev` adds the hook runner and the build
+tools on top of it and is what a contributor wants. The library itself has no
+runtime dependencies, so `pyproject.toml` is the only place this project
+declares a dependency.
 
 `uv sync` creates `.venv/` and installs the exact versions `uv.lock` records.
 `--locked` is what makes it exact: uv refuses a lock that no longer matches
@@ -115,6 +115,11 @@ second. The module count in mypy's line is not written down here for the
 same reason the test count above is not. Bandit prints a run summary and exits
 zero; every severity row should read zero, and the two suppressed findings in
 the certificate generator are reported on their own line.
+
+The fifth gate, complexipy, is deliberately not in that block. Its committed
+baseline records the paths CI computes on Linux, so a run on Windows reports
+the two recorded functions as missing from the snapshot. That is expected, not
+a broken setup; PLAYBOOK 3.30 says why and how the baseline is regenerated.
 
 ## 4. Key files
 
