@@ -1,6 +1,6 @@
 [
   {
-    "path": "src/pyomb/client_simulator.py",
+    "path": "src/pyomb/simulators/client_simulator.py",
     "file_name": "client_simulator.py",
     "functions": [
       {
@@ -10,7 +10,7 @@
     ]
   },
   {
-    "path": "src/pyomb/server_simulator.py",
+    "path": "src/pyomb/simulators/server_simulator.py",
     "file_name": "server_simulator.py",
     "functions": [
       {

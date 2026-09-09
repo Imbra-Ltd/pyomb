@@ -123,9 +123,9 @@ using the length declared in its header.
 ```python
 import socket
 
-from pyomb.packets import ModbusHeader, ModbusRequestFC1
-from pyomb.packets import ModbusTcpRequest, ModbusTcpResponse
-from pyomb.stream import ModbusTcpStream
+from pyomb.adu import ModbusHeader, ModbusTcpRequest, ModbusTcpResponse
+from pyomb.pdu import ModbusRequestFC1
+from pyomb.transport import ModbusTcpStream
 
 pdu = ModbusRequestFC1(start_addr=0, quantity=1)
 header = ModbusHeader(unit_id=1, length=len(pdu) + 1)
@@ -154,7 +154,8 @@ Work directly with packet objects when you need to choose the header or
 payload fields yourself. This example needs no connection:
 
 ```python
-from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest
+from pyomb.adu import ModbusHeader, ModbusTcpRequest
+from pyomb.pdu import ModbusRequestFC1
 
 pdu = ModbusRequestFC1(start_addr=0, quantity=1)
 header = ModbusHeader(unit_id=1, length=len(pdu) + 1)  # Includes the unit ID
@@ -177,7 +178,7 @@ The Modbus Application Protocol caps Read Holding Registers at 125 registers
 per request, so a quantity of 126 is one past the edge:
 
 ```python
-from pyomb.packets import ModbusRequestFC3
+from pyomb.pdu import ModbusRequestFC3
 
 request = ModbusRequestFC3(start_addr=0, quantity=126)
 
@@ -215,14 +216,17 @@ src/pyomb/              # The library
   transport/             # Everything that reads or writes a socket
     stream.py            # Length-driven TCP framing and fragmentation
     tls.py                # TLS settings and SSL context construction
+  simulators/            # The client and server, built on the three above
+    client_simulator.py  # Client simulator and request builder
+    server_simulator.py   # Server simulator, select loop and response factory
   packets/               # Deprecated forwarding shims; removed in 0.9.0
     base.py               # Forwards to pyomb.pdu.common
     pdu.py                 # Forwards to pyomb.pdu's group modules
     framing.py              # Forwards to pyomb.adu's tcp and rtu modules
   stream.py               # Forwards to pyomb.transport.stream
   tls.py                   # Forwards to pyomb.transport.tls
-  client_simulator.py    # Client simulator and request builder
-  server_simulator.py    # Server simulator, select loop and response factory
+  client_simulator.py     # Forwards to pyomb.simulators.client_simulator
+  server_simulator.py      # Forwards to pyomb.simulators.server_simulator
   errors.py              # Modbus exception codes as a Python hierarchy
   logger.py              # Logger that writes to stdout and optionally a file
   defines.py             # Protocol constants
