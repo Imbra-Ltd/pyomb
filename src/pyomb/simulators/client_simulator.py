@@ -1,0 +1,806 @@
+"""A scriptable Modbus TCP client, for exercising a server implementation.
+
+The client owns a socket, matches every response to its request by
+transaction identifier, and exposes one method per function code.
+"""
+
+from __future__ import annotations
+
+import contextlib
+import logging
+import socket
+import ssl
+import struct
+import sys
+from collections.abc import Iterable
+from typing import cast
+
+from ..adu import ModbusHeader, ModbusTcpRequest, ModbusTcpResponse
+from ..errors import ModbusIllegalDataValueError, ModbusIllegalFunctionError, ModbusNetworkError
+from ..logger import Logger
+from ..pdu import (
+    ModbusPdu,
+    ModbusRequestFC1,
+    ModbusRequestFC2,
+    ModbusRequestFC3,
+    ModbusRequestFC4,
+    ModbusRequestFC5,
+    ModbusRequestFC6,
+    ModbusRequestFC7,
+    ModbusRequestFC15,
+    ModbusRequestFC16,
+    ModbusRequestFC22,
+    ModbusRequestFC23,
+    ModbusRequestFC43,
+)
+from ..transport import ModbusTcpStream, TlsRole, TlsSettings
+
+
+class ModbusClientSimulator:
+    """Very simple Modbus TCP Client used for testing purposes.
+
+    Args:
+        log (Logger):
+            External logger.
+
+        host (str):
+            The remote host address. Defaults to 'localhost'.
+
+        port (int):
+            The remote port number. Defaults to 502.
+
+        unit_id (int):
+            The unit identifier addressed by every request. Defaults to 1.
+            A device behind a gateway needs the id the gateway routes on.
+
+        frag_size (int):
+            Fragmentation size. Defaults to 0.
+
+        frag_delay (int):
+            Fragmentation delay. Defaults to 0.
+
+        tls (TlsSettings):
+            The certificate material and TLS options. Defaults to None, which
+            is plaintext; passing an instance is what turns TLS on. Every
+            weakening it carries is logged at construction.
+
+        timeout (float):
+            Socket timeout in seconds, applied to connect and to reads.
+            Defaults to DEFAULT_TIMEOUT. None blocks indefinitely.
+    """
+
+    # The transaction identifier is a 16-bit field, so the counter wraps here.
+    TRANS_ID_MODULO = 0x10000
+
+    # A mismatched transaction identifier is dropped and the read repeated,
+    # bounded so a peer emitting a steady stream of them ends the exchange.
+    MAX_STALE_RESPONSES = 8
+
+    # Seconds, applied to connect and every read. Finite by default so a peer
+    # that accepts and never replies cannot block the caller forever.
+    DEFAULT_TIMEOUT = 10.0
+
+    # The plaintext port, and the one a secure client dials when the caller
+    # leaves the port at that default.
+    PLAINTEXT_PORT = 502
+    ENCRYPTED_PORT = 802
+
+    def __init__(
+        self,
+        log: Logger | None = None,
+        host: str = "localhost",
+        port: int = PLAINTEXT_PORT,
+        unit_id: int = 1,
+        frag_size: int = 0,
+        frag_delay: float = 0,
+        tls: TlsSettings | None = None,
+        timeout: float | None = DEFAULT_TIMEOUT,
+    ) -> None:
+        """Build a client. The class docstring documents every argument."""
+        # Initialize the logger
+        self.log = log or Logger(name="ModbusClientSimulator")
+        self.log.addHandler(logging.NullHandler())
+
+        # Initialize the client parameters
+        self.timeout = timeout
+        self.host = host
+        self.port = port
+        self.unit_id = unit_id
+        self.frag_size = frag_size
+        self.frag_delay = frag_delay
+        self.header_size = 8
+
+        # The identifier the next request will carry, and the one in flight.
+        # They differ while a request is outstanding, which is what matches it.
+        self._next_trans_id = 0
+        self._pending_trans_id: int | None = None
+
+        # The TLS settings, or None for plaintext. One object rather than a
+        # flag, so certificates cannot be handed over and silently unused.
+        self.tls = tls
+
+        if tls is not None:
+            # A secure session does not run on the plaintext port, so naming
+            # no port gets the encrypted one.
+            if port == self.PLAINTEXT_PORT:
+                self.port = self.ENCRYPTED_PORT
+
+            self.crypto = tls.context(TlsRole.CLIENT)
+
+            # Said out loud because the arguments cannot: a caller sees what
+            # the session will actually carry, not what they thought they set.
+            for relaxation in tls.relaxations(TlsRole.CLIENT):
+                self.log.warning("TLS relaxed: %s", relaxation)
+
+        # Optional because disconnect() clears it. Inferred from this line
+        # alone the type would claim a socket the teardown path contradicts.
+        self.sock: socket.socket | None = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(self.timeout)
+
+    ############################################################################
+
+    def _require_socket(self) -> socket.socket:
+        """The client's socket, or a named error when it holds none.
+
+        Returns:
+            socket.socket : The socket the client currently holds
+
+        Raises:
+            ModbusNetworkError : If the client has been disconnected
+        """
+        if self.sock is None:
+            message = "The client has no socket; call connect() first"
+            raise ModbusNetworkError(message=message)
+
+        return self.sock
+
+    ############################################################################
+
+    @property
+    def recvbuf_size(self) -> int:
+        """Get the receive buffer size of the socket."""
+        return self._require_socket().getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
+
+    @recvbuf_size.setter
+    def recvbuf_size(self, value: int) -> None:
+        """Set the receive buffer size of the socket.
+
+        Args:
+            value (int): The buffer size value.
+        """
+        self._require_socket().setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, value)
+
+    ############################################################################
+
+    def connect(self, host: str | None = None, port: int | None = None) -> None:
+        """Connects the client to the specified host and port.
+
+        This method establishes a connection to the remote Modbus server. It
+        takes optional arguments for host and port, defaulting to the values
+        set during initialization. If no socket exists, a new socket is created.
+
+        Args:
+            host (str)      : The host address to connect to.
+            port (int)      : The port number to connect to.
+        """
+        # Set the host and port if not provided
+        host = self.host if host is None else host
+        port = self.port if port is None else port
+
+        # Check if socket still exists
+        if self.sock is None:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        # Applied before connect, so an unreachable peer fails rather than
+        # hanging, and inherited by the wrapped socket below.
+        self.sock.settimeout(self.timeout)
+
+        # Encrypt socket
+        if self.tls is not None:
+            self.sock = self.crypto.wrap_socket(self.sock, server_hostname=host)
+
+        # Connect to the host
+        self.sock.connect((host, port))
+        self.log.info("Client connected")
+
+    ############################################################################
+
+    def disconnect(self) -> None:
+        """Disconnects the client from the Modbus server and closes the socket.
+
+        This method gracefully disconnects the client from the server and closes
+        the underlying socket. It attempts to unwrap the socket from an SSL
+        context if secure connection was used. It also handles potential socket
+        errors during the shutdown process.
+        """
+        self.log.info("Disconnecting client...")
+
+        # Asking twice is not an error: a client holding no socket is done.
+        # The local carries the narrowing, which an attribute would lose.
+        sock = self.sock
+
+        if sock is None:
+            self.log.info("Client socket already closed")
+            return
+
+        try:
+            # Check if the socket is an encrypted socket
+            if isinstance(sock, ssl.SSLSocket):
+                # If so unwrap the socket from the SSL context
+                sock = sock.unwrap()
+
+            # Send the FIN now. The close below only does so once no other
+            # reference remains, so dropping this changes what the peer sees.
+            sock.shutdown(socket.SHUT_RDWR)
+
+        except OSError:
+            pass
+
+        finally:
+            # A peer gone away is the ordinary case here, not a fault, and
+            # the clear below has to run on this path too.
+            with contextlib.suppress(socket.error):
+                sock.close()
+
+            self.sock = None
+
+        self.log.info("Client socket closed")
+
+    ############################################################################
+    def reset(self) -> None:
+        """Close the socket with SO_LINGER at zero, so the peer sees a reset.
+
+        A linger time of zero tells the kernel not to wait for unsent data to
+        be acknowledged, so the connection is torn down at once rather than
+        drained. That is what makes this a recovery path rather than an
+        ordinary close: a peer that has stopped reading cannot hold the
+        teardown open.
+        """
+        self.log.info("Reset the client connection...")
+
+        sock = self._require_socket()
+
+        # Configure the SO_LINGER option with a linger time of zero
+        sock.setsockopt(
+            socket.SOL_SOCKET,  # Level is SOL_SOCKET
+            socket.SO_LINGER,  # Option is SO_LINGER
+            struct.pack("ii", 1, 0),  # Enable flag is 1, Linger time is 0
+        )
+
+        # Close the socket
+        sock.close()
+
+    ############################################################################
+
+    def _take_trans_id(self) -> int:
+        """Claims the next transaction identifier for a request.
+
+        The identifier is recorded as pending so that wait_response() can tell
+        the reply to this request from a late reply to an earlier one.
+
+        Returns:
+            int : The transaction identifier to send
+        """
+        trans_id = self._next_trans_id
+
+        self._next_trans_id = (trans_id + 1) % self.TRANS_ID_MODULO
+        self._pending_trans_id = trans_id
+
+        return trans_id
+
+    ############################################################################
+    def send_request(
+        self,
+        fc: int,
+        read_address: int = 0,
+        read_count: int = 1,
+        write_address: int = 0,
+        write_count: int = 1,
+        values: Iterable[int] | int = (0,),
+        and_mask: int = 0xFFFF,
+        or_mask: int = 0,
+    ) -> None:
+        """Sends a Modbus request to the server.
+
+        This method creates a Modbus request based on the provided function
+        code (fc) and arguments, serializes it into a bytearray, and sends it
+        to the server using the configured socket.
+
+        This is a very generic multi-purpose method that is very useful for
+        testing and debugging purposes. It can be used to send any Modbus
+        request to the server, including read and write operations, and
+        various other Modbus functions in a burst fashion.
+        """
+        pdu: ModbusPdu
+
+        # Handle values based on function code and data type
+        try:
+            # Check if values is iterable (list, tuple)
+            iter(cast("Iterable[int]", values))
+
+            # For FC5 and FC6, take the first value only (single value)
+            if fc in (5, 6):
+                # A list rather than a subscript: an empty sequence becomes a
+                # value to decide about, and len() is never asked of a generator.
+                selected = list(cast("Iterable[int]", values))[:1]
+
+                # A write of nothing has no correct reading, so it is refused
+                # here rather than sent as whatever the PDU makes of it.
+                if not selected:
+                    raise ModbusIllegalDataValueError(values)
+
+                values = selected[0]
+
+        # If the user provided a single value for `values`
+        except TypeError:
+            # For FC15, FC16, and FC23, wrap the value in a list
+            if fc in (15, 16, 23):
+                values = [cast("int", values)]
+
+        # Read Coils (FC1)
+        if fc == 1:
+            pdu = RequestFactory.create_fc1_req(read_address=read_address, read_count=read_count)
+
+        # Read Discrete Inputs (FC2)
+        elif fc == 2:
+            pdu = RequestFactory.create_fc2_req(read_address=read_address, read_count=read_count)
+
+        # Read Holding Registers (FC3)
+        elif fc == 3:
+            pdu = RequestFactory.create_fc3_req(read_address=read_address, read_count=read_count)
+
+        # Read Input Registers (FC4)
+        elif fc == 4:
+            pdu = RequestFactory.create_fc4_req(read_address=read_address, read_count=read_count)
+
+        # Write Single Coil (FC5)
+        elif fc == 5:
+            pdu = RequestFactory.create_fc5_req(write_address=write_address, value=cast("int", values))
+
+        # Write Single Register (FC6)
+        elif fc == 6:
+            pdu = RequestFactory.create_fc6_req(write_address=write_address, value=cast("int", values))
+
+        # Read Exception Status (FC7)
+        elif fc == 7:
+            pdu = RequestFactory.create_fc7_req()
+
+        # Write Multiple Coils (FC15)
+        elif fc == 15:
+            pdu = RequestFactory.create_fc15_req(
+                write_address=write_address, write_count=write_count, values=cast("Iterable[int]", values)
+            )
+
+        # Write Multiple Registers (FC16)
+        elif fc == 16:
+            pdu = RequestFactory.create_fc16_req(
+                write_address=write_address, write_count=write_count, values=cast("Iterable[int]", values)
+            )
+
+        # Mask Write Register (FC22)
+        elif fc == 22:
+            pdu = RequestFactory.create_fc22_req(write_address=write_address, and_mask=and_mask, or_mask=or_mask)
+
+        # Read/Write Multiple Registers (FC23)
+        elif fc == 23:
+            pdu = RequestFactory.create_fc23_req(
+                read_addr=read_address,
+                read_count=read_count,
+                write_addr=write_address,
+                write_count=write_count,
+                write_values=cast("Iterable[int]", values),
+            )
+
+        # Read Device Identification (FC43)
+        elif fc == 43:
+            pdu = RequestFactory.create_fc43_req(mei_type=0x0E, mei_data=b"\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a")
+
+        # Function code not recognized
+        else:
+            raise ModbusIllegalFunctionError(fc)
+
+        # Create Modbus TCP request
+        header = ModbusHeader(trans_id=self._take_trans_id(), prot_id=0, length=len(pdu) + 1, unit_id=self.unit_id)
+        request = ModbusTcpRequest(header=header, pdu=pdu)
+
+        # Log the request
+        self.log.info(f"{request}")
+
+        # Create a Modbus TCP stream object
+        sender = ModbusTcpStream(sock=self.sock, frag_delay=self.frag_delay, frag_size=self.frag_size)
+
+        # Send the request bytes over the socket
+        sender.send(request.serialize())
+
+    ############################################################################
+    def wait_response(self) -> tuple[ModbusHeader | None, ModbusPdu | None]:
+        """Waits for the response to the pending request and parses it.
+
+        A response is accepted only when its transaction identifier matches the
+        request that is outstanding. One that does not belongs to a request
+        this client has already given up on, so it is logged, dropped, and the
+        read repeated. Accepting it instead would return a reading taken for a
+        different request, which is wrong rather than merely late.
+
+        Returns:
+            tuple:
+                A tuple containing the parsed header and pdu instances or
+                (None, None) if the peer closed the connection.
+
+        Raises:
+            ModbusNetworkError: If the peer keeps answering with identifiers
+                                that match no outstanding request.
+        """
+        stream = ModbusTcpStream(sock=self.sock, frag_size=0)
+
+        for _ in range(self.MAX_STALE_RESPONSES + 1):
+            # Receive data from the socket
+            data = stream.receive()
+
+            # The peer closed the connection rather than answering
+            if not data:
+                return None, None
+
+            response = ModbusTcpResponse.deserialize(data)
+            self.log.info(f"{response}")
+
+            # A client that has never sent a request has nothing to match
+            # against, so whatever arrives is passed through.
+            if self._pending_trans_id is None:
+                return response.header, response.pdu
+
+            if response.header.trans_id == self._pending_trans_id:
+                self._pending_trans_id = None
+                return response.header, response.pdu
+
+            self.log.warning(
+                f"Discarding a response for transaction "
+                f"{response.header.trans_id} while waiting for transaction "
+                f"{self._pending_trans_id}"
+            )
+
+        message = (
+            f"Received {self.MAX_STALE_RESPONSES + 1} consecutive responses "
+            f"that do not answer transaction {self._pending_trans_id}"
+        )
+        raise ModbusNetworkError(message=message)
+
+    ############################################################################
+
+    def request(
+        self,
+        fc: int,
+        read_address: int = 0,
+        read_count: int = 1,
+        write_address: int = 0,
+        write_count: int = 1,
+        values: Iterable[int] | int = (0,),
+        and_mask: int = 0xFFFF,
+        or_mask: int = 0,
+    ) -> tuple[ModbusHeader | None, ModbusPdu | None]:
+        """Sends a Modbus request and waits for the response.
+
+        This methods wraps the `send_request` and `wait_response` methods to send
+        a request and wait for the response in a single call. It takes the same
+        arguments as the `send_request` method and returns the response header
+        and PDU instances.
+
+        It is used to simplify the process of sending a request and waiting for
+        the response in a single call and its primary use is for testing and
+        debugging purposes.
+
+        Args:
+            fc (int)            : The function code of the request.
+            read_address (int)  : The starting address to read from.
+            read_count (int)    : The number of registers to read.
+            write_address (int) : The starting address to write to.
+            write_count (int)   : The number of registers to write.
+            values (list)       : The list of values to write.
+            and_mask (int)      : The AND mask value.
+            or_mask (int)       : The OR mask value.
+
+        """
+        self.send_request(
+            fc=fc,
+            read_address=read_address,
+            read_count=read_count,
+            write_address=write_address,
+            write_count=write_count,
+            values=values,
+            and_mask=and_mask,
+            or_mask=or_mask,
+        )
+        response = self.wait_response()
+
+        return response
+
+    ############################################################################
+
+    def send_raw(self, data: bytes = b"") -> None:
+        """Sends raw bytes of data over the established socket connection.
+
+        This method provides a way to send arbitrary byte data directly through
+        the client socket, bypassing the Modbus Protocol framing.
+
+        Args:
+            data (bytearray): The raw data to send.
+        """
+        self._require_socket().send(data)
+
+    ############################################################################
+
+    def recv_raw(self, buffer_size: int = 1024) -> bytes:
+        """Receives raw bytes of data from the socket connection.
+
+        This method receives a specified number of bytes from the socket and
+        returns them as a bytearray.
+
+        Args:
+            buffer_size (int): The number of bytes to receive.
+
+        Returns:
+            bytearray: The received raw data.
+        """
+        return self._require_socket().recv(buffer_size)
+
+    ############################################################################
+
+    def set_socket_timeout(self, timeout: float | None = None) -> None:
+        """Sets the timeout value for socket operations.
+
+        This method configures the timeout (in seconds) for socket operations
+        like `recv` and `send`.
+
+        - A timeout of `None` disables any timeout, makes the socket blocking.
+        - A timeout of zero means non-blocking mode
+        - A timeout greater than zero will raise a timeout exception
+
+        Args:
+            timeout (float): The timeout value in seconds.
+        """
+        self._require_socket().settimeout(timeout)
+
+    ############################################################################
+
+    def set_socket_options(self, level: int, optname: int, value: int | bytes) -> None:
+        """Sets specific options on the underlying socket.
+
+        This method allows fine-grained control over socket behavior by
+        setting options using the provided level, option name, and value.
+        Refer to socket documentation for available options and their meanings.
+
+        The socket library is organized in layers, and each layer has its own
+        set of options. The level argument specifies the layer, and the optname
+        argument specifies the option name. The value argument is the value to
+        set for the option.
+
+        Args:
+            level (int)     : The socket option level (socket.SOL_SOCKET).
+            optname (int)   : The socket option name (socket.SO_REUSEADDR).
+            value           : The value to set for the option.
+        """
+        self._require_socket().setsockopt(level, optname, value)
+
+    ############################################################################
+
+    def test(self, addr: int = 0, count: int = 16) -> None:
+        """Quick test of the client."""
+        self.connect()
+
+        # Exchange data
+        for i in range(1):
+            self.request(fc=1, read_address=addr, read_count=1)
+            self.request(fc=2, read_address=addr, read_count=1)
+            self.request(fc=3, read_address=addr, read_count=1)
+            self.request(fc=4, read_address=addr, read_count=1)
+            self.request(fc=5, write_address=addr, write_count=count, values=[i] * count)
+            self.request(fc=6, write_address=addr, write_count=count, values=[i] * count)
+            self.request(fc=15, write_address=addr, write_count=1, values=[i] * count)
+            self.request(fc=16, write_address=addr, write_count=count, values=[i] * count)
+            self.request(fc=22, write_address=addr, and_mask=0x55, or_mask=0xAA)
+            self.request(
+                fc=23, read_address=addr, read_count=count, write_address=0, write_count=count, values=[i] * count
+            )
+
+        self.disconnect()
+
+
+class RequestFactory:
+    """Factory class for creating Modbus request PDUs.
+
+    This class provides static methods for creating various Modbus request PDUs
+    based on the function code and arguments. It wraps the creation of the
+    request and implements the necessary logic for each function code.
+    """
+
+    @staticmethod
+    def create_fc1_req(read_address: int, read_count: int) -> ModbusRequestFC1:
+        """Create a Modbus FC1 request PDU.
+
+        Args:
+            read_address (int)  : The starting address to read from.
+            read_count (int)    : The number of registers to read.
+        """
+        pdu = ModbusRequestFC1(start_addr=read_address, quantity=read_count)
+        return pdu
+
+    @staticmethod
+    def create_fc2_req(read_address: int, read_count: int) -> ModbusRequestFC2:
+        """Create a Modbus FC2 request PDU.
+
+        Args:
+            read_address (int)  : The starting address to read from.
+            read_count (int)    : The number of registers to read.
+        """
+        pdu = ModbusRequestFC2(start_addr=read_address, quantity=read_count)
+        return pdu
+
+    @staticmethod
+    def create_fc3_req(read_address: int, read_count: int) -> ModbusRequestFC3:
+        """Create a Modbus FC3 request PDU.
+
+        Args:
+            read_address (int)  : The starting address to read from.
+            read_count (int)    : The number of registers to read.
+        """
+        pdu = ModbusRequestFC3(start_addr=read_address, quantity=read_count)
+        return pdu
+
+    @staticmethod
+    def create_fc4_req(read_address: int, read_count: int) -> ModbusRequestFC4:
+        """Create a Modbus FC4 request PDU.
+
+        Args:
+            read_address (int)  : The starting address to read from.
+            read_count (int)    : The number of registers to read.
+        """
+        pdu = ModbusRequestFC4(start_addr=read_address, quantity=read_count)
+        return pdu
+
+    @staticmethod
+    def create_fc5_req(write_address: int, value: int) -> ModbusRequestFC5:
+        """Create a Modbus FC5 request PDU.
+
+        Args:
+            write_address (int) : The address to write to.
+            value (int)         : The value to write.
+        """
+        pdu = ModbusRequestFC5(output_address=write_address, output_value=value)
+        return pdu
+
+    @staticmethod
+    def create_fc6_req(write_address: int, value: int) -> ModbusRequestFC6:
+        """Create a Modbus FC6 request PDU.
+
+        Args:
+            write_address (int) : The address to write to.
+            value (int)         : The value to write.
+        """
+        pdu = ModbusRequestFC6(output_address=write_address, output_value=value)
+        return pdu
+
+    @staticmethod
+    def create_fc7_req() -> ModbusRequestFC7:
+        """Create a Modbus FC7 request PDU."""
+        pdu = ModbusRequestFC7()
+        return pdu
+
+    @staticmethod
+    def create_fc15_req(write_address: int, write_count: int, values: Iterable[int]) -> ModbusRequestFC15:
+        """Create a Modbus FC15 request PDU.
+
+        Args:
+            write_address (int) : The starting address to write to.
+            write_count (int)   : The number of coils to write.
+            values (list)       : The list of coil values to write.
+        """
+        # Eight coils to the byte, rounded up: a count that is not a whole
+        # number of bytes takes one more, whose spare bits are sent as zero.
+        byte_count = (write_count + 7) // 8
+
+        # Read by index below, so a generator is consumed once here
+        # rather than half-read by the loop.
+        values = tuple(values)
+
+        # Construct the output values and take only the required number of bytes
+        output_values = []
+        for i in range(byte_count):
+            output_values.append(values[i])
+
+        # Create the Modbus FC15 request PDU
+        pdu = ModbusRequestFC15(
+            start_addr=write_address, quantity=write_count, byte_count=byte_count, values=tuple(output_values)
+        )
+
+        return pdu
+
+    @staticmethod
+    def create_fc16_req(write_address: int, write_count: int, values: Iterable[int]) -> ModbusRequestFC16:
+        """Create a Modbus FC16 request PDU.
+
+        Args:
+            write_address (int) : The starting address to write to.
+            write_count (int)   : The number of registers to write.
+            values (list)       : The list of register values to write.
+        """
+        byte_count = 2 * write_count
+
+        pdu = ModbusRequestFC16(
+            start_addr=write_address,
+            quantity=write_count,
+            byte_count=byte_count,
+            values=tuple(values),
+        )
+
+        return pdu
+
+    @staticmethod
+    def create_fc22_req(write_address: int, and_mask: int, or_mask: int) -> ModbusRequestFC22:
+        """Create a Modbus FC22 request PDU.
+
+        Args:
+            write_address (int) : The address to write to.
+            and_mask (int)      : The AND mask value.
+            or_mask (int)       : The OR mask value.
+        """
+        pdu = ModbusRequestFC22(ref_addr=write_address, and_mask=and_mask, or_mask=or_mask)
+
+        return pdu
+
+    @staticmethod
+    def create_fc23_req(
+        read_addr: int, read_count: int, write_addr: int, write_count: int, write_values: Iterable[int]
+    ) -> ModbusRequestFC23:
+        """Create a Modbus FC23 request PDU.
+
+        Args:
+            read_addr (int)     : The starting address to read from.
+            read_count (int)    : The number of registers to read.
+            write_addr (int)    : The starting address to write to.
+            write_count (int)   : The number of registers to write.
+            write_values (list) : The list of register values to write.
+        """
+        byte_count = 2 * write_count
+
+        pdu = ModbusRequestFC23(
+            read_start_addr=read_addr,
+            read_quantity=read_count,
+            write_start_addr=write_addr,
+            write_quantity=write_count,
+            write_byte_count=byte_count,
+            write_values=tuple(write_values),
+        )
+
+        return pdu
+
+    @staticmethod
+    def create_fc43_req(mei_type: int, mei_data: Iterable[int]) -> ModbusRequestFC43:
+        """Create a Modbus FC43 request PDU.
+
+        Args:
+            mei_type (int)  : The MEI type.
+            mei_data (bytes): The MEI data.
+        """
+        pdu = ModbusRequestFC43(mei_type=mei_type, mei_data=tuple(mei_data))
+        return pdu
+
+
+def run_client() -> None:
+    """Run the built-in exercise against a server on the loopback interface."""
+    logger = Logger(name="ModbusClientSimulator")
+    client = ModbusClientSimulator(
+        log=logger,
+        host="localhost",
+        port=502,
+        # frag_size=2,
+    )
+    client.test()
+
+
+if __name__ == "__main__":
+    # Inside the guard, never at import: stdout belongs to the application.
+    # Checked rather than assumed -- see PLAYBOOK, entry-point output encoding.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
+    run_client()

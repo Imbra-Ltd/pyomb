@@ -30,7 +30,7 @@ def imported_names(statement):
         set[str] : The watched module names present after it runs
     """
 
-    watched = ("ssl", "pyomb.client_simulator", "pyomb.server_simulator", "pyomb.transport.tls")
+    watched = ("ssl", "pyomb.simulators.client_simulator", "pyomb.simulators.server_simulator", "pyomb.transport.tls")
 
     program = "import sys\n" + statement + f"\nprint(' '.join(name for name in {watched!r} if name in sys.modules))"
 
@@ -184,7 +184,7 @@ class ImportingThePackageDoesNotOpenTheTransport(unittest.TestCase):
     def test_naming_a_simulator_loads_it(self):
         """The deferral has to end when someone asks, or the name is useless."""
 
-        self.assertIn("pyomb.server_simulator", imported_names("import pyomb; pyomb.ModbusServerSimulator"))
+        self.assertIn("pyomb.simulators.server_simulator", imported_names("import pyomb; pyomb.ModbusServerSimulator"))
 
 
 if __name__ == "__main__":

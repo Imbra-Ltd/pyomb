@@ -224,7 +224,7 @@ class TestResponseDelay(ServerUnderTest):
         # transport sleeps through it too, so this asks for membership.
         self.server.set_delay(0.25)
 
-        with mock.patch("pyomb.server_simulator.time.sleep") as sleep:
+        with mock.patch("pyomb.simulators.server_simulator.time.sleep") as sleep:
             self.dispatch(ModbusRequestFC1(start_addr=0, quantity=8))
 
         sleep.assert_any_call(0.25)
