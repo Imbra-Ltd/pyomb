@@ -18,6 +18,13 @@ numbers follow [Semantic Versioning](https://semver.org/).
   bind that fails names the operating system's reason in the message and
   chains it as the cause, where it previously reached only stderr. See #210
 
+### Deprecated
+
+- `pyomb.packets`, `pyomb.stream`, `pyomb.tls`, `pyomb.client_simulator` and
+  `pyomb.server_simulator` are replaced by `pyomb.pdu`, `pyomb.adu`,
+  `pyomb.transport` and `pyomb.simulators`. Each old path still works and
+  warns; removed in 0.9.0. See #413
+
 ## [0.7.0] - 2026-09-08
 
 Modbus RTU reaches the codec. An RTU frame can be built, read and checksum-
