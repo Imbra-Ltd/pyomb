@@ -11,8 +11,8 @@ import warnings
 from unittest import mock
 
 import pyomb
-from pyomb import tls
-from pyomb.tls import UNSET, TlsRole, TlsSettings
+from pyomb.transport import tls
+from pyomb.transport.tls import UNSET, TlsRole, TlsSettings
 
 # Paths that are never opened: every context in this module is built through
 # the double below, whose certificate loading accepts anything.
@@ -186,7 +186,7 @@ class TestUnsetIsPublic(unittest.TestCase):
     answers for the object as a whole. What it does not answer is whether one
     named field carries a choice, which a caller handed an object they did not
     build has to ask. That reads as `settings.protocol is UNSET` and needs the
-    name on the supported surface rather than reached for inside pyomb.tls,
+    name on the supported surface rather than reached for inside pyomb.transport.tls,
     which the package docstring does not list as public.
     """
 

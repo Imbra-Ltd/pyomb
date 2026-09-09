@@ -18,7 +18,7 @@ import sys
 from pyomb import ModbusServerSimulator
 from pyomb.adu import ModbusHeader, ModbusTcpRequest, ModbusTcpResponse
 from pyomb.pdu import ModbusRequestFC1
-from pyomb.stream import ModbusTcpStream
+from pyomb.transport import ModbusTcpStream
 
 # Seconds to wait for the listener and for the exchange. Bounded rather than
 # blocking, so a failure here reports itself instead of hanging.

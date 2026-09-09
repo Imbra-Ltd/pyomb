@@ -18,7 +18,7 @@ import sys
 import unittest
 
 from pyomb.errors import ModbusNetworkError
-from pyomb.stream import ModbusTcpStream
+from pyomb.transport import ModbusTcpStream
 
 # A frame with a recognisable payload, so a test can assert the bytes did not
 # reach a log line rather than trusting that nobody wrote them there.
@@ -221,7 +221,7 @@ class TheLoggerIsTheCallers(unittest.TestCase):
         # last resort never fires here and the check would pass either way.
         program = (
             "import sys\n"
-            "from pyomb.stream import ModbusTcpStream\n"
+            "from pyomb.transport import ModbusTcpStream\n"
             "class Dead:\n"
             "    def setsockopt(self, *a):\n"
             "        pass\n"
