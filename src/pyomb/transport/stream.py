@@ -192,7 +192,7 @@ class ModbusFragmenter(ModbusFragmenterAbc):
                 fragments.append(pdu[:frag_size])
                 pdu = pdu[frag_size:]
 
-        except Exception as e:
+        except TypeError as e:
             reason = f"Error fragmenting the Modbus packet: {e!s}"
             raise ModbusPacketError(reason) from e
 
@@ -296,7 +296,12 @@ class ModbusTcpStream(ModbusStreamAbc):
                 self.log.debug("sent a fragment of %d byte(s)", len(fragment))
                 time.sleep(self.frag_delay)
 
-        except Exception as e:
+        # Raised by the fragmenter and already carrying the reason; wrapping
+        # it again would bury a framing fault inside a transport error.
+        except ModbusBaseError:
+            raise
+
+        except OSError as e:
             self.log.warning("send failed: %s", e)
             reason = f"Error sending Modbus message: {e!s}"
             raise ModbusNetworkError(message=reason) from e
@@ -450,7 +455,7 @@ class ModbusTcpStream(ModbusStreamAbc):
         except ModbusBaseError:
             raise
 
-        except Exception as e:
+        except OSError as e:
             self.log.warning("receive failed: %s", e)
             reason = f"Error receiving Modbus message: {e!s}"
             raise ModbusNetworkError(message=reason) from e
@@ -570,10 +575,11 @@ class ModbusTcpSender(ModbusSenderAbc):
                     # Send the message
                     self.stream.send(message)
 
-            except Exception as e:
+            # serialize() and send() already raise a specific ModbusBaseError
+            # subclass; relabeling it here would discard which one it was.
+            except ModbusBaseError as e:
                 self.log.warning("buffered send failed: %s", e)
-                reason = f"Error sending Modbus message: {e!s}"
-                raise ModbusNetworkError(message=reason) from e
+                raise
 
     def stop(self) -> None:
         """Stops sending messages and closes the socket."""
@@ -672,9 +678,11 @@ class ModbusTcpReceiver(ModbusReceiverAbc):
                 with self._lock:
                     self.packets.append(packet)
 
-        except Exception as e:
+        # receive() and deserialize() already raise a specific ModbusBaseError
+        # subclass; relabeling it here would discard which one it was.
+        except ModbusBaseError as e:
             self.log.warning("buffered receive failed: %s", e)
-            raise ModbusBaseError(message=str(e)) from e
+            raise
 
         # Return the received messages
         return self.packets
