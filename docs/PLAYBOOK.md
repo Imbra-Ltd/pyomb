@@ -393,9 +393,9 @@ inside them.
    class in it is registered, and add both to `pdu/__init__.py`'s imports
    and `__all__`.
 3. Add a builder to `RequestFactory` in
-   `src/pyomb/simulators/client_simulator.py` and a branch to `send_request`.
+   `src/pyomb/simulators/client.py` and a branch to `send_request`.
 4. Add a responder to `ResponseFactory` in
-   `src/pyomb/simulators/server_simulator.py` and a branch to `on_data`.
+   `src/pyomb/simulators/server.py` and a branch to `on_data`.
    Import the request class and test it with `isinstance`
    rather than comparing the function code field — the factory reads fields
    only that class declares, and a caller can register a different class
@@ -1142,7 +1142,7 @@ there would always answer yes.
 Re-measure before treating the numbers above as current:
 
 ```bash
-python -X importtime -c "import pyomb; import pyomb.simulators.client_simulator; import pyomb.simulators.server_simulator"
+python -X importtime -c "import pyomb; import pyomb.simulators.client; import pyomb.simulators.server"
 ```
 
 Read the cumulative column on the `pyomb` line and on the two that follow it.

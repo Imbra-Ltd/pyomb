@@ -11,10 +11,16 @@ numbers follow [Semantic Versioning](https://semver.org/).
 - `pyomb.packets`, `pyomb.stream`, `pyomb.tls`, `pyomb.client_simulator` and
   `pyomb.server_simulator` no longer exist. Each name they forwarded is
   replaced by the same name under `pyomb.pdu`, `pyomb.adu`,
-  `pyomb.transport.stream`, `pyomb.transport.tls`,
-  `pyomb.simulators.client_simulator` or `pyomb.simulators.server_simulator`
-  respectively. Every name `pyomb` itself re-exports (`from pyomb import
-  ...`) is unaffected. See #412
+  `pyomb.transport.stream`, `pyomb.transport.tls`, `pyomb.simulators.client`
+  or `pyomb.simulators.server` respectively. Every name `pyomb` itself
+  re-exports (`from pyomb import ...`) is unaffected. See #412
+
+### Changed
+
+- `pyomb.simulators.client_simulator` and `pyomb.simulators.server_simulator`
+  are renamed to `pyomb.simulators.client` and `pyomb.simulators.server`,
+  with no forwarding alias — that path was never part of the public API.
+  See #440
 
 ## [0.8.0] - 2026-09-10
 

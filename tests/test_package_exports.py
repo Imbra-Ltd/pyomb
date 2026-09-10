@@ -30,7 +30,7 @@ def imported_names(statement):
         set[str] : The watched module names present after it runs
     """
 
-    watched = ("ssl", "pyomb.simulators.client_simulator", "pyomb.simulators.server_simulator", "pyomb.transport.tls")
+    watched = ("ssl", "pyomb.simulators.client", "pyomb.simulators.server", "pyomb.transport.tls")
 
     program = "import sys\n" + statement + f"\nprint(' '.join(name for name in {watched!r} if name in sys.modules))"
 
@@ -86,8 +86,8 @@ class PackageExportsWhatItNames(unittest.TestCase):
     def test_the_simulators_are_the_classes_the_submodules_define(self):
         """A deferred binding must hand back the same class, not a copy of it."""
 
-        from pyomb.simulators.client_simulator import ModbusClientSimulator
-        from pyomb.simulators.server_simulator import ModbusServerSimulator
+        from pyomb.simulators.client import ModbusClientSimulator
+        from pyomb.simulators.server import ModbusServerSimulator
 
         self.assertIs(pyomb.ModbusClientSimulator, ModbusClientSimulator)
         self.assertIs(pyomb.ModbusServerSimulator, ModbusServerSimulator)
@@ -184,7 +184,7 @@ class ImportingThePackageDoesNotOpenTheTransport(unittest.TestCase):
     def test_naming_a_simulator_loads_it(self):
         """The deferral has to end when someone asks, or the name is useless."""
 
-        self.assertIn("pyomb.simulators.server_simulator", imported_names("import pyomb; pyomb.ModbusServerSimulator"))
+        self.assertIn("pyomb.simulators.server", imported_names("import pyomb; pyomb.ModbusServerSimulator"))
 
 
 if __name__ == "__main__":

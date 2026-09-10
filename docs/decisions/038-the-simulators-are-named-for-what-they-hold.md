@@ -1,10 +1,10 @@
 ---
 id: "038"
-status: Accepted
-date: 2026-09-01
+status: Superseded
+date: 2026-09-10
 category: repository
 supersedes: []
-superseded_by: []
+superseded_by: ["056"]
 ---
 
 # ADR-038: The simulators are named for what they hold

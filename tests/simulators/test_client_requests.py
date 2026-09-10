@@ -27,7 +27,7 @@ from pyomb.pdu import (
     ModbusRequestFC23,
     ModbusRequestFC43,
 )
-from pyomb.simulators.client_simulator import ModbusClientSimulator
+from pyomb.simulators.client import ModbusClientSimulator
 from tests.helpers.stub_socket import LoopbackSocket
 
 # One call per supported function code, paired with the PDU class it must

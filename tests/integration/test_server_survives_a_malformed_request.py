@@ -18,7 +18,7 @@ import unittest
 
 from pyomb.adu import ModbusHeader, ModbusTcpRequest, ModbusTcpResponse
 from pyomb.pdu import ModbusRequestFC1
-from pyomb.simulators.server_simulator import ModbusServerSimulator
+from pyomb.simulators.server import ModbusServerSimulator
 
 # Transaction 1, protocol 0, length 4, unit 1, then an FC1 body two bytes
 # short. The MBAP length agrees with the ADU, so only the PDU is malformed.

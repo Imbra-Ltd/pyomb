@@ -337,7 +337,7 @@ class TestTheSimulatorsConsumeTheSettings(unittest.TestCase):
             return factory(tls=settings)
 
     def test_the_client_takes_its_context_from_the_settings(self):
-        from pyomb.simulators.client_simulator import ModbusClientSimulator
+        from pyomb.simulators.client import ModbusClientSimulator
 
         client = self.build(ModbusClientSimulator)
         self.addCleanup(client.sock.close)
@@ -346,7 +346,7 @@ class TestTheSimulatorsConsumeTheSettings(unittest.TestCase):
         self.assertEqual(client.crypto.minimum_version, ssl.TLSVersion.TLSv1_2)
 
     def test_the_server_takes_its_context_from_the_settings(self):
-        from pyomb.simulators.server_simulator import ModbusServerSimulator
+        from pyomb.simulators.server import ModbusServerSimulator
 
         server = self.build(ModbusServerSimulator)
 
@@ -354,7 +354,7 @@ class TestTheSimulatorsConsumeTheSettings(unittest.TestCase):
         self.assertEqual(server.ssl_context.minimum_version, ssl.TLSVersion.TLSv1_2)
 
     def test_a_secure_client_moves_off_the_plaintext_port(self):
-        from pyomb.simulators.client_simulator import ModbusClientSimulator
+        from pyomb.simulators.client import ModbusClientSimulator
 
         client = self.build(ModbusClientSimulator)
         self.addCleanup(client.sock.close)
@@ -362,7 +362,7 @@ class TestTheSimulatorsConsumeTheSettings(unittest.TestCase):
         self.assertEqual(client.port, ModbusClientSimulator.ENCRYPTED_PORT)
 
     def test_a_plaintext_client_builds_no_context(self):
-        from pyomb.simulators.client_simulator import ModbusClientSimulator
+        from pyomb.simulators.client import ModbusClientSimulator
 
         client = ModbusClientSimulator()
         self.addCleanup(client.sock.close)
@@ -373,8 +373,8 @@ class TestTheSimulatorsConsumeTheSettings(unittest.TestCase):
     def test_each_simulator_logs_the_weakenings_it_was_handed(self):
         # The report is worth nothing sitting unread on the settings object,
         # so both simulators say it at construction.
-        from pyomb.simulators.client_simulator import ModbusClientSimulator
-        from pyomb.simulators.server_simulator import ModbusServerSimulator
+        from pyomb.simulators.client import ModbusClientSimulator
+        from pyomb.simulators.server import ModbusServerSimulator
 
         for factory in (ModbusClientSimulator, ModbusServerSimulator):
             with self.subTest(factory=factory.__name__):

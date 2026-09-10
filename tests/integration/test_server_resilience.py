@@ -19,7 +19,7 @@ import unittest
 
 from pyomb.adu import ModbusHeader, ModbusTcpRequest, ModbusTcpResponse
 from pyomb.pdu import ModbusRequestFC1
-from pyomb.simulators.server_simulator import ModbusServerSimulator
+from pyomb.simulators.server import ModbusServerSimulator
 
 
 def read_request(address=0, count=8, trans_id=1):

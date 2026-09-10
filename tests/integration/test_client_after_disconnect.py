@@ -17,7 +17,7 @@ import struct
 import unittest
 
 from pyomb.errors import ModbusNetworkError
-from pyomb.simulators.client_simulator import ModbusClientSimulator
+from pyomb.simulators.client import ModbusClientSimulator
 
 
 def disconnected_client():

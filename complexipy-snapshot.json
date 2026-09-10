@@ -1,7 +1,7 @@
 [
   {
-    "path": "src/pyomb/simulators/client_simulator.py",
-    "file_name": "client_simulator.py",
+    "path": "src/pyomb/simulators/client.py",
+    "file_name": "client.py",
     "functions": [
       {
         "name": "ModbusClientSimulator::send_request",
@@ -10,8 +10,8 @@
     ]
   },
   {
-    "path": "src/pyomb/simulators/server_simulator.py",
-    "file_name": "server_simulator.py",
+    "path": "src/pyomb/simulators/server.py",
+    "file_name": "server.py",
     "functions": [
       {
         "name": "ModbusServerSimulator::on_data",
