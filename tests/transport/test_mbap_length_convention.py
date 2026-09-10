@@ -9,8 +9,9 @@ field. These tests pin the single convention at both layers.
 
 import unittest
 
-from pyomb.packets import ModbusHeader, ModbusPduParser, ModbusRequestFC1, ModbusTcpRequest
-from pyomb.stream import ModbusFragmenter, ModbusTcpStream
+from pyomb.adu import ModbusHeader, ModbusTcpRequest
+from pyomb.pdu import ModbusPduParser, ModbusRequestFC1
+from pyomb.transport.stream import ModbusFragmenter, ModbusTcpStream
 from tests.helpers.stub_socket import StubSocket
 
 

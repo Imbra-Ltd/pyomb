@@ -10,7 +10,7 @@ client believes whatever the server reports.
 
 import unittest
 
-from pyomb.packets import (
+from pyomb.pdu import (
     ModbusRequestFC1,
     ModbusRequestFC2,
     ModbusRequestFC3,
@@ -23,7 +23,7 @@ from pyomb.packets import (
     ModbusRequestFC23,
     ModbusRequestFC43,
 )
-from pyomb.server_simulator import ResponseFactory
+from pyomb.simulators.server_simulator import ResponseFactory
 
 
 class TestBitReadByteCounts(unittest.TestCase):

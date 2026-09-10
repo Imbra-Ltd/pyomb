@@ -130,7 +130,6 @@ a broken setup; PLAYBOOK 3.30 says why and how the baseline is regenerated.
 | `src/pyomb/transport/` | The socket layer — length-driven framing, deliberate fragmentation, TLS settings |
 | `src/pyomb/simulators/client_simulator.py` | Client simulator and the request builder |
 | `src/pyomb/simulators/server_simulator.py` | Server simulator, its select loop and the response factory |
-| `src/pyomb/packets/` | Deprecated forwarding shims for the old codec layout; removed in 0.9.0 |
 | `src/pyomb/errors.py` | Modbus exception codes as a Python exception hierarchy |
 | `tests/helpers/stub_socket.py` | The socket doubles most tests build on |
 | `checks/` | Gates over this repository's own conventions, kept out of the library suite and out of the source archive |

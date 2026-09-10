@@ -6,39 +6,15 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Fixed
-
-- The package ships a PEP 561 `py.typed` marker, so a type checker reads the
-  annotations `pyomb` declares instead of treating every imported name as
-  `Any`. Consuming code needs no change. See #385
-- The five mutual-TLS integration tests run again. They computed their
-  certificate directory one level short of where `scripts/gen_test_certs.py`
-  writes it after the suite moved into `tests/integration/`, so every one of
-  them silently skipped in CI instead of failing. See #428
-- Six broad `except Exception` blocks in the transport and server simulator
-  narrowed to the specific errors each site can actually raise. A bug in a
-  caller or in this library's own code used to be caught alongside a genuine
-  socket failure and relabeled as a generic network error or device failure;
-  it now propagates as itself. See #426
-
-### Changed
-
-- `ModbusServerSimulator.start()` reports why the listener did not come up. A
-  bind that fails names the operating system's reason in the message and
-  chains it as the cause, where it previously reached only stderr. See #210
-- The client and server demo programs (`run_client()`, `run_server()`) no
-  longer carry an unexplained, commented-out `frag_size=2,` line. See #427
-- The release procedure's ordering check (PLAYBOOK 5, step 7) now leaves a
-  record: its output is folded into the release tag's annotation, and
-  `checks/test_release_ordering_check_was_recorded.py` fails a release whose
-  tag does not carry it. See #429
-
-### Deprecated
+### Removed
 
 - `pyomb.packets`, `pyomb.stream`, `pyomb.tls`, `pyomb.client_simulator` and
-  `pyomb.server_simulator` are replaced by `pyomb.pdu`, `pyomb.adu`,
-  `pyomb.transport` and `pyomb.simulators`. Each old path still works and
-  warns; removed in 0.9.0. See #413
+  `pyomb.server_simulator` no longer exist. Each name they forwarded is
+  replaced by the same name under `pyomb.pdu`, `pyomb.adu`,
+  `pyomb.transport.stream`, `pyomb.transport.tls`,
+  `pyomb.simulators.client_simulator` or `pyomb.simulators.server_simulator`
+  respectively. Every name `pyomb` itself re-exports (`from pyomb import
+  ...`) is unaffected. See #412
 
 ## [0.8.0] - 2026-09-10
 

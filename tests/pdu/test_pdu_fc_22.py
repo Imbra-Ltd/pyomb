@@ -1,6 +1,6 @@
 import unittest
 
-from pyomb.packets import ModbusRequestFC22, ModbusResponseFC22
+from pyomb.pdu import ModbusRequestFC22, ModbusResponseFC22
 
 
 class TestModbusRequestFC22(unittest.TestCase):

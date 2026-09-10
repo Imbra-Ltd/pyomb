@@ -15,13 +15,7 @@ per-function-code suites is the mutation path none of them exercised.
 import unittest
 
 from pyomb.errors import ModbusPacketError
-from pyomb.packets import (
-    ModbusPdu,
-    ModbusRequestFC3,
-    ModbusRequestFC7,
-    ModbusRequestFC15,
-    ModbusResponseFC3,
-)
+from pyomb.pdu import ModbusPdu, ModbusRequestFC3, ModbusRequestFC7, ModbusRequestFC15, ModbusResponseFC3
 
 
 class ChangedFieldReachesTheWire(unittest.TestCase):

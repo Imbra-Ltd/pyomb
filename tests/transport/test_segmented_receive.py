@@ -12,7 +12,7 @@ hold the method to the MBAP length field instead of to the segment boundary.
 import unittest
 
 from pyomb.errors import ModbusNetworkError, ModbusPacketError
-from pyomb.stream import ModbusTcpStream
+from pyomb.transport.stream import ModbusTcpStream
 
 # Trans-ID 1, Prot-ID 0, Length 6, Unit-ID 0x11, PDU 03 00 00 00 02.
 FRAME = bytes.fromhex("000100000006110300000002")

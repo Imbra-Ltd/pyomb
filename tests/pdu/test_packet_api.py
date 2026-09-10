@@ -1,8 +1,8 @@
 import unittest
 
-from pyomb.packets import (
+from pyomb.adu import ModbusHeader, ModbusRtuRequest, ModbusRtuResponse, ModbusTcpRequest, ModbusTcpResponse
+from pyomb.pdu import (
     ModbusError,
-    ModbusHeader,
     ModbusPdu,
     ModbusPduParser,
     ModbusRequestFC1,
@@ -29,10 +29,6 @@ from pyomb.packets import (
     ModbusResponseFC16,
     ModbusResponseFC23,
     ModbusResponseFC43,
-    ModbusRtuRequest,
-    ModbusRtuResponse,
-    ModbusTcpRequest,
-    ModbusTcpResponse,
 )
 
 

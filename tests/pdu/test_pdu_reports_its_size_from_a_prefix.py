@@ -13,7 +13,7 @@ library.
 import unittest
 
 from pyomb.errors import ModbusPacketError
-from pyomb.packets import (
+from pyomb.pdu import (
     ModbusError,
     ModbusPdu,
     ModbusPduParser,

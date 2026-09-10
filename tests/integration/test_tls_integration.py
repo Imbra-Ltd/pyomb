@@ -13,10 +13,10 @@ import pathlib
 import ssl
 import unittest
 
-from pyomb.client_simulator import ModbusClientSimulator
-from pyomb.packets import ModbusPduParser, ModbusRequestFC1, ModbusResponseFC1
-from pyomb.server_simulator import ModbusServerSimulator
-from pyomb.tls import TlsSettings
+from pyomb.pdu import ModbusPduParser, ModbusRequestFC1, ModbusResponseFC1
+from pyomb.simulators.client_simulator import ModbusClientSimulator
+from pyomb.simulators.server_simulator import ModbusServerSimulator
+from pyomb.transport.tls import TlsSettings
 
 # scripts/gen_test_certs.py writes to <repo root>/assets/certificates by
 # default; this file sits two directories below the repo root.

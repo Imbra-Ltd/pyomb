@@ -14,7 +14,7 @@ optional keyword parameters, as the RTU packets do for CRC verification.
 import inspect
 import unittest
 
-from pyomb.packets import ModbusPacketAbc
+from pyomb.pdu import ModbusPacketAbc
 from tests.helpers.packet_hierarchy import packet_classes
 from tests.helpers.signatures import caller_parameters
 

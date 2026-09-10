@@ -14,8 +14,9 @@ work, which is the promise `stop()` makes, rather than that the event is read.
 
 import unittest
 
-from pyomb.packets import ModbusHeader, ModbusPdu, ModbusTcpPacket
-from pyomb.stream import ModbusTcpReceiver, ModbusTcpSender
+from pyomb.adu import ModbusHeader, ModbusTcpPacket
+from pyomb.pdu import ModbusPdu
+from pyomb.transport.stream import ModbusTcpReceiver, ModbusTcpSender
 from tests.helpers.stub_socket import StubSocket
 
 
