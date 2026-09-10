@@ -14,7 +14,7 @@ superseded_by: []
 A prior record named the client and server simulator modules for what they
 hold: `client_simulator.py` and `server_simulator.py`. It considered and
 rejected folding them into a `simulators/` sub-package, because no such
-directory existed yet -- creating one was "a directory no requirement asks
+directory existed yet. Creating one was "a directory no requirement asks
 for," and it would have left the package asymmetric against the then-flat
 modules holding the codec and the transport.
 
