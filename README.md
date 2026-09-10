@@ -219,14 +219,6 @@ src/pyomb/              # The library
   simulators/            # The client and server, built on the three above
     client_simulator.py  # Client simulator and request builder
     server_simulator.py   # Server simulator, select loop and response factory
-  packets/               # Deprecated forwarding shims; removed in 0.9.0
-    base.py               # Forwards to pyomb.pdu.common
-    pdu.py                 # Forwards to pyomb.pdu's group modules
-    framing.py              # Forwards to pyomb.adu's tcp and rtu modules
-  stream.py               # Forwards to pyomb.transport.stream
-  tls.py                   # Forwards to pyomb.transport.tls
-  client_simulator.py     # Forwards to pyomb.simulators.client_simulator
-  server_simulator.py      # Forwards to pyomb.simulators.server_simulator
   errors.py              # Modbus exception codes as a Python hierarchy
   logger.py              # Logger that writes to stdout and optionally a file
   defines.py             # Protocol constants
