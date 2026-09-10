@@ -5052,3 +5052,41 @@ package, per ADR-002. See `README.md` for usage and
   because both sat inside prose that named a path without importing it --
   the mechanical searches this session ran were import-shaped, and a
   documentation cross-reference is not an import.
+
+## 2026-09-10 -- Four audit-backlog fixes and the ordering-check gate
+
+- **Tool:** Claude Code (Sonnet 5).
+- **Key changes:** worked the P2/P3 backlog the 2026-09-09 audit filed.
+  - **Restored the TLS integration suite** (PR #431, #428). The five tests
+    computed their certificate directory one level short of where
+    `scripts/gen_test_certs.py` writes it, after the suite moved into
+    `tests/integration/` in #317 -- silently skipped in CI ever since.
+    Added a fast-tier regression test pinning the two computations to each
+    other, independent of whether a chain is on disk.
+  - **Removed the demos' leftover disabled setting** (PR #432, #427). A
+    commented-out `# frag_size=2,` sat unexplained in both `run_client()`
+    and `run_server()`.
+  - **Narrowed six broad `except Exception` blocks** in the transport and
+    server simulator (PR #433, #426), matching the pattern this library's
+    message-handling code already used. A caller's own bug, and a framing
+    fault this library had already typed, were both silently relabeled as a
+    network error or a device failure. Regression tests for both files
+    confirmed against the unfixed code (`git stash`) before and after.
+  - **Recorded that the release-ordering check ran** (PR #434, #429). Asked
+    the user where to leave the record rather than guessing -- the tag's
+    own annotation, over a comment on the (already-merged) release PR,
+    since no `checks/` gate makes a live GitHub API call today and this
+    avoids adding one. `v0.7.0` predates the gate and is grandfathered.
+  - **Wrote ADR-055** (PR #435, this wrap-up's item 4): the exception
+    narrowing changes which type propagates through the public API and
+    what the server sends a peer for an internal bug, which crosses the
+    compatibility-contract threshold.
+- **PRs merged:** #431, #432, #433, #434. #435 opened and pending the
+  owner's merge as this entry is written.
+- **Issues closed/created:** closed #426, #427, #428, #429.
+- **Lesson:** `checks/test_comment_length.py` reads `git ls-files`, so
+  running it on a new file before `git add` reports a clean tree having
+  scanned nothing. PR #434's first CI run failed on exactly that -- a
+  passing local run that never saw the file. Fixed by staging before
+  testing for the rest of the session; quality.md already names this trap
+  for document gates and it reaches source gates the same way.
