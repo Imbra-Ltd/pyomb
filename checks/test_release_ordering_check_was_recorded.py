@@ -1,16 +1,12 @@
 """A release's tag carries proof the ordering check ran before it was pushed.
 
-PLAYBOOK 5 step 7 asks an operator to run the release-ordering check -- which
-pull requests are ready to land in the gap between tags -- before pushing the
-new tag. Nothing recorded whether that happened; a release proceeding without
-it looked identical to one that ran it and found nothing to do. The tag's own
-annotation is the record: step 8 folds the check's output into `git tag -a`'s
-message, so it ships with every archive the tag produces and needs no new
-commit on `main`, which `git.md` would refuse.
+PLAYBOOK 5 step 7 asks an operator to run the release-ordering check before
+pushing the tag. Nothing recorded whether that happened, so a skipped run
+looked identical to one that found nothing to do.
 
-This gate has nothing to check between releases -- the tag for the version
-`pyomb` currently reports does not exist until an operator cuts it -- so it is
-silent until then, the same as PLAYBOOK 3.23's audit gate.
+Step 8 folds the check's output into the tag's own annotation instead -- no
+new commit on `main`, which `git.md` refuses. This gate is silent between
+releases, the same as PLAYBOOK 3.23's audit gate.
 """
 
 import pathlib
@@ -23,9 +19,8 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 
 TAG = f"v{pyomb.__version__}"
 
-# v0.7.0 was tagged before this gate existed, so its tag carries no record.
-# Retagging it to add one is refused by git.md and by PLAYBOOK 5's own
-# argument against repairing a published tag; grandfathered instead.
+# Predates this gate. Retagging to add the record is worse than the gap,
+# per PLAYBOOK 5's own argument against repairing a published release.
 GRANDFATHERED = frozenset({"0.7.0"})
 
 # Printed by the ordering check (PLAYBOOK 5, step 7) whenever it applies --
