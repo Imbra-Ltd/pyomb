@@ -86,8 +86,8 @@ class PackageExportsWhatItNames(unittest.TestCase):
     def test_the_simulators_are_the_classes_the_submodules_define(self):
         """A deferred binding must hand back the same class, not a copy of it."""
 
-        from pyomb.client_simulator import ModbusClientSimulator
-        from pyomb.server_simulator import ModbusServerSimulator
+        from pyomb.simulators.client_simulator import ModbusClientSimulator
+        from pyomb.simulators.server_simulator import ModbusServerSimulator
 
         self.assertIs(pyomb.ModbusClientSimulator, ModbusClientSimulator)
         self.assertIs(pyomb.ModbusServerSimulator, ModbusServerSimulator)

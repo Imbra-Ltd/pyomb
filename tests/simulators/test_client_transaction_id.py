@@ -13,9 +13,10 @@ These tests pin the counter, the correlation and the configurable unit id.
 
 import unittest
 
-from pyomb.client_simulator import ModbusClientSimulator
+from pyomb.adu import ModbusHeader, ModbusTcpResponse
 from pyomb.errors import ModbusNetworkError
-from pyomb.packets import ModbusHeader, ModbusResponseFC1, ModbusTcpResponse
+from pyomb.pdu import ModbusResponseFC1
+from pyomb.simulators.client_simulator import ModbusClientSimulator
 from tests.helpers.stub_socket import LoopbackSocket
 
 

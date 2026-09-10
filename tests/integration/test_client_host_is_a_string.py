@@ -19,8 +19,8 @@ import re
 import socket
 import unittest
 
-from pyomb.client_simulator import ModbusClientSimulator, run_client
-from pyomb.server_simulator import ModbusServerSimulator
+from pyomb.simulators.client_simulator import ModbusClientSimulator, run_client
+from pyomb.simulators.server_simulator import ModbusServerSimulator
 
 # The `host (str)` line of a Google-style Args block. The character class is
 # spelled out, since a shorthand escape can be lost while still compiling.

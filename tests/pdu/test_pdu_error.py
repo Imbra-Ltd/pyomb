@@ -1,6 +1,6 @@
 import unittest
 
-from pyomb.packets import ModbusError, ModbusPduParser
+from pyomb.pdu import ModbusError, ModbusPduParser
 
 ####################################################################################################
 # Error Tests

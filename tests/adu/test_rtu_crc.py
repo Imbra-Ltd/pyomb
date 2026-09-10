@@ -12,16 +12,14 @@ bugs can satisfy.
 
 import unittest
 
+from pyomb.adu import ModbusRtuRequest, ModbusRtuResponse, calc_crc16
 from pyomb.errors import ModbusPacketError
-from pyomb.packets import (
+from pyomb.pdu import (
     ModbusPduParser,
     ModbusRequestFC1,
     ModbusRequestFC3,
     ModbusResponseFC1,
     ModbusResponseFC4,
-    ModbusRtuRequest,
-    ModbusRtuResponse,
-    calc_crc16,
 )
 
 

@@ -16,15 +16,9 @@ import socket
 import struct
 import unittest
 
-from pyomb.packets import (
-    ModbusHeader,
-    ModbusPdu,
-    ModbusPduParser,
-    ModbusRequestFC1,
-    ModbusTcpRequest,
-    ModbusTcpResponse,
-)
-from pyomb.server_simulator import ModbusServerSimulator
+from pyomb.adu import ModbusHeader, ModbusTcpRequest, ModbusTcpResponse
+from pyomb.pdu import ModbusPdu, ModbusPduParser, ModbusRequestFC1
+from pyomb.simulators.server_simulator import ModbusServerSimulator
 
 
 class CoilRequestWithoutQuantity(ModbusPdu):

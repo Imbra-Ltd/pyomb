@@ -1,7 +1,7 @@
 import struct
 import unittest
 
-from pyomb.packets import ModbusError, ModbusPdu
+from pyomb.pdu import ModbusError, ModbusPdu
 
 
 class TestModbusPdu(unittest.TestCase):

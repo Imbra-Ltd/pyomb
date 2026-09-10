@@ -16,7 +16,7 @@ import inspect
 import unittest
 
 from pyomb.errors import ModbusPacketError
-from pyomb.packets import ModbusPdu, ModbusPduParser, ModbusPduParserAbc
+from pyomb.pdu import ModbusPdu, ModbusPduParser, ModbusPduParserAbc
 from tests.helpers.packet_hierarchy import concrete_packet_classes, packet_classes
 
 # A one-element tuple holding a value no Modbus field can hold, so struct

@@ -15,7 +15,7 @@ behaviour. The name IS the behaviour: it is the join key the guard matches on.
 
 import unittest
 
-from pyomb.server_simulator import ModbusServerSimulator
+from pyomb.simulators.server_simulator import ModbusServerSimulator
 from tests import conftest
 
 

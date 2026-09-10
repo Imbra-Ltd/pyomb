@@ -13,8 +13,8 @@ every failure that leaves nothing to echo keeps raising the plain error.
 
 import unittest
 
+from pyomb.adu import ModbusHeader, ModbusTcpRequest
 from pyomb.errors import ModbusPacketError, ModbusPduParseError
-from pyomb.packets import ModbusHeader, ModbusTcpRequest
 
 # Transaction 1, protocol 0, length 4, unit 1, then an FC1 body two bytes
 # short. The MBAP length agrees with the ADU, so only the PDU is malformed.

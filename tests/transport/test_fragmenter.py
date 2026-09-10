@@ -1,6 +1,6 @@
 import unittest
 
-from pyomb.stream import ModbusFragmenter
+from pyomb.transport.stream import ModbusFragmenter
 
 
 class TestFragmenter(unittest.TestCase):

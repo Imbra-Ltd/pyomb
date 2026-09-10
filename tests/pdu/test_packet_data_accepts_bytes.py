@@ -16,7 +16,7 @@ import struct
 import unittest
 import warnings
 
-from pyomb.packets import ModbusPdu
+from pyomb.pdu import ModbusPdu
 
 # A layout mixing 16-bit and 8-bit fields, which the format string could
 # describe. Bytes describe it too, and go on past what struct has code for.
@@ -86,7 +86,7 @@ class TheFormatStringRouteIsDeprecated(unittest.TestCase):
     def test_the_packet_classes_do_not_use_the_deprecated_route(self):
         # The classes call the internal helpers, so an ordinary serialize must
         # not warn about a route its caller never took.
-        from pyomb.packets import ModbusRequestFC3
+        from pyomb.pdu import ModbusRequestFC3
 
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")

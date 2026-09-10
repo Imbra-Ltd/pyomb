@@ -9,9 +9,9 @@ as something other than a ModbusProtocolError.
 
 import unittest
 
-from pyomb.client_simulator import ModbusClientSimulator
+from pyomb.adu import ModbusTcpRequest
 from pyomb.errors import ModbusIllegalDataValueError, ModbusProtocolError
-from pyomb.packets import ModbusTcpRequest
+from pyomb.simulators.client_simulator import ModbusClientSimulator
 from tests.helpers.stub_socket import LoopbackSocket
 
 # The function codes that narrow a sequence to one value.

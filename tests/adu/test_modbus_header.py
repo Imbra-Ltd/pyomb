@@ -1,6 +1,6 @@
 import unittest
 
-from pyomb.packets import ModbusHeader
+from pyomb.adu import ModbusHeader
 
 
 class TestModbusHeader(unittest.TestCase):

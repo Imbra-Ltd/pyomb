@@ -17,8 +17,9 @@ import struct
 import time
 import unittest
 
-from pyomb.packets import ModbusHeader, ModbusRequestFC1, ModbusTcpRequest, ModbusTcpResponse
-from pyomb.server_simulator import ModbusServerSimulator
+from pyomb.adu import ModbusHeader, ModbusTcpRequest, ModbusTcpResponse
+from pyomb.pdu import ModbusRequestFC1
+from pyomb.simulators.server_simulator import ModbusServerSimulator
 
 
 def read_request(address=0, count=8, trans_id=1):

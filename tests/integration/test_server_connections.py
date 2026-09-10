@@ -16,7 +16,7 @@ import time
 import unittest
 
 from pyomb.errors import ModbusModeError, ModbusNetworkError
-from pyomb.server_simulator import ModbusServerSimulator
+from pyomb.simulators.server_simulator import ModbusServerSimulator
 
 
 class ServerThreadExceptions:

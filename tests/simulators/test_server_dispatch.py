@@ -14,10 +14,10 @@ listener, no certificates and no timing.
 import unittest
 from unittest import mock
 
+from pyomb.adu import ModbusHeader, ModbusTcpRequest, ModbusTcpResponse
 from pyomb.errors import ModbusSlaveDeviceFailureError
-from pyomb.packets import (
+from pyomb.pdu import (
     ModbusError,
-    ModbusHeader,
     ModbusPdu,
     ModbusRequestFC1,
     ModbusRequestFC2,
@@ -43,10 +43,8 @@ from pyomb.packets import (
     ModbusResponseFC22,
     ModbusResponseFC23,
     ModbusResponseFC43,
-    ModbusTcpRequest,
-    ModbusTcpResponse,
 )
-from pyomb.server_simulator import ModbusServerSimulator
+from pyomb.simulators.server_simulator import ModbusServerSimulator
 
 # One request per supported function code, paired with the response class the
 # dispatch is expected to answer with.

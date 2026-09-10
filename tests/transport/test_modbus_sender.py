@@ -1,7 +1,8 @@
 import unittest
 
-from pyomb.packets import ModbusHeader, ModbusPdu, ModbusTcpPacket
-from pyomb.stream import ModbusTcpSender
+from pyomb.adu import ModbusHeader, ModbusTcpPacket
+from pyomb.pdu import ModbusPdu
+from pyomb.transport.stream import ModbusTcpSender
 from tests.helpers.stub_socket import StubSocket
 
 

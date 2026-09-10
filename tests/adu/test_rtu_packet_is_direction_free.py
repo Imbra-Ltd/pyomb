@@ -12,15 +12,9 @@ the bytes are anchored outside this library.
 
 import unittest
 
+from pyomb.adu import ModbusRtuPacket, ModbusRtuRequest, ModbusRtuResponse
 from pyomb.errors import ModbusPacketError
-from pyomb.packets import (
-    ModbusPdu,
-    ModbusRequestFC3,
-    ModbusResponseFC4,
-    ModbusRtuPacket,
-    ModbusRtuRequest,
-    ModbusRtuResponse,
-)
+from pyomb.pdu import ModbusPdu, ModbusRequestFC3, ModbusResponseFC4
 
 # 11 03 00 00 00 02 -- read two holding registers from slave 17, checksum C6 9B.
 REQUEST_FRAME = b"\x11\x03\x00\x00\x00\x02\xc6\x9b"
