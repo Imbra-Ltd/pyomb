@@ -1062,7 +1062,6 @@ def run_server() -> None:
         host="",
         connection_limit=50,
         inactive_timeout=60,
-        # frag_size=2,
         frag_delay=0,
     )
     server_thread.start()
