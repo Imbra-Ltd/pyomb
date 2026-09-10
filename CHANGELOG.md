@@ -11,6 +11,10 @@ numbers follow [Semantic Versioning](https://semver.org/).
 - The package ships a PEP 561 `py.typed` marker, so a type checker reads the
   annotations `pyomb` declares instead of treating every imported name as
   `Any`. Consuming code needs no change. See #385
+- The five mutual-TLS integration tests run again. They computed their
+  certificate directory one level short of where `scripts/gen_test_certs.py`
+  writes it after the suite moved into `tests/integration/`, so every one of
+  them silently skipped in CI instead of failing. See #428
 
 ### Changed
 
