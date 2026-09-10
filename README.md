@@ -217,8 +217,8 @@ src/pyomb/              # The library
     stream.py            # Length-driven TCP framing and fragmentation
     tls.py                # TLS settings and SSL context construction
   simulators/            # The client and server, built on the three above
-    client_simulator.py  # Client simulator and request builder
-    server_simulator.py   # Server simulator, select loop and response factory
+    client.py              # Client simulator and request builder
+    server.py              # Server simulator, select loop and response factory
   errors.py              # Modbus exception codes as a Python hierarchy
   logger.py              # Logger that writes to stdout and optionally a file
   defines.py             # Protocol constants

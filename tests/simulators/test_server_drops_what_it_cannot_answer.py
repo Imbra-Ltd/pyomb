@@ -14,7 +14,7 @@ genuinely deliver is a length field contradicting the ADU.
 import unittest
 
 from pyomb.errors import ModbusPacketError, ModbusPduParseError
-from pyomb.simulators.server_simulator import ModbusServerSimulator
+from pyomb.simulators.server import ModbusServerSimulator
 
 # Length 9 against three PDU bytes: the field claims six more than arrived, so
 # the frame boundary is unknown and nothing after the header is trustworthy.

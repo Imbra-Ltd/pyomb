@@ -16,7 +16,7 @@ import unittest
 from pyomb.adu import ModbusHeader, ModbusTcpResponse
 from pyomb.errors import ModbusNetworkError
 from pyomb.pdu import ModbusResponseFC1
-from pyomb.simulators.client_simulator import ModbusClientSimulator
+from pyomb.simulators.client import ModbusClientSimulator
 from tests.helpers.stub_socket import LoopbackSocket
 
 

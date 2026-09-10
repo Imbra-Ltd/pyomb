@@ -23,7 +23,7 @@ from pyomb.pdu import (
     ModbusRequestFC23,
     ModbusRequestFC43,
 )
-from pyomb.simulators.server_simulator import ResponseFactory
+from pyomb.simulators.server import ResponseFactory
 
 
 class TestBitReadByteCounts(unittest.TestCase):

@@ -9,16 +9,16 @@ from importlib import import_module
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pyomb.simulators.client_simulator import ModbusClientSimulator, RequestFactory, run_client
-    from pyomb.simulators.server_simulator import ModbusServerSimulator, ResponseFactory, run_server
+    from pyomb.simulators.client import ModbusClientSimulator, RequestFactory, run_client
+    from pyomb.simulators.server import ModbusServerSimulator, ResponseFactory, run_server
 
 _DEFERRED = {
-    "ModbusClientSimulator": "client_simulator",
-    "RequestFactory": "client_simulator",
-    "run_client": "client_simulator",
-    "ModbusServerSimulator": "server_simulator",
-    "ResponseFactory": "server_simulator",
-    "run_server": "server_simulator",
+    "ModbusClientSimulator": "client",
+    "RequestFactory": "client",
+    "run_client": "client",
+    "ModbusServerSimulator": "server",
+    "ResponseFactory": "server",
+    "run_server": "server",
 }
 
 __all__ = [

@@ -50,15 +50,15 @@ from .transport import ModbusFragmenter, ModbusTcpReceiver, ModbusTcpSender, Mod
 # Named below but not imported: they reach ssl, and __getattr__ binds them on
 # first access instead. See PLAYBOOK, deferred imports, for the measurement.
 if TYPE_CHECKING:
-    from .simulators.client_simulator import ModbusClientSimulator
-    from .simulators.server_simulator import ModbusServerSimulator
+    from .simulators.client import ModbusClientSimulator
+    from .simulators.server import ModbusServerSimulator
     from .transport.tls import UNSET, TlsRole, TlsSettings
 
 # Each deferred name against the submodule defining it. The TLS settings join
 # the simulators because pyomb.transport.tls reaches ssl for the same reason.
 _DEFERRED = {
-    "ModbusClientSimulator": "simulators.client_simulator",
-    "ModbusServerSimulator": "simulators.server_simulator",
+    "ModbusClientSimulator": "simulators.client",
+    "ModbusServerSimulator": "simulators.server",
     "TlsSettings": "transport.tls",
     "TlsRole": "transport.tls",
     "UNSET": "transport.tls",

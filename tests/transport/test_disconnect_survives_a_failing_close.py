@@ -16,7 +16,7 @@ first two and change what a peer observes.
 import contextlib
 import unittest
 
-from pyomb.simulators.client_simulator import ModbusClientSimulator
+from pyomb.simulators.client import ModbusClientSimulator
 
 
 class ClosingRaises:

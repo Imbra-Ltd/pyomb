@@ -11,7 +11,7 @@ import unittest
 
 from pyomb.adu import ModbusTcpRequest
 from pyomb.errors import ModbusIllegalDataValueError, ModbusProtocolError
-from pyomb.simulators.client_simulator import ModbusClientSimulator
+from pyomb.simulators.client import ModbusClientSimulator
 from tests.helpers.stub_socket import LoopbackSocket
 
 # The function codes that narrow a sequence to one value.

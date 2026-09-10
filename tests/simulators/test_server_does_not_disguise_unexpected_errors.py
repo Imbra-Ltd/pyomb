@@ -16,7 +16,7 @@ import unittest
 from unittest.mock import patch
 
 from pyomb.errors import ModbusIllegalDataValueError, ModbusSlaveDeviceFailureError
-from pyomb.simulators.server_simulator import ModbusServerSimulator, ResponseFactory
+from pyomb.simulators.server import ModbusServerSimulator, ResponseFactory
 
 # Trans-ID 1, Prot-ID 0, Length 6, Unit-ID 1, FC1 read 1 coil from address 0.
 FC1_REQUEST = bytes.fromhex("000100000006") + bytes([1]) + bytes([1, 0, 0, 0, 1])

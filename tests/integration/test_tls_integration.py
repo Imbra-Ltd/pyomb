@@ -14,8 +14,8 @@ import ssl
 import unittest
 
 from pyomb.pdu import ModbusPduParser, ModbusRequestFC1, ModbusResponseFC1
-from pyomb.simulators.client_simulator import ModbusClientSimulator
-from pyomb.simulators.server_simulator import ModbusServerSimulator
+from pyomb.simulators.client import ModbusClientSimulator
+from pyomb.simulators.server import ModbusServerSimulator
 from pyomb.transport.tls import TlsSettings
 
 # scripts/gen_test_certs.py writes to <repo root>/assets/certificates by
