@@ -17,7 +17,7 @@ import pathlib
 import re
 import unittest
 
-from changelog import UNRELEASED, read_links, read_sections
+from changelog import UNRELEASED, read_links, read_section_body, read_sections
 
 import pyomb
 
@@ -27,7 +27,7 @@ CHANGELOG = pathlib.Path(__file__).resolve().parents[1] / "CHANGELOG.md"
 # planted ones the negative control feeds it.
 Findings = collections.namedtuple(
     "Findings",
-    "release_entry unreleased_link unlinked_sections orphan_links mismatched_links",
+    "release_entry unreleased_link unlinked_sections orphan_links mismatched_links duplicated_release",
 )
 
 # The `Unreleased` link compares the tip against the last release, so the tag
@@ -50,6 +50,13 @@ MOVE_THE_LINK = (
     "The compare links live at the foot of the file. `Unreleased` compares the "
     "tip against the newest release, so cutting an entry moves it to the "
     "version just cut."
+)
+
+MOVE_NOT_COPY = (
+    "Cutting the block moves its bullets into the dated entry. A bullet left "
+    "behind in Unreleased after the cut means it was copied instead, and now "
+    "reads as shipping twice: once in the release just cut and once as still "
+    "outstanding."
 )
 
 
@@ -155,6 +162,23 @@ def links_naming_another_version(links):
     return found
 
 
+def unreleased_duplicates_the_release(text, version):
+    """Report a bullet a cut left behind in Unreleased instead of moving.
+
+    Args:
+        text (str)    : The changelog's full Markdown source
+        version (str) : The version the package reports
+
+    Returns:
+        list[str] : Empty when Unreleased and the dated entry share no bullet
+    """
+
+    unreleased = set(read_section_body(text, UNRELEASED))
+    released = set(read_section_body(text, version))
+
+    return sorted(unreleased & released)
+
+
 def findings(text, version):
     """Run every rule over one changelog.
 
@@ -175,6 +199,7 @@ def findings(text, version):
         sections_without_a_link(sections, links),
         links_without_a_section(sections, links),
         links_naming_another_version(links),
+        unreleased_duplicates_the_release(text, version),
     )
 
 
@@ -235,6 +260,14 @@ BREAKS = (
         "mismatched_links",
         "the new link was copied from its neighbour and not retargeted",
         CLEAN.replace("compare/v9.9.8...v9.9.9", "compare/v9.9.7...v9.9.8"),
+    ),
+    (
+        "duplicated_release",
+        "the cut copied a bullet into the dated entry instead of moving it",
+        CLEAN.replace(
+            "## [Unreleased]\n\n",
+            "## [Unreleased]\n\n### Added\n\n- Something the release carries.\n\n",
+        ),
     ),
 )
 
@@ -324,12 +357,23 @@ class ChangelogReleaseEntry(unittest.TestCase):
             "them:\n  " + "\n  ".join(self.found.mismatched_links),
         )
 
+    def test_the_cut_moved_every_bullet_rather_than_copying_it(self):
+        """A bullet left in both blocks reads as shipping twice."""
+
+        self.assertEqual(
+            self.found.duplicated_release,
+            [],
+            "these bullets appear in both Unreleased and the dated entry for "
+            f"{pyomb.__version__}, so the cut copied them instead of moving "
+            "them:\n  " + "\n  ".join(self.found.duplicated_release) + "\n" + MOVE_NOT_COPY,
+        )
+
     def test_every_rule_clears_a_changelog_that_satisfies_it(self):
         """A rule that flags a clean file says nothing about a real one."""
 
         self.assertEqual(
             findings(CLEAN, CLEAN_VERSION),
-            Findings([], [], [], [], []),
+            Findings([], [], [], [], [], []),
             "a rule reported a finding against a changelog written to satisfy "
             "every one of them, so the findings it reports against the real "
             "file say nothing about that file.",
