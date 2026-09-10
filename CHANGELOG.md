@@ -28,6 +28,10 @@ numbers follow [Semantic Versioning](https://semver.org/).
   chains it as the cause, where it previously reached only stderr. See #210
 - The client and server demo programs (`run_client()`, `run_server()`) no
   longer carry an unexplained, commented-out `frag_size=2,` line. See #427
+- The release procedure's ordering check (PLAYBOOK 5, step 7) now leaves a
+  record: its output is folded into the release tag's annotation, and
+  `checks/test_release_ordering_check_was_recorded.py` fails a release whose
+  tag does not carry it. See #429
 
 ### Deprecated
 
