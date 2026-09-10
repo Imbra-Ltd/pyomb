@@ -9,7 +9,7 @@ rather than part of the default run.
 """
 
 import contextlib
-import os
+import pathlib
 import ssl
 import unittest
 
@@ -18,15 +18,18 @@ from pyomb.packets import ModbusPduParser, ModbusRequestFC1, ModbusResponseFC1
 from pyomb.server_simulator import ModbusServerSimulator
 from pyomb.tls import TlsSettings
 
-CERTS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "certificates")
+# scripts/gen_test_certs.py writes to <repo root>/assets/certificates by
+# default; this file sits two directories below the repo root.
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+CERTS = REPO_ROOT / "assets" / "certificates"
 
-CA = os.path.join(CERTS, "ca.crt")
-SERVER_CRT = os.path.join(CERTS, "server.crt")
-SERVER_KEY = os.path.join(CERTS, "server.key")
-CLIENT_CRT = os.path.join(CERTS, "client-operator.crt")
-CLIENT_KEY = os.path.join(CERTS, "client-operator.key")
+CA = str(CERTS / "ca.crt")
+SERVER_CRT = str(CERTS / "server.crt")
+SERVER_KEY = str(CERTS / "server.key")
+CLIENT_CRT = str(CERTS / "client-operator.crt")
+CLIENT_KEY = str(CERTS / "client-operator.key")
 
-HAVE_CERTS = all(os.path.exists(p) for p in (CA, SERVER_CRT, SERVER_KEY, CLIENT_CRT, CLIENT_KEY))
+HAVE_CERTS = all(pathlib.Path(p).exists() for p in (CA, SERVER_CRT, SERVER_KEY, CLIENT_CRT, CLIENT_KEY))
 
 SKIP_REASON = "run 'py scripts/gen_test_certs.py' to generate the test chain"
 
