@@ -58,6 +58,61 @@ def read_sections(text):
     return sections
 
 
+def read_section_body(text, label):
+    """Read the bullet entries under one section heading, wrapped lines joined.
+
+    Args:
+        text (str)  : The changelog's full Markdown source
+        label (str) : The section heading's label, `Unreleased` included
+
+    Returns:
+        list[str] : Each top-level bullet's text, in file order
+    """
+
+    entries = []
+    current = None
+    in_section = False
+    fenced = False
+
+    for line in text.split("\n"):
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            continue
+
+        if fenced:
+            continue
+
+        found = SECTION.match(line)
+
+        if found:
+            if current is not None:
+                entries.append(" ".join(current))
+                current = None
+
+            in_section = found.group("label") == label
+
+            continue
+
+        if not in_section:
+            continue
+
+        if line.startswith("- "):
+            if current is not None:
+                entries.append(" ".join(current))
+
+            current = [line[2:].strip()]
+        elif current is not None and line.strip() and not line.startswith("#"):
+            current.append(line.strip())
+        elif current is not None:
+            entries.append(" ".join(current))
+            current = None
+
+    if current is not None:
+        entries.append(" ".join(current))
+
+    return entries
+
+
 def read_links(text):
     """Read the link definitions at the foot of a changelog.
 
