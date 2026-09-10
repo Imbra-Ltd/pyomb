@@ -581,9 +581,9 @@ class ModbusServerSimulator(threading.Thread):
 
             self.answer(request.header, response_pdu, conn)
 
-        # Any failure building or sending the response becomes exception code
-        # 0x04, which is what that code means. The cause travels with it.
-        except Exception as e:
+        # A factory or answer() failure becomes exception code 0x04; anything
+        # else is a bug here, not a device failure, and must not look like one.
+        except ModbusBaseError as e:
             self.log.info(f"Error: {e}")
             raise ModbusSlaveDeviceFailureError() from e
 

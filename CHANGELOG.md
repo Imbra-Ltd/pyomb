@@ -15,6 +15,11 @@ numbers follow [Semantic Versioning](https://semver.org/).
   certificate directory one level short of where `scripts/gen_test_certs.py`
   writes it after the suite moved into `tests/integration/`, so every one of
   them silently skipped in CI instead of failing. See #428
+- Six broad `except Exception` blocks in the transport and server simulator
+  narrowed to the specific errors each site can actually raise. A bug in a
+  caller or in this library's own code used to be caught alongside a genuine
+  socket failure and relabeled as a generic network error or device failure;
+  it now propagates as itself. See #426
 
 ### Changed
 
