@@ -21,6 +21,8 @@ numbers follow [Semantic Versioning](https://semver.org/).
 - `ModbusServerSimulator.start()` reports why the listener did not come up. A
   bind that fails names the operating system's reason in the message and
   chains it as the cause, where it previously reached only stderr. See #210
+- The client and server demo programs (`run_client()`, `run_server()`) no
+  longer carry an unexplained, commented-out `frag_size=2,` line. See #427
 
 ### Deprecated
 

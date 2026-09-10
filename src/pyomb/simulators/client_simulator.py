@@ -792,7 +792,6 @@ def run_client() -> None:
         log=logger,
         host="localhost",
         port=502,
-        # frag_size=2,
     )
     client.test()
 
