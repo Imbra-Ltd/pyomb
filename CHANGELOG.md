@@ -40,6 +40,48 @@ numbers follow [Semantic Versioning](https://semver.org/).
   `pyomb.transport` and `pyomb.simulators`. Each old path still works and
   warns; removed in 0.9.0. See #413
 
+## [0.8.0] - 2026-09-10
+
+The library is laid out the way the Modbus specification is arranged: `pdu`
+for the message body, `adu` for the TCP and RTU envelopes, `transport` for
+everything that touches a socket, and `simulators` for the client and server.
+The four old flat modules and the `packets` package still work and warn;
+they are removed in 0.9.0.
+
+### Fixed
+
+- The package ships a PEP 561 `py.typed` marker, so a type checker reads the
+  annotations `pyomb` declares instead of treating every imported name as
+  `Any`. Consuming code needs no change. See #385
+- The five mutual-TLS integration tests run again. They computed their
+  certificate directory one level short of where `scripts/gen_test_certs.py`
+  writes it after the suite moved into `tests/integration/`, so every one of
+  them silently skipped in CI instead of failing. See #428
+- Six broad `except Exception` blocks in the transport and server simulator
+  narrowed to the specific errors each site can actually raise. A bug in a
+  caller or in this library's own code used to be caught alongside a genuine
+  socket failure and relabeled as a generic network error or device failure;
+  it now propagates as itself. See #426
+
+### Changed
+
+- `ModbusServerSimulator.start()` reports why the listener did not come up. A
+  bind that fails names the operating system's reason in the message and
+  chains it as the cause, where it previously reached only stderr. See #210
+- The client and server demo programs (`run_client()`, `run_server()`) no
+  longer carry an unexplained, commented-out `frag_size=2,` line. See #427
+- The release procedure's ordering check (PLAYBOOK 5, step 7) now leaves a
+  record: its output is folded into the release tag's annotation, and
+  `checks/test_release_ordering_check_was_recorded.py` fails a release whose
+  tag does not carry it. See #429
+
+### Deprecated
+
+- `pyomb.packets`, `pyomb.stream`, `pyomb.tls`, `pyomb.client_simulator` and
+  `pyomb.server_simulator` are replaced by `pyomb.pdu`, `pyomb.adu`,
+  `pyomb.transport` and `pyomb.simulators`. Each old path still works and
+  warns; removed in 0.9.0. See #413
+
 ## [0.7.0] - 2026-09-08
 
 Modbus RTU reaches the codec. An RTU frame can be built, read and checksum-
@@ -678,7 +720,8 @@ no upgrade path to describe and no consumer to break.
   committed chain was rotated; it was self-signed and installed in no trust
   store
 
-[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/Imbra-Ltd/pyomb/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Imbra-Ltd/pyomb/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/Imbra-Ltd/pyomb/compare/v0.5.0...v0.5.1
