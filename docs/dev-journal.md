@@ -5090,3 +5090,42 @@ package, per ADR-002. See `README.md` for usage and
   passing local run that never saw the file. Fixed by staging before
   testing for the rest of the session; quality.md already names this trap
   for document gates and it reaches source gates the same way.
+
+## 2026-09-10 (later) -- Ship v0.8.0 and retire the deprecated import shims
+
+- **Tool:** Claude Code (Sonnet 5).
+- **Key changes:**
+  - **Cut and shipped v0.8.0** (PR #436, tag `v0.8.0`). Ran the full
+    pre-release checklist (PLAYBOOK 5), bumped `__version__`, cut the
+    changelog, repointed the README install command, and pushed the
+    annotated tag carrying the release-ordering check's output. The
+    release workflow built and attached the wheel, sdist and SBOM.
+  - **Closed #413**, the epic-413 layout, once the shipped release
+    satisfied its last open item ("a release has shipped with the new
+    folders").
+  - **Implemented #412** (PR #437): deleted the eight forwarding shims
+    (`pyomb.packets`, `pyomb.stream`, `pyomb.tls`, `pyomb.client_simulator`,
+    `pyomb.server_simulator`) and their four dedicated compat tests. The
+    issue as filed undersold the work: 56 test modules still imported
+    through the shims as their ordinary way of reaching classes, not only
+    the four compat tests it named. Repointed all 56 (plus six more a
+    file-level scan missed because they were indented inside test
+    methods) in a separate commit before deleting anything, so the
+    deletion commit is a clean removal rather than a mixed
+    refactor-and-delete.
+- **PRs merged:** #436, #437.
+- **Issues closed/created:** closed #413, #412. Filed #438 (the
+  changelog release-entry check does not catch a cut that duplicates
+  content into Unreleased instead of moving it).
+- **Lesson:** the v0.8.0 changelog cut copied the Unreleased bullets into
+  the new `[0.8.0]` section instead of moving them, leaving both sections
+  carrying the same entries in the tagged release. No gate caught it --
+  `checks/test_changelog_release_entry.py` checks that a dated section
+  exists, not that Unreleased is empty afterwards. Filed as #438; fixed
+  by hand in PR #437 rather than retagging, per the rule that a published
+  tag is not retaken. Separately, a throwaway migration script looped
+  forever walking up from its own path (in a Temp directory) looking for
+  `pyproject.toml`, rather than from the working directory -- `.parent`
+  of a drive root is itself, so an unguarded walk-up loop never
+  terminates. Add a guard (`if REPO == REPO.parent: raise`) to any such
+  loop, always.
