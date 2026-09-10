@@ -1,15 +1,15 @@
 """The package exports what it names, and names the deferred ones without loading them.
 
-`__all__` is the project's statement of its public API, and nothing checked
-it. A name can sit in that list with nothing bound to it -- the list is a
-literal, not a reference -- so `from pyomb import X` fails for a name the
-package advertises. The first check resolves every name against the package.
+`__all__` is a package's statement of its public API, and nothing checked
+it -- a name can sit in the list with nothing bound to it, so `from X
+import Y` fails for a name X advertises. `pyomb`, `pyomb.pdu`, `pyomb.adu`,
+`pyomb.transport` and `pyomb.simulators` are each public this way, and the
+first check resolves every name each one advertises.
 
-The simulators make that live rather than theoretical: they are bound through
-the module's `__getattr__`, so their entries are backed by a function rather
-than an import statement. The deferral is a property of the package, so the
-last check runs a fresh interpreter and reads `sys.modules` -- in-process the
-suite has already imported both submodules and would always say yes.
+The simulators make that live rather than theoretical: `__getattr__` binds
+their entries, so a broken one fails only when read. The last check reads
+`sys.modules` in a fresh interpreter, since in-process the suite has
+already imported both submodules.
 """
 
 import subprocess  # nosec B404
@@ -18,6 +18,10 @@ import unittest
 import warnings
 
 import pyomb
+import pyomb.adu
+import pyomb.pdu
+import pyomb.simulators
+import pyomb.transport
 
 
 def imported_names(statement):
@@ -74,14 +78,19 @@ class PackageExportsWhatItNames(unittest.TestCase):
     def test_every_advertised_name_resolves(self):
         """A name in __all__ with nothing behind it breaks a documented import."""
 
-        missing = sorted(name for name in pyomb.__all__ if not hasattr(pyomb, name))
+        modules = (pyomb, pyomb.pdu, pyomb.adu, pyomb.transport, pyomb.simulators)
 
-        self.assertEqual(
-            missing,
-            [],
-            "__all__ advertises names the package does not bind, so importing "
-            "any of them from pyomb raises ImportError:\n  " + "\n  ".join(missing),
-        )
+        for module in modules:
+            with self.subTest(module=module.__name__):
+                missing = sorted(name for name in module.__all__ if not hasattr(module, name))
+
+                self.assertEqual(
+                    missing,
+                    [],
+                    "__all__ advertises names the module does not bind, so "
+                    "importing any of them from " + module.__name__ + " raises "
+                    "ImportError:\n  " + "\n  ".join(missing),
+                )
 
     def test_the_simulators_are_the_classes_the_submodules_define(self):
         """A deferred binding must hand back the same class, not a copy of it."""
