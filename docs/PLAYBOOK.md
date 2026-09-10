@@ -1944,9 +1944,14 @@ To cut a release:
 6. Open the pull request, merge it, and wait for CI to pass on `main`
 7. Run the release-ordering check below, from the release commit and before
    the tag. Every pull request it lists is a decision to record rather than
-   something that happens to land first
-8. Tag with `git tag -a`, never a lightweight tag, or `git describe` reports a
-   stale version to consumers
+   something that happens to land first. Keep its output; the next step folds
+   it into the tag
+8. Tag with `git tag -a -m "$output"`, where `$output` is what step 7 printed,
+   never a lightweight tag or a placeholder message -- either leaves nothing
+   showing the check ran, and `git describe` also reports a stale version to
+   consumers from a lightweight one.
+   `checks/test_release_ordering_check_was_recorded.py` fails until the tag's
+   annotation carries the check's output
 9. Push the tag
 
 Merge the release pull request before any other pull request that is ready,
@@ -1995,6 +2000,15 @@ Requiring branches to be up to date would block the wrong order outright and
 is deliberately not done. It would refuse every second merge of a batch on
 staleness rather than on content, which costs an update-and-rerun cycle per
 pull request to prevent a mistake this reading already surfaces.
+
+Capture what the command printed -- `output=$(the command above)` -- rather
+than only reading it in the terminal. Step 8 passes that capture to
+`git tag -a -m`, which is what lets a later gate tell a release that ran this
+reading from one that skipped it: the tag itself, not an operator's memory of
+having looked, is what the next person reads.
+`checks/test_release_ordering_check_was_recorded.py` carries that gate. It is
+silent for every tag but the one `pyomb.__init__` currently reports, the same
+way PLAYBOOK 3.23's audit gate is.
 
 Pushing the tag is the last manual step. `.github/workflows/release.yml` fires
 on any `v*` tag and does the rest: it refuses a tag that does not name the
