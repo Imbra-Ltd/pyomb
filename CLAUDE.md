@@ -84,9 +84,8 @@ duplicate it here. Create that section if it is missing.
   library, a caller hands an open one in -- see ADR-057
 - The client and server simulators live in the `simulators` package and
   depend on `pdu`, `adu` and `transport`; nothing depends on them
-- The four old flat modules and the `packets` package forward to the new
-  layout and warn on import; they are removed one release after the move,
-  never widened with new content — see ADR-054
+- The four old flat modules and the `packets` package are gone; each name
+  they forwarded resolves under the new layout instead — see ADR-054
 - A test module's home follows its subject, never its imports — a simulator
   test that builds a frame through the pdu and adu packages is still a
   simulator test. Regression tests for a fixed defect get their own module
