@@ -5505,3 +5505,54 @@ package, per ADR-002. See `README.md` for usage and
   contradiction lives across a heading. Re-reading the changed section
   whole is the review rule; here the section to re-read whole was the one
   above the diff.
+
+## 2026-09-11 (status check) -- Phase the backlog, spike the client/server API
+
+- **Tool:** Claude Code (Fable 5.1).
+- **Key changes:**
+  - **Two more Dependabot bumps merged (#476, #477).** ruff 0.16.4 to
+    0.16.6 and build 1.5.0 to 1.6.0, both touching `uv.lock`. Merged #476
+    first; since #477 shared the same file, asked Dependabot to rebase it
+    rather than pushing to its branch, and re-verified green against the
+    combined result before merging, per the batch-merge convention.
+  - **The 20-issue backlog phased into seven milestones.** Read every
+    open issue's body plus the code each touches (three parallel research
+    passes) to build the real dependency graph from what the issues
+    themselves state -- #450 explicitly blocked by #453, #459 explicitly
+    blocked by #458, #463's own task checklist naming #462/#445/#449 --
+    rather than from issue numbers. Recorded in `tmp/backlog-phases.md`
+    (gitignored, not committed) and mirrored as seven GitHub milestones;
+    verified every open issue carries exactly one.
+  - **Filed the data-image follow-on (#479, #480, #481).** A design-spike
+    prototype (below) surfaced that the scriptable server's own
+    `NormalResponse()` sequence example has nothing to read from without
+    a real register map. Filed as a task pair plus a wrapping epic,
+    sequenced into a new Phase 7 after #463, and added #481 to #463's own
+    out-of-scope section as a deferred item, the same way it already
+    named #459.
+  - **Design-spike prototype for #462
+    (`tmp/prototype_client_server_api.py`, gitignored, not committed).**
+    Exercised design_notes.md sections 13/20/21 against real `pyomb.pdu`
+    and `pyomb.adu` classes rather than inventing shapes: the composed
+    `ModbusClient(transport=, framer=)` core with thin constructors, a
+    genuine RTU-to-TCP protocol gateway (deframe then re-frame, distinct
+    from section 21's RTU-over-TCP, which changes no framing), and a
+    single `when(...).then(...)` vocabulary shared by the client and the
+    server through one `_Rule`/`_RuleBuilder` pair -- the client reacting
+    to a response is new, not something design_notes.md already sketches.
+    Findings live only in the gitignored prototype and this entry until
+    #462 is picked up and turns them into an ADR.
+- **PRs merged:** #476, #477.
+- **Issues closed/created:** #479, #480, #481 created; none closed.
+- **Not done:** #462's ADR itself -- the prototype only explored
+  candidate shapes, it recorded no decision; phases 2 through 7 of
+  `tmp/backlog-phases.md`, unstarted by design (phase 1 was sequenced
+  first as the owner's stated priority).
+- **Lesson:** an external formatter (ruff format, which targets this
+  project's 120-column CI gate) re-widened several manually 80-column-
+  wrapped lines in the prototype file every time it ran, silently
+  undoing the narrower house-style width `.editorconfig` states as
+  preferred. Nothing was wrong with either tool's own configuration --
+  120 is what CI actually enforces, 80 is a preference layered on top of
+  it -- so a formatter respecting the enforced width will keep reopening
+  a gap against the preferred one, on every save, indefinitely.
