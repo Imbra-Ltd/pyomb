@@ -6,6 +6,20 @@ numbers follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `ModbusRtuStream` sends and receives RTU frames over any open object with
+  `read(size)` and `write(data)`: pyserial's `Serial`, a socket's
+  `makefile("rwb", buffering=0)`, or your own. The library opens no port and
+  imports no serial library. See #231
+- `ModbusRtuSplitter`, `RtuSide`, `read_rtu_frame` and `RtuRead` cut whole
+  RTU frames out of a byte stream, sized from the content and adjudicated by
+  the checksum. The reader is told its side. See #391
+- `ModbusTimeoutError`, a `ModbusNetworkError`, is what a serial read raises
+  when nothing arrives before the port's timeout. Catch it to retry a silent
+  peer without retrying a failed port
+- The `serial` extra installs pyserial; nothing in the library imports it
+
 ### Removed
 
 - `pyomb.packets`, `pyomb.stream`, `pyomb.tls`, `pyomb.client_simulator` and

@@ -378,6 +378,33 @@ class ModbusNetworkError(ModbusBaseError):
         super().__init__(message=message, extended_info=extended_info)
 
 
+class ModbusTimeoutError(ModbusNetworkError):
+    """Nothing arrived before the port's timeout elapsed.
+
+    Raised by a stream over a serial port when a read returns no bytes at
+    all. A serial line never closes, so silence is the only way a peer that
+    is absent, powered off or addressed wrongly shows up. Catch it apart from
+    its parent to retry a request that was never answered without also
+    retrying a port that failed.
+
+    Args:
+        message         (unicode)   : A description of the error.
+        extended_info   (unicode)   : Additional information (e.g. the wait)
+
+    Example:
+        try:
+            frame = stream.receive()
+
+        # The peer never answered; the port itself is fine.
+        except ModbusTimeoutError as e:
+            print("Modbus timeout: {0}".format(e))
+    """
+
+    def __init__(self, message: str, extended_info: str = "") -> None:
+        """Forward the caller's message and extended information unchanged."""
+        super().__init__(message=message, extended_info=extended_info)
+
+
 class ModbusPacketError(ModbusBaseError):
     """Generic Modbus packet error.
 

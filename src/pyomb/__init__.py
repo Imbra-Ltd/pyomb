@@ -42,10 +42,24 @@ from .errors import (
     ModbusProtocolError,
     ModbusSlaveDeviceBusyError,
     ModbusSlaveDeviceFailureError,
+    ModbusTimeoutError,
 )
 from .logger import Logger
 from .pdu import ModbusError, ModbusPdu, ModbusPduParser, ModbusViolation
-from .transport import ModbusFragmenter, ModbusTcpReceiver, ModbusTcpSender, ModbusTcpStream
+from .transport import (
+    MAX_RTU_FRAME,
+    MIN_RTU_FRAME,
+    BytePort,
+    ModbusFragmenter,
+    ModbusRtuSplitter,
+    ModbusRtuStream,
+    ModbusTcpReceiver,
+    ModbusTcpSender,
+    ModbusTcpStream,
+    RtuRead,
+    RtuSide,
+    read_rtu_frame,
+)
 
 # Named below but not imported: they reach ssl, and __getattr__ binds them on
 # first access instead. See PLAYBOOK, deferred imports, for the measurement.
@@ -100,10 +114,19 @@ __all__ = [  # noqa: RUF022
     "ModbusTcpSender",
     "ModbusTcpReceiver",
     "ModbusFragmenter",
+    "ModbusRtuStream",
+    "ModbusRtuSplitter",
+    "BytePort",
+    "RtuSide",
+    "RtuRead",
+    "read_rtu_frame",
+    "MIN_RTU_FRAME",
+    "MAX_RTU_FRAME",
     # Errors
     "ModbusBaseError",
     "ModbusProtocolError",
     "ModbusNetworkError",
+    "ModbusTimeoutError",
     "ModbusPacketError",
     "ModbusPduParseError",
     "ModbusModeError",

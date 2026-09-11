@@ -5,7 +5,7 @@ date: 2026-09-01
 category: protocol
 supersedes: []
 superseded_by: []
-corrected_by: ["051"]
+corrected_by: ["051", "058"]
 ---
 
 # ADR-035: The direction note contributes a vocabulary, not a structure

@@ -14,6 +14,7 @@ from pyomb.errors import (
     ModbusProtocolError,
     ModbusSlaveDeviceBusyError,
     ModbusSlaveDeviceFailureError,
+    ModbusTimeoutError,
 )
 
 
@@ -76,6 +77,13 @@ class TestErrors(unittest.TestCase):
     def test_modbus_packet_error(self):
         e = ModbusPacketError("Test packet error")
         self.assertEqual("Test packet error", str(e))
+
+    def test_modbus_timeout_error_is_a_network_error(self):
+        # A caller retrying on the parent still retries a peer that never
+        # answered; one catching the child does so without retrying a dead port.
+        e = ModbusTimeoutError("Test timeout error")
+        self.assertEqual("Test timeout error", str(e))
+        self.assertIsInstance(e, ModbusNetworkError)
 
 
 if __name__ == "__main__":

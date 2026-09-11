@@ -38,6 +38,10 @@ Issues = "https://github.com/Imbra-Ltd/pyomb/issues"
 
 [project.optional-dependencies]
 
+# The RTU stream takes any open port with read() and write(), so this extra
+# imports nothing here: it is the convenience of one pip install for a caller.
+serial = ["pyserial"]
+
 # What CI installs. bandit takes its toml extra to read this file: the
 # standard library gained a TOML parser in 3.11 and the floor here is 3.10.
 test = [

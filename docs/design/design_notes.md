@@ -291,33 +291,39 @@ Implementations could include:
 ``` text
 SocketTransport
 TlsTransport
-SerialTransport
 MemoryTransport
 CustomTransport
 ```
 
 This abstraction should remain independent from Modbus.
 
+A serial transport is not on that list, and section 7 says why: an open
+port already satisfies the protocol above, so the library takes one rather
+than building one.
+
 ## 7. Serial Transport
 
-Serial communication should be implemented behind the generic transport
-interface.
+Built, and not the way the rest of this section originally proposed. The
+decision record on serial RTU carries the reasoning; what follows is what
+shipped.
+
+The caller opens the port and hands it over. `ModbusRtuStream` takes any
+object with `read(size)` and `write(data)`, which is the byte-transport
+protocol above:
 
 ``` python
-client = ModbusClient(
-    transport=SerialTransport(
-        port="COM3",
-        baudrate=19200,
-        parity="E",
-    ),
-    framer=RtuFramer(),
-)
+port = serial.Serial("COM3", baudrate=19200, parity="E", timeout=1.0)
+stream = ModbusRtuStream(port=port, side=RtuSide.RESPONSE)
 ```
 
-The transport implementation should hide the underlying serial library.
+A wrapper owning `port`, `baudrate` and `parity` was rejected. It binds the
+library to one driver and to a runtime dependency the project declares it
+does not have, and it serves a caller on another serial library not at all.
+Injection also makes RTU-over-TCP fall out for free: a socket's
+`makefile("rwb", buffering=0)` is a port.
 
-PySerial is a good candidate for the platform-specific serial
-implementation, but it should be an optional dependency:
+PySerial therefore stays optional, and nothing under `src/` imports it. The
+extra is a convenience for installing it alongside:
 
 ``` text
 pyomb
@@ -327,8 +333,9 @@ pyomb[serial]
     pyserial
 ```
 
-PyOMB's architecture should depend on its own `SerialTransport`
-abstraction rather than directly exposing `serial.Serial`.
+Baud rate, parity, stop bits, the RS-485 driver-enable turnaround and the
+read timeout belong to the port. The library never sees them, which is why
+it can work with whichever serial library the machine has.
 
 ## 8. Channel / Wire Layer
 
@@ -707,10 +714,14 @@ should conceptually construct:
 
 ``` python
 ModbusClient(
-    transport=SerialTransport("COM3"),
+    transport=ModbusRtuStream(port=serial.Serial("COM3"), side=RtuSide.RESPONSE),
     framer=RtuFramer(),
 )
 ```
+
+Opening the port is the convenience such a constructor adds, and section 7
+is why that is the only part it adds: the transport itself takes a port
+rather than the settings to build one.
 
 ## 21. Protocol/Transport Composition
 
