@@ -5163,7 +5163,12 @@ package, per ADR-002. See `README.md` for usage and
     for layouts the registry cannot size, RS-485 echo verification. Added
     the `serial` extra, an example over an in-memory port pair, and RTU over
     `socket.socketpair()` in the integration tier.
-- **PRs merged:** #441, #443, #444. Open: #446.
+  - **Corrected `docs/design/design_notes.md` section 7**, found by the
+    wrap-up sweep for surviving instructions. It told a future implementer
+    to build a `SerialTransport` owning `port`, `baudrate` and `parity` --
+    the shape ADR-057 rejected -- so it was a delayed write of the thing the
+    record had just decided against.
+- **PRs merged:** #441, #443, #444. Open: #446, #447.
 - **Issues closed/created:** closed #440, #442, #438; #231 and #391 close
   with #446. Filed #440, #442 and #445 (the simulators speak TCP only).
 - **Lesson:** an adversarial review of the receive-loop design, run before
