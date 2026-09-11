@@ -5129,3 +5129,60 @@ package, per ADR-002. See `README.md` for usage and
   of a drive root is itself, so an unguarded walk-up loop never
   terminates. Add a guard (`if REPO == REPO.parent: raise`) to any such
   loop, always.
+
+## 2026-09-10 (night) -- Serial RTU over an injected port, plus three fixes
+
+- **Tool:** Claude Code (Fable 5.1; Sonnet 5 for the first three items).
+- **Key changes:**
+  - **Dropped the `_simulator` suffix** (PR #441, ADR-056):
+    `simulators/client_simulator.py` and `server_simulator.py` became
+    `client.py` and `server.py`. ADR-038 had rejected a `simulators/`
+    sub-package only because none existed yet; ADR-054 then created one
+    without revisiting the names, so ADR-056 supersedes 038's naming call.
+    No forwarding shim, because ADR-038 itself declared the submodule path
+    non-public.
+  - **`tests/test_package_exports.py` walks every public package's
+    `__all__`** (PR #443), not only root's. All four sub-packages resolved
+    fine; nothing had been checking.
+  - **`checks/test_changelog_release_entry.py` catches a cut that copies
+    instead of moves** (PR #444, closing #438): `checks/changelog.py` grew
+    `read_section_body`, and a bullet shared by `Unreleased` and the dated
+    section is now a finding -- the v0.8.0 defect, verified against a
+    planted copy on the real file.
+  - **Designed and built serial RTU over an injected port** (PR #446,
+    ADR-057, open at wrap-up). `ModbusRtuStream(port, side, echo=False)` in
+    `transport/rtu.py` runs over any object with `read(size)` and
+    `write(data)`: no port opened, no serial import, `dependencies = []`
+    intact; pyserial's `Serial` and a socket's `makefile("rwb",
+    buffering=0)` both satisfy it. Restored the splitter, `RtuSide` and a
+    now-public `read_rtu_frame`, which is the free/paid line #386 redrew:
+    only the sniffer stays private, and its 33-test suite passes against the
+    new library through `__all__` alone, checked on a scratch copy of
+    `tmp/pyomb-sniffer`. Exact-count reads so a short frame never waits out
+    the port's timeout, `ModbusTimeoutError` on silence, a silence fallback
+    for layouts the registry cannot size, RS-485 echo verification. Added
+    the `serial` extra, an example over an in-memory port pair, and RTU over
+    `socket.socketpair()` in the integration tier.
+  - **Corrected `docs/design/design_notes.md` section 7**, found by the
+    wrap-up sweep for surviving instructions. It told a future implementer
+    to build a `SerialTransport` owning `port`, `baudrate` and `parity` --
+    the shape ADR-057 rejected -- so it was a delayed write of the thing the
+    record had just decided against.
+- **PRs merged:** #441, #443, #444. Open: #446, #447.
+- **Issues closed/created:** closed #440, #442, #438; #231 and #391 close
+  with #446. Filed #440, #442 and #445 (the simulators speak TCP only).
+- **Lesson:** an adversarial review of the receive-loop design, run before
+  any code, found the silence fallback unreachable as drafted -- the
+  splitter swallows the no-size raise inside `push()` and discards the head
+  before the stream can see it -- and found that a stray byte ahead of a
+  real reply would have been lost to a whole-buffer checksum. The fix was
+  structural rather than a patch: the stream owns its own buffer and drives
+  `read_rtu_frame` directly, so every verdict it has to override is visible
+  to it, and the splitter stays a pure bytes-in, frames-out object for the
+  sniffer. A component that both buffers and decides cannot be asked to
+  defer the decision. Two environment notes for the next session:
+  `complexipy .` with an explicit path overrides `paths = ["src"]` in
+  `pyproject.toml` and walks the templates submodule, so run it bare (the
+  Windows path-separator watermark it then reports is pre-existing, and the
+  Linux CI run is the authority); and `uv` is absent from the Git Bash PATH
+  here but sits in `%APPDATA%\Python\Scripts`, while the venv carries no pip.

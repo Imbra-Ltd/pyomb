@@ -79,7 +79,9 @@ duplicate it here. Create that section if it is missing.
   groups them: bit access, register access, diagnostics, encapsulated
   interface, plus one file for the shared parts. `adu` keeps TCP and RTU
   in separate files; see ADR-054
-- Anything that reads or writes a socket goes in the `transport` package
+- Anything that reads or writes a socket or a serial port goes in the
+  `transport` package; the library opens no port itself and imports no serial
+  library, a caller hands an open one in -- see ADR-057
 - The client and server simulators live in the `simulators` package and
   depend on `pdu`, `adu` and `transport`; nothing depends on them
 - The four old flat modules and the `packets` package forward to the new
