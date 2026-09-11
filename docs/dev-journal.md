@@ -5298,3 +5298,71 @@ package, per ADR-002. See `README.md` for usage and
   after the list was published rather than before, and running it first
   would have produced a list of three. A gap analysis placed after the
   candidate list is a list the reader has to discount.
+
+## 2026-09-11 (evening) -- Function-code sweep, overdue fixes, new epic
+
+- **Tool:** Claude Code (Opus 5, then Fable 5.1, then Sonnet 5 -- three
+  `/model` switches this session).
+- **Key changes:**
+  - **Merged #451**, the journal entry the prior session left open. CI and
+    CodeQL green on the new `main` tip before any further work started.
+  - **The PDU parser split and the RTU parse-error shape are independent of
+    #449 and #450, not routes to them.** Splitting `ModbusPduParser` into
+    its own module is a genuine cohesion win regardless -- it owns the
+    package's only mutable global state, and three test modules reach into
+    it -- but neither issue needs it: #449 never touches the parser at all,
+    and #450's actual blocker is `ModbusPduParseError` requiring a
+    `ModbusHeader`, which a serial frame carries no equivalent of. Filed
+    #452 and #453, and commented #453 onto #450 as its prerequisite.
+  - **The RTU and TCP ADU classes carry the same frame code six times over,
+    and #450 is what happens when a fix reaches one copy and not the other
+    five.** `ModbusTcpRequest.deserialize` alone was given the two-stage
+    split that lets a payload failure carry its header; the other five
+    classes (RTU request, response and packet; TCP response and packet)
+    kept the flat form that rewraps everything as a plain packet error.
+    Filed #454.
+  - **The MEI type 0x0E (device identification) implementation is
+    envelope-only.** `LIMITS` bounds the MEI type correctly, but the
+    payload is bare bytes with no named fields, and against the worked
+    example in Application Protocol v1.1b3 section 6.21 neither
+    `MoreFollows` nor `NextObjectId` is ever read -- a truncated
+    multi-transaction answer looks identical to a complete one. Filed #458
+    (named fields) and #459 (the fragmented read, blocked on #458).
+  - **Three more function-code gaps closed out the register, file-record
+    and serial-diagnostics groups**: FC24 (#455), FC20/21 (#456), FC11/12/17
+    (#457), each checked against `defines.py` and the implemented class set
+    before filing rather than assumed from the specification's table alone.
+  - **Two already-decided but unexecuted changes, found and fixed.**
+    `CLAUDE.md` still described the four flat modules and `packets` as
+    forwarding and warning, though #412 removed them; `ModbusPdu.pack` and
+    `unpack` were still present past the 0.6.0 removal ADR-036 committed
+    to. Both fixed on separate branches, the removal verified against a
+    stashed run of the unfixed tree first (8 tests pass, including two
+    asserting the deprecated route still works and warns) and again after
+    (6 pass, including two new ones asserting `AttributeError`). Merged as
+    #460 and #461. A stray, self-referencing `Closes #461` in that PR's
+    first-drafted body was caught and removed before merge.
+  - **Epic #463 replaces the client and server simulator API**, fed by
+    spike #462, which turns the sketch in `docs/design/design_notes.md`
+    sections 13, 20 and 21 into an accepted ADR before any implementation
+    starts. #445 and #449 are linked under it as tasks rather than closed:
+    the new composed-transport design is each issue's actual route to what
+    it asks for, and both are commented to say their filed acceptance
+    criteria are likely superseded by whatever #462 designs rather than
+    literally satisfied by an incremental change to the classes as they
+    stand. The epic excludes the `pdu`/`adu` codec layer and defers #459
+    until the new API lands, so it is built once rather than twice.
+- **PRs merged:** #451, #460, #461.
+- **Issues closed/created:** #452, #453, #454, #455, #456, #457, #458,
+  #459, #462 and #463 created; none closed.
+- **Lesson:** ADR-036's own Consequences section named the risk it was
+  about to demonstrate -- "nothing enforces the 0.6.0 removal except a
+  person reading this record or the warning text" -- and two sessions and
+  four versions later, nobody had. The same session found a second,
+  unrelated instance of the identical shape in `CLAUDE.md`'s own prose,
+  describing shims that #412 had already removed. A decision record that
+  commits to a future removal and cites no check for it is a deferral with
+  a trigger nobody watches, which is `quality-revisit-trigger` by another
+  name; the fix each time was a person reading the record, which is the
+  mechanism the record's own Consequences section already predicted would
+  not scale.
