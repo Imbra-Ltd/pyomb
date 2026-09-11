@@ -1840,6 +1840,12 @@ would, say that detection is a person looking. A trigger that fired and one
 that has not read identically from the text, so the sentence that says who is
 watching is the only thing separating them.
 
+Discharging a trigger does not remove it from that listing. The record's prose
+stays as it merged, so the line keeps matching, and what says the question is
+answered is a `corrected_by` entry in the front matter naming the record that
+answered it. Read the front matter of every hit before acting on one: a
+discharged trigger and a live one are the same line of prose.
+
 A merged record is immutable in what it claims, not in how it reads. Editing
 one for readability alone is a format migration: make the change, confirm with
 `git diff --word-diff` that only connectives and capitalisation moved, and say

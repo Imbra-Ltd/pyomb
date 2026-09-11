@@ -5186,3 +5186,49 @@ package, per ADR-002. See `README.md` for usage and
   Windows path-separator watermark it then reports is pre-existing, and the
   Linux CI run is the authority); and `uv` is absent from the Git Bash PATH
   here but sits in `%APPDATA%\Python\Scripts`, while the venv carries no pip.
+
+## 2026-09-11 -- Discharge the second-transport revisit trigger
+
+- **Tool:** Claude Code (Opus 5).
+- **Key changes:**
+  - **Verified the three open issues against the tree** before any work,
+    which is the step that decided the session. #231 and #391 were already
+    answered by PR #446 with the deviations its body states; #391's first
+    acceptance criterion was unsatisfiable as filed, because it asks for
+    `pyomb.packets` and ADR-054 removed that package. #445's citations all
+    resolve, and it was blocked only on #446 landing.
+  - **ADR-058 discharges the revisit trigger on ADR-035 rule 1** (PR #446).
+    The trigger fires on a second transport landing, #446 is that landing,
+    and nothing in the pull request had answered it. Re-reading the rule
+    withdrew its premise: it predicted framing and transport separating
+    because an RTU framer splits on silence, and the splitter that shipped
+    reads content -- the function code names the PDU class, that class
+    states the size, the checksum adjudicates. The TCP framer reads its size
+    from the MBAP header, so both read a prefix and the difference in kind
+    the trigger expected does not arise. Recorded through `corrects` /
+    `corrected_by` rather than a supersession, the second use of the
+    relation ADR-052 created and the first trigger here discharged by the
+    event it named.
+  - **PLAYBOOK 4.2 now says a discharged trigger stays greppable.** The
+    listing that finds triggers reads immutable prose, so the line survives
+    being answered and only the front matter says so.
+  - **Merged #446 then #447**, in that order, so the journal entry
+    describing the serial RTU work did not land before the work.
+- **PRs merged:** #446, #447.
+- **Issues closed/created:** #231 and #391 closed by #446. None created.
+  #445 stays open and is now unblocked.
+- **Lesson:** a revisit trigger has no watcher, which this project already
+  knew, and it also has no off switch. The documented discovery path is a
+  grep over the records, that grep reads prose a merged record may not
+  change, and so a trigger that has been answered keeps matching forever.
+  Nothing distinguishes it from a live one at the point of discovery, which
+  is the same failure the trigger rules already name one step earlier. The
+  front-matter link is the only carrier, so a reader who greps and does not
+  open the hits will re-derive an answered question. Second, and unresolved:
+  the session opened with 17 files under `src/` modified in the working
+  tree, docstrings stripped down and every file rewritten with CRLF, on a
+  branch whose HEAD carried none of it. By the time it was to be stashed the
+  tree was clean and `errors.py` held its committed docstring again, with
+  HEAD unmoved and nothing in the session reverting it. It is recorded here
+  unexplained so the next session recognises the shape rather than trusting
+  a clean `git status` on arrival.
