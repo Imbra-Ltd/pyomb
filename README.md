@@ -17,12 +17,12 @@ constructed and sent, using Python's standard library alone.
 
 ## Features
 
-> Note: the list below describes the target product. Not built in v0.7.0 —
-> serial RTU and RTU-over-TCP transport, client retries and reconnection,
-> server register maps and scripted response sequences, composed test
-> scenarios, traffic hooks and the capture format. Serial framing exists in
-> the codec only; reading frames off a serial line is tracked in
-> [#231](https://github.com/Imbra-Ltd/pyomb/issues/231).
+> Note: the list below describes the target product. Not built in v0.8.0 —
+> client retries and reconnection, server register maps and scripted response
+> sequences, composed test scenarios, traffic hooks and the capture format.
+> Serial RTU and RTU-over-TCP exist at the transport level (`ModbusRtuStream`
+> over any open port); the simulators speak TCP only, tracked in
+> [#445](https://github.com/Imbra-Ltd/pyomb/issues/445).
 
 - **Modbus communication:** Connect over TCP, TLS, serial RTU or RTU-over-TCP,
   with configurable timeouts, retries and reconnection.
@@ -148,6 +148,43 @@ MODBUS TCP RSP -> | HEADER: (Trans-ID: 0, Prot-ID: 0, Length: 4, Unit-ID: 1) | P
 For a version that starts its own local server, see
 [fragmented_send.py](examples/fragmented_send.py).
 
+### Talk RTU over a serial port
+
+`ModbusRtuStream` works over any open object with `read(size)` and
+`write(data)`: the library opens no port and imports no serial library. With
+pyserial (`pip install "pyomb[serial]"`), open the port yourself, set its read
+timeout to the response timeout you want, and say which side this end reads —
+a client reads responses:
+
+```python
+import serial
+
+from pyomb.adu import ModbusRtuRequest, ModbusRtuResponse
+from pyomb.pdu import ModbusRequestFC3
+from pyomb.transport import ModbusRtuStream, RtuSide
+
+port = serial.Serial("COM3", baudrate=19200, parity="E", timeout=1.0)
+stream = ModbusRtuStream(port=port, side=RtuSide.RESPONSE)
+
+pdu = ModbusRequestFC3(start_addr=0x6B, quantity=3)
+stream.send(ModbusRtuRequest(slave_id=17, pdu=pdu).serialize())
+
+response = ModbusRtuResponse.deserialize(stream.receive())
+print(response)
+```
+
+Three registers coming back look like:
+
+```text
+MODBUS RTU RSP: (Slave ID: 17, PDU: (FC: 03, Data: (6, 44609, 22098, 17216)), CRC: 44361)
+```
+
+Silence raises `ModbusTimeoutError`. On RS-485 two-wire, pass `echo=True`
+where the transceiver returns what it sent. A socket's
+`makefile("rwb", buffering=0)` is a port too, which is RTU over TCP. For a
+version with both ends in one process and no hardware, see
+[read_rtu_frames_off_a_port.py](examples/read_rtu_frames_off_a_port.py).
+
 ### Serialize and deserialize a packet
 
 Work directly with packet objects when you need to choose the header or
@@ -213,8 +250,9 @@ src/pyomb/              # The library
   adu/                  # The envelope a transport puts around a PDU
     tcp.py               # MBAP header, MBAP length check, TCP frame classes
     rtu.py                # CRC-16 checksum, RTU frame classes
-  transport/             # Everything that reads or writes a socket
+  transport/             # Everything that reads or writes a socket or a port
     stream.py            # Length-driven TCP framing and fragmentation
+    rtu.py                # Content-driven RTU framing over any port a caller opens
     tls.py                # TLS settings and SSL context construction
   simulators/            # The client and server, built on the three above
     client.py              # Client simulator and request builder

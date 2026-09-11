@@ -128,6 +128,7 @@ a broken setup; PLAYBOOK 3.30 says why and how the baseline is regenerated.
 | `src/pyomb/pdu/` | The message — `common.py` holds the abstractions, the parser and the registry; `bits.py`, `registers.py`, `diagnostics.py` and `encapsulated.py` group the function codes the way the specification does |
 | `src/pyomb/adu/` | The envelope — `tcp.py` the MBAP header and TCP frame wrappers, `rtu.py` the CRC-16 checksum and RTU frame wrappers |
 | `src/pyomb/transport/` | The socket layer — length-driven framing, deliberate fragmentation, TLS settings |
+| `src/pyomb/transport/rtu.py` | RTU over any port a caller opens — the port protocol, the splitter that sizes frames from content, and the stream |
 | `src/pyomb/simulators/client.py` | Client simulator and the request builder |
 | `src/pyomb/simulators/server.py` | Server simulator, its select loop and the response factory |
 | `src/pyomb/errors.py` | Modbus exception codes as a Python exception hierarchy |

@@ -5,12 +5,13 @@ executes every file in this directory against an install of the project with no
 extras, so an example that stops working fails a pull request.
 
 What that catches is an example that raises, so it is worth saying which ones
-can. Three compare a result and exit non-zero when it disagrees: the round
-trip, the checksum and the capture. Two more fail if the server never reaches
-its accept loop or the reply will not parse, but do not compare the values
-they print: the fragmented send and the simulator run. The last two
-demonstrate rather than verify -- they build a thing and print it, and a
-change in what they print is caught by review rather than by the job.
+can. Four compare a result and exit non-zero when it disagrees: the round
+trip, the checksum, the RTU exchange and the capture. Two more fail if the
+server never reaches its accept loop or the reply will not parse, but do not
+compare the values they print: the fragmented send and the simulator run.
+The last two demonstrate rather than verify -- they build a thing and print
+it, and a change in what they print is caught by review rather than by the
+job.
 
 Install the project first. From a checkout:
 
@@ -19,9 +20,10 @@ pip install .
 ```
 
 Every example runs offline. The two that need a Modbus server start this
-project's own simulator in-process rather than reaching for a host, and the
-third holds both ends of a connection itself, so a reader with the repository
-and nothing else can run all seven.
+project's own simulator in-process rather than reaching for a host, one holds
+both ends of a connection itself, and the RTU exchange holds both ends of an
+in-memory line, so a reader with the repository and nothing else can run every
+one of them.
 
 ## A note on ports
 
@@ -106,6 +108,26 @@ included, rather than against the 16-bit values. A value matches whichever
 order it is packed in afterwards, so checking only the number would agree
 with the byte-swapped frame a real device rejects. Either break makes this
 example exit non-zero, which is what the run above is asserting.
+
+### Read RTU frames off a port
+
+```bash
+python examples/read_rtu_frames_off_a_port.py
+```
+
+Sends a published request down one end of an in-memory line and answers it
+from the other, through `ModbusRtuStream` on both ends. The port is any open
+object with `read(size)` and `write(data)` — here two buffers, on a machine
+with hardware `serial.Serial(...)` — so no serial library is installed for
+this. The reply read back is compared against its published bytes, and the
+example exits non-zero when they differ.
+
+```text
+device read : MODBUS RTU REQ: (Slave ID: 17, PDU: (FC: 03, Data: (107, 3)), CRC: 34678)
+master read : MODBUS RTU RSP: (Slave ID: 17, PDU: (FC: 03, Data: (6, 44609, 22098, 17216)), CRC: 44361)
+on the wire : 11 03 06 ae 41 56 52 43 40 49 ad
+the reply matches its published bytes
+```
 
 ### Report a constraint violation
 

@@ -478,6 +478,7 @@ Exception (Python standard library)
  +-- ...
  +-- ModbusBaseError
      +-- ModbusNetworkError
+        +-- ModbusTimeoutError
      +-- ModbusPacketError
         +-- ModbusPduParseError
      +-- ModbusProtocolError
@@ -504,8 +505,63 @@ or one whose length field contradicts the bytes received, leaves nothing to
 echo and keeps raising the plain `ModbusPacketError`. Catching the parent
 still catches both.
 
+`ModbusTimeoutError` splits the first the same way. The RTU stream raises it
+when the port's timeout elapses with nothing held, so a caller retries a peer
+that never answered without also retrying a port that failed. A port that
+raised, wrote short or read back the wrong echo stays a plain
+`ModbusNetworkError`.
+
 Adding one means adding the class here and a row to the code table in the same
 module — `tests/test_errors.py` fails on a code with no class.
+
+### 2.6 Talk RTU over a serial port
+
+`ModbusRtuStream` sends and receives RTU frames over any open object with
+`read(size)` and `write(data)`. The library opens no port and imports no serial
+library. Open the port with whatever the machine has, set its read timeout to
+the response timeout you want, and hand it over with the side this end reads —
+a client reads responses, a server reads requests:
+
+```python
+import serial
+
+from pyomb.adu import ModbusRtuRequest, ModbusRtuResponse
+from pyomb.pdu import ModbusRequestFC3
+from pyomb.transport import ModbusRtuStream, RtuSide
+
+port = serial.Serial("COM3", baudrate=19200, parity="E", timeout=1.0)
+stream = ModbusRtuStream(port=port, side=RtuSide.RESPONSE)
+
+request = ModbusRtuRequest(slave_id=17, pdu=ModbusRequestFC3(start_addr=0x6B, quantity=3))
+stream.send(request.serialize())
+response = ModbusRtuResponse.deserialize(stream.receive())
+```
+
+Installing with the `serial` extra pulls pyserial in; nothing in the library
+imports it, so any other port object works the same way, and
+`examples/read_rtu_frames_off_a_port.py` runs the exchange over an in-memory
+pair with no hardware at all. A socket's `makefile("rwb", buffering=0)` is a
+port too, which is RTU over TCP.
+
+What the stream does that a caller should know:
+
+- It reads exact counts: the head of the frame, then the count byte, then the
+  remainder. A read past the frame's end would wait out the port's whole
+  timeout, so that timeout is paid only when the peer is silent.
+- Silence with nothing held raises `ModbusTimeoutError`. Silence with a partial
+  frame held scans it once more, then raises `ModbusPacketError` naming how
+  many bytes arrived. The stream never returns an empty frame, because a
+  serial line never closes.
+- A function code the registry cannot size — Diagnostics, device
+  identification, any vendor code — is read until the port goes quiet instead
+  and then judged on its checksum. Such a frame costs one full timeout.
+
+On RS-485 two-wire, pass `echo=True` where the transceiver returns what it
+sent: the stream reads the frame back after every write and reports a mismatch
+as a collision. Driver-enable timing, baud rate and parity belong to the port.
+On a multi-drop bus a server reads every request on the line, and the ones not
+addressed to it are the caller's to ignore until the simulators speak RTU,
+which #445 tracks.
 
 ## 3. Quality
 
