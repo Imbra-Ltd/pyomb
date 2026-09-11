@@ -5366,3 +5366,91 @@ package, per ADR-002. See `README.md` for usage and
   name; the fix each time was a person reading the record, which is the
   mechanism the record's own Consequences section already predicted would
   not scale.
+
+## 2026-09-11 (night) -- Groom the API shape, the tests and the tooling
+
+- **Tool:** Claude Code (Sonnet 5, then Fable 5.1 after one `/model`
+  switch).
+- **Key changes:**
+  - **A grooming session: no library code changed.** Started from a clean
+    tree with CI and CodeQL green on `a023812`, and ended with eight
+    tickets here and one upstream. Every finding below was measured against
+    the tree before it was filed.
+  - **The RTU direction enum reads backwards at the call site.** A master
+    passes `side=RtuSide.RESPONSE`, because the value names what the stream
+    reads and "side" says who you are. Scored the candidates and settled on
+    `RtuFrameKind` with the keyword `reads=`, singular because the same
+    enum sizes one frame in `read_rtu_frame`; `RtuTraffic` with plural
+    members read better at the constructor and worse everywhere else.
+    Filed #465.
+  - **The TCP sender and receiver are the skeleton of a worker thread whose
+    `run()` was never written.** ADR-026 already records that their lock
+    and stop event were inert until it made the contract real; `run_once`
+    is a one-shot burst on one class and an until-EOF loop on the other.
+    Nothing in the simulators or the #462 design sketch uses them; one
+    example does. Filed #466 to replace them with a `ModbusTcpSplitter`
+    mirroring the RTU one, with an ADR superseding 026.
+  - **`defines.py` holds twelve function codes nothing imports and nine
+    exception codes read from two modules.** Dissolved rather than renamed
+    to `constants.py`: the codes move beside the errors that carry them.
+    Filed #467.
+  - **The owner set the pre-release stance: renames and removals land
+    outright.** #465, #466 and #467 were first drafted with the
+    `_RENAMED`-table alias and a 2.0 removal window copied from
+    `pyomb/__init__.py`; all three were amended to drop it. Recorded in
+    memory so the next session files the same way.
+  - **Opening an example shows type errors CI never reports.** Pylance is
+    off in the tracked settings, but the mypy extension checks the open
+    file at strict while the gate's `files = ["src"]` never reads
+    `examples/`: 15 errors across 8 files, 8 of them `sys.stdout.reconfigure`
+    on a `TextIO`. Filed #468 to bring `examples` under the gate.
+  - **Docstrings.** The owner proposed a what/why/how shape; the Google
+    summary line already is the what and the extended paragraph the
+    caller-facing why, so no new headings, and how stays in comments. The
+    older docstrings restate the name (`run_once`: "Sends the Modbus
+    messages"). Filed #469 as a sweep over 225 public symbols, skipping the
+    two simulator modules #463 replaces.
+  - **Tests.** `tests/unit/` declined: the tree already has one axis
+    (subject) and one tier marker (`integration/`). Two additions filed:
+    #470, a cross-implementation tier with pymodbus on the other end, which
+    is the system-level form of "never assert against this library's own
+    output"; and #471, one pty-plus-pyserial test proving the `BytePort`
+    claim ADR-057 rests on, skipping on Windows. Both ride the existing
+    `test` extra and integration job, so no workflow change.
+  - **Dependabot has never refreshed `uv.lock`.** Enrolled on the pip
+    ecosystem by #57 on 2026-08-21 "so the lock is refreshed", and zero
+    lock-touching pull requests in three weekly windows. Dependabot's pip
+    file fetcher names `Pipfile.lock`, `poetry.lock` and `pdm.lock` and
+    nothing else; `uv.lock` belongs to the separate `uv` ecosystem. Filed
+    #472 as a bug. `pylock.toml` as a replacement lock declined -- uv's
+    docs make it export-only -- and the complexipy snapshot stays tracked
+    because it is the ratchet's baseline.
+  - **Upstream.** Filed braboj/solid-ai-templates#1688 under v3.0: the
+    interview should ask who is onboarded and what a session record is
+    for, instead of generating ONBOARDING and a per-session journal for
+    every project. Links #1656 (README section 6 defers to ONBOARDING) and
+    #715 (journal shape). ADR-053's decision that `checks/` stays here was
+    re-read against upstream #1006, which is the same idea from the other
+    side and still open.
+  - **Examples and 1.0.0.** The examples index reorganisation (order by
+    layer, fold two overlapping pairs) is deferred until #463 lands. The
+    owner reads the tree as close to v1.0.0 after today's tickets; no
+    milestone exists yet, and a 14-in / 7-out split was proposed and awaits
+    an answer.
+- **PRs merged:** none; the journal entry's own pull request is opened by
+  this wrap-up.
+- **Issues closed/created:** #465, #466, #467, #468, #469, #470, #471 and
+  #472 created here, braboj/solid-ai-templates#1688 created upstream; none
+  closed.
+- **Not done:** the v1.0.0 milestone, pending the owner's answer on the
+  split; whether the no-shims stance gets a line in `CLAUDE.md` 2.2 or stays
+  in memory; a docstring-example edit to `transport/stream.py` sitting
+  uncommitted in the owner's working tree, left untouched.
+- **Lesson:** a scheduled control that has produced nothing reads as
+  "nothing to do", and for three weeks it did. The comment beside the
+  enrolment said what it was for, the job ran on schedule, and the updater
+  could not see the file it was enrolled to refresh. What surfaced it was
+  counting the job's outputs against its stated input -- pull requests that
+  touch `uv.lock` -- which is `testing-negative-assertion-coverage` applied
+  to a bot rather than a test: a zero is only a clean result once the
+  reader has confirmed the corpus was reached.
