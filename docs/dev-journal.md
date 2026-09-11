@@ -5130,7 +5130,7 @@ package, per ADR-002. See `README.md` for usage and
   terminates. Add a guard (`if REPO == REPO.parent: raise`) to any such
   loop, always.
 
-## 2026-09-10 (night) -- Serial RTU over an injected port, and three backlog fixes
+## 2026-09-10 (night) -- Serial RTU over an injected port, plus three fixes
 
 - **Tool:** Claude Code (Fable 5.1; Sonnet 5 for the first three items).
 - **Key changes:**
