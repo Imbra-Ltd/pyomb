@@ -5454,3 +5454,54 @@ package, per ADR-002. See `README.md` for usage and
   touch `uv.lock` -- which is `testing-negative-assertion-coverage` applied
   to a bot rather than a test: a zero is only a clean result once the
   reader has confirmed the corpus was reached.
+
+## 2026-09-11 (late night) -- Merge the wrap, fix the lock refresh
+
+- **Tool:** Claude Code (Fable 5.1).
+- **Key changes:**
+  - **Three merges, one bug fixed.** Started with #473 open and green, one
+    uncommitted docstring edit, and CI green on `a023812`. Merged #473,
+    then committed the `ModbusFragmenter` example edit on its own branch
+    rather than onto the journal pull request, so each carries one concern
+    (#474): the variables now name the layer they hold and the call passes
+    `frag_size=7`, which is what the doctest exercises.
+  - **Dependabot now reads the lock it was enrolled to refresh (#472,
+    #475).** `.github/dependabot.yml` enrols the `uv` ecosystem instead of
+    `pip`. Before keeping the strategy line, the claim that uv honours
+    `versioning-strategy` was checked against a source, because
+    dependabot-core#12162 said the opposite in mid-2025: the options
+    reference now lists uv among the supported ecosystems and the issue
+    closed on 2026-02-13 confirming it, so `increase-if-necessary` stays.
+    PLAYBOOK 4.5 had said the pip ecosystem was deliberately not enrolled
+    while 4.6 said it was; both now describe the uv enrolment.
+    `checks/test_dependabot_reads_the_committed_lock.py` pairs each
+    committed lock with an enrolled ecosystem that reads it and each
+    enrolled Python ecosystem with a lock it reads; it fails both ways on
+    the old configuration and passes on the new.
+  - **The fix verified itself before the audit started.** A change to the
+    configuration triggers a Dependabot run, and within minutes of the
+    merge it opened #476 (build 1.5.0 to 1.6.0) and #477 (ruff 0.16.4 to
+    0.16.6), each touching `uv.lock` only, each green. Three weekly runs
+    had produced nothing; one run under the right ecosystem produced two.
+  - **Upstream.** Filed braboj/solid-ai-templates#1695: the python-lib
+    packaging section tells a uv-locked project to set the strategy "on
+    the pip ecosystem", which reproduces this defect in every consumer
+    that follows both bullets. The pin stays at v2.88.0; v2.89.0 exists
+    upstream and creates no obligation on its own.
+- **PRs merged:** #473, #474, #475.
+- **Issues closed/created:** #472 closed by #475;
+  braboj/solid-ai-templates#1695 created upstream.
+- **Not done:** #476 and #477, the two lock bumps Dependabot opened, left
+  for the owner's review because a toolchain bump changes what every gate
+  measures; the v1.0.0 milestone, still pending the owner's answer on the
+  split; whether the no-shims stance gets a line in `CLAUDE.md` 2.2 or
+  stays in memory. The `transport/stream.py` edit the previous entry left
+  uncommitted shipped as #474.
+- **Lesson:** two sections of one document contradicted each other for
+  three weeks. PLAYBOOK 4.6 was written when the pip ecosystem was
+  enrolled and 4.5 kept saying it deliberately was not, because the change
+  that added 4.6 never re-read the section beside it. A diff review cannot
+  see that: each sentence is correct against its own neighbours, and the
+  contradiction lives across a heading. Re-reading the changed section
+  whole is the review rule; here the section to re-read whole was the one
+  above the diff.
