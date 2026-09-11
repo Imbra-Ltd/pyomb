@@ -1896,8 +1896,8 @@ Every `uses:` in the workflow is pinned to a commit SHA with the release in a
 trailing comment. Dependabot reads that comment, so a bump arrives as a pull
 request rewriting the SHA and the comment together.
 
-`.github/dependabot.yml` enrols the Actions ecosystem alone, weekly, on the
-default versioning strategy — the one that lifts a pin to the newest release.
+`.github/dependabot.yml` enrols the Actions ecosystem weekly, on the default
+versioning strategy — the one that lifts a pin to the newest release.
 That default is the point of the arrangement rather than an oversight: a pin
 nothing moves is a pin that goes stale, and pinning is only worth doing if
 something keeps it current.
@@ -1910,8 +1910,9 @@ whichever lands first is red on its own, and the pins then stop moving at all.
 `checks/test_dependabot_groups_split_actions.py` holds the grouping.
 
 Read the release notes for input changes before merging a major bump; the
-gate proves the rest. The pip ecosystem is deliberately not enrolled, because
-this project bounds its dependencies rather than pinning them.
+gate proves the rest. The uv ecosystem is enrolled beside it for the toolchain
+lock, on a strategy that leaves the dependency floors alone; 4.6 carries that
+arrangement.
 
 ### 4.6 Refresh the toolchain lock (uv)
 
@@ -1937,10 +1938,21 @@ Two rules follow from `--locked`, which is what CI installs with:
 - Never pass `--frozen` to work around it. `--frozen` skips the check the
   freeze exists to perform, which turns the lock back into decoration.
 
-Dependabot is enrolled on the pip ecosystem and opens the refresh weekly, so
-the commands above are the manual path rather than the routine one. Treat a
-lock nobody has touched in months as a finding: it pins an ageing toolchain
-with no signal that it has aged.
+Dependabot is enrolled on the uv ecosystem, which is the one that reads
+`uv.lock`, and opens the refresh weekly, so the commands above are the manual
+path rather than the routine one. It moves the direct dependencies and what
+they pull in; a transitive pin nothing direct drags along moves only with the
+first command. The strategy is `increase-if-necessary`, so a bump edits
+`pyproject.toml` only where the new version falls outside a floor: a floor is a
+claim about what a consumer may install, not a record of what CI ran.
+
+The enrolment was on the pip ecosystem for three weekly runs, and none touched
+the lock: the pip updater names `Pipfile.lock`, `poetry.lock` and `pdm.lock`
+and never opens `uv.lock`, so the job ran green on schedule while refreshing
+nothing. `checks/test_dependabot_reads_the_committed_lock.py` holds the
+pairing between the lock the tree commits and the ecosystem that reads it.
+Treat a lock nobody has touched in months as a finding either way: it pins an
+ageing toolchain with no signal that it has aged.
 
 ### 4.7 Groom the backlog
 
