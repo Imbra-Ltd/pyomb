@@ -15,9 +15,9 @@ updates:
         patterns:
           - "github/codeql-action*"
 
-  # Enrolled so the lock is refreshed. increase-if-necessary rather than the
-  # default: a floor here is a claim about what a consumer may install.
-  - package-ecosystem: pip
+  # uv is the ecosystem that reads uv.lock; pip never did. The strategy holds
+  # each floor still, because a floor claims what a consumer may install.
+  - package-ecosystem: uv
     directory: /
     versioning-strategy: increase-if-necessary
     schedule:
