@@ -114,23 +114,23 @@ class ModbusFragmenter(ModbusFragmenterAbc):
         >>> from pyomb.pdu import ModbusRequestFC1
         >>> from pyomb.transport import ModbusFragmenter
         >>>
-        >>> # Create a Modbus message
+        >>> # Create a Modbus PDU
         >>> pdu = ModbusRequestFC1(start_addr=0, quantity=1)
         >>>
         >>> # Create the Modbus header and set the length (Unit-ID + PDU)
         >>> header = ModbusHeader(length=len(pdu)+1)
         >>>
-        >>> # Create the Modbus packet
-        >>> packet = ModbusTcpRequest(header=header, pdu=pdu)
+        >>> # Create the Modbus ADU
+        >>> adu = ModbusTcpRequest(header=header, pdu=pdu)
         >>>
         >>> # Serialize the packet
-        >>> message1 = packet.serialize()
+        >>> message1 = adu.serialize()
         >>>
         >>> # Create the Modbus fragmenter
         >>> fragmenter = ModbusFragmenter()
         >>>
         >>> # Fragment the message
-        >>> fragments = fragmenter.fragment(message1)
+        >>> fragments = fragmenter.fragment(message1, frag_size=7)
         >>>
         >>> # Assemble the fragments
         >>> message2 = fragmenter.assemble(fragments)
