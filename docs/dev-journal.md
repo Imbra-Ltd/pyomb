@@ -5232,3 +5232,69 @@ package, per ADR-002. See `README.md` for usage and
   HEAD unmoved and nothing in the session reverting it. It is recorded here
   unexplained so the next session recognises the shape rather than trusting
   a clean `git status` on arrival.
+
+## 2026-09-11 (later) -- Spike the serial simulators, upstream three gaps
+
+- **Tool:** Claude Code (Opus 5).
+- **Key changes:**
+  - **No source changed.** The session spiked #445 and distilled this
+    repository's engineering patterns. Nothing under `src/` moved.
+  - **#445 is decided, and its acceptance criteria are restated on the
+    issue rather than edited into the body.** The filed criteria
+    presupposed a transport seam on the existing simulators, and four
+    things beyond the stream are shaped for TCP: the client returns an
+    MBAP header a serial reply has no counterpart for, the public handler
+    type names that header and a socket, the server's loop multiplexes
+    sockets an injected stream cannot drive, and silence inverts. The TCP
+    stream returns nothing when a peer closes and the server retires the
+    connection; the RTU stream never returns nothing and raises a timeout
+    on an idle line, so a copied read loop shuts the server down on the
+    first quiet second. The decision is a separate pair of RTU classes
+    sharing an extracted dispatch, which is the standard `adu` and
+    `transport` already set.
+  - **The issue was wrong about one of the two stream sites it named.**
+    The server builds its stream in the method that reads a client's
+    frame and in the one that sends the reply, not in the accept loop.
+  - **#449 and #450 created.** #449 carries the transport-free core,
+    deferred with the v1.0.0 trigger named and its detector stated as a
+    person reading the unmilestoned backlog, since nothing polls it. #450
+    carries a gap the issue did not mention: `ModbusRtuPacket.deserialize`
+    wraps every failure in a plain `ModbusPacketError`, and
+    `ModbusPduParseError` structurally requires a `ModbusHeader`, so a
+    well-framed request with an unparsable PDU reaches a server with no
+    address to reply to. Accepting that asymmetry for now was the spike's
+    second decision, and ADR-049's exception response has no RTU
+    counterpart until #450 lands.
+  - **Engineering know-how distilled to `tmp/`, not to `docs/`.** Three
+    read-only passes over the decision records, the toolchain and the
+    source produced one reference of about 11,000 words. It was written
+    to `docs/engineering-know-how.md` with a README row, then moved to
+    `tmp/` on request; the README row came out with it, because it would
+    otherwise link to a path that no longer exists. `tmp/` is gitignored,
+    so the document does not survive a clone and no gate reads it.
+  - **Three gaps filed upstream**, each scoped to the falsifiable half.
+    braboj/solid-ai-templates#1663: a double whose injected fault stays
+    armed makes the recovery path untestable, and the passing test reads
+    as covering it. #1665: the variadic rule names a strict type checker
+    as its check, then says to shrink the freeze that disabled that
+    checker, so the gap goes unreported for exactly as long as the
+    migration runs. #1667: a directional import ban is stated nowhere,
+    and neither layering rule names a check.
+  - **Four of the seven candidates were already covered upstream**, two of
+    them upstreamed from here. The four were dropped rather than filed.
+- **PRs merged:** none. This entry is the session's only commit.
+- **Issues closed/created:** #449 and #450 created; none closed. #445
+  stays open, now decided rather than blocked. Upstream:
+  braboj/solid-ai-templates#1663, #1665 and #1667 created.
+- **Lesson:** the upstream-candidate list was built with the wrong
+  classifier and it failed in the expensive direction. Candidates were
+  selected by asking which category of the distilled document owns a
+  pattern, and the question that decides whether to file is which
+  upstream file already carries it. Those two agree only by accident:
+  four of seven were covered, and two of those four this project had
+  upstreamed itself, so the list presented as novel exactly the rules the
+  repository had already contributed. The reconciliation costs one read
+  of the pinned templates plus one issue search per candidate, it was run
+  after the list was published rather than before, and running it first
+  would have produced a list of three. A gap analysis placed after the
+  candidate list is a list the reader has to discount.
