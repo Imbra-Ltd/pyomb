@@ -8,7 +8,6 @@ here knows a function code or a transport.
 from __future__ import annotations
 
 import struct
-import warnings
 from abc import ABCMeta, abstractmethod
 from typing import ClassVar
 
@@ -387,50 +386,6 @@ class ModbusPdu(ModbusPacketAbc):
     def is_request(self) -> bool:
         """Check if the PDU is a request."""
         return self.PDU_ID < 0x8000
-
-    def pack(self, fmt: str) -> bytes:
-        """Pack under an explicit format string.
-
-        Deprecated. Put the finished bytes in data instead, which expresses
-        every layout a format string can and every layout it cannot. Removed
-        in 0.6.0.
-
-        Args:
-            fmt (str)   : The format string to pack under
-
-        Returns:
-            bytes : The packed PDU
-        """
-        warnings.warn(
-            "ModbusPdu.pack is deprecated and is removed in 0.6.0; build the bytes and pass them as data instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        return self._pack(fmt)
-
-    @classmethod
-    def unpack(cls, stream: bytes, fmt: str) -> ModbusPdu:
-        """Unpack under an explicit format string.
-
-        Deprecated. Use deserialize(), which reads the payload as bytes.
-        Removed in 0.6.0.
-
-        Args:
-            stream (bytes)  : The stream of bytes to unpack
-            fmt (str)       : The format string to unpack under
-
-        Returns:
-            ModbusPdu : The Modbus PDU object
-        """
-        warnings.warn(
-            "ModbusPdu.unpack is deprecated and is removed in 0.6.0; use "
-            "deserialize(), which reads the payload as bytes",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        return cls._unpack(stream, fmt)
 
     def _pack(self, fmt: str) -> bytes:
         """Pack the function code and the data under an explicit format string.

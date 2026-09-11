@@ -28,6 +28,9 @@ numbers follow [Semantic Versioning](https://semver.org/).
   `pyomb.transport.stream`, `pyomb.transport.tls`, `pyomb.simulators.client`
   or `pyomb.simulators.server` respectively. Every name `pyomb` itself
   re-exports (`from pyomb import ...`) is unaffected. See #412
+- `ModbusPdu.pack` and `ModbusPdu.unpack`, deprecated at their 0.6.0 removal
+  date and left in place past it. Build the bytes and pass them as `data`
+  instead. See ADR-036
 
 ### Changed
 
