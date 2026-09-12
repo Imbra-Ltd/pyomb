@@ -899,6 +899,22 @@ while `when(ExceptionResponse)` reacts to one, needing no dispatch
 machinery beyond an isinstance test, provided the concrete response
 shapes share a base class.
 
+What `when()` accepts is the harder half, and three answers compete. A
+declarative object -- `Request(fc=3, address=100)`, a field left unset
+meaning any -- is printable, serialisable and comparable against another
+rule. A bare class says "a response of this kind" and nothing about its
+values. A predicate expresses every condition the other two cannot, and
+can be rendered, diffed or checked for overlap by nothing at all.
+
+Section 13 is what decides it, by putting the workbench's visual device
+editor on this same engine: a lambda in the rule table is something no
+editor can draw. So the declarative object should be the primary form, a
+bare class should desugar to "any instance of", and a predicate should be
+available wrapped in a label the editor renders in place of the body.
+All three normalise to one matcher protocol when the rule is registered,
+so each side dispatches through a single call rather than reading the
+same field two incompatible ways.
+
 One naming question stays open. Section 13 spells the server effect
 `respond(...)`, which reads well where the effect is a response and badly
 where it is a callback. A single verb on both sides is the point of
