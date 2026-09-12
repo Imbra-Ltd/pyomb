@@ -1659,6 +1659,38 @@ network-free half of the split ADR-054 made, and the CLAUDE.md 1.2 rule
 this enforces. Collected by a bare `pytest` like every other module under
 `checks/`, so it runs on every push without a separate CI step.
 
+### 3.32 Why the lint scope is a negated per-file-ignore
+
+`pyproject.toml` scopes ruff with one negated pattern rather than a list of
+excluded paths:
+
+```toml
+"!{src,tests,checks,examples,scripts}/**" = ["ALL"]
+```
+
+Three mechanisms could express this and two of them fail. `exclude` accepts
+no negation -- `["*", "!src"]` silently matches everything and lints nothing,
+which reads as a clean run. `include` scopes the directory walk correctly but
+is ignored under `--force-exclude`, which is how an editor lints the single
+file you have open, so the squiggles survive it.
+
+A negated `per-file-ignores` entry is evaluated against whatever file is
+being linted, however that file was reached, so it holds for the walk and the
+editor alike. Entries are additive, which is why the `tests/**` and
+`checks/**` docstring exemptions still compose with it.
+
+The cost is the one every allowlist carries: a new top-level directory of
+real source is unlinted and nothing says so. `mypy` and `complexipy` already
+take that trade here, both scoped to `src`. Verify with a planted violation
+rather than a clean run, because a config that silences everything reports
+success too:
+
+```bash
+printf 'import os\n' >> src/pyomb/__init__.py
+ruff check src tests checks scripts examples    # MUST report F401
+git checkout src/pyomb/__init__.py
+```
+
 ## 4. Maintenance
 
 ### 4.1 Bump the templates submodule
