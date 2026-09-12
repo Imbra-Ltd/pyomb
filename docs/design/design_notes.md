@@ -858,3 +858,121 @@ The long-term differentiator is simple:
 > **If an implementation claims to speak Modbus, PyOMB should be able to
 > determine how well it speaks Modbus --- including when the other side
 > does everything wrong.**
+
+## 27. Scriptable Client
+
+Section 13 sketches the scriptable server. The scriptable client is the
+half the architecture overview names alongside it and never sketches.
+Section 14's scenario API is a different thing: it asserts on a response,
+and an assertion ends a test where a reaction continues a session.
+
+A real use case, not just a test convenience: a condition-monitoring
+script polls a pump's holding registers on a schedule and has to act on
+what it reads -- raise an alarm when a bearing temperature crosses a
+limit, and retry rather than give up when the device answers with a busy
+exception. Without a rule table the caller repeats the same branch after
+every read, and the polling loop and the reaction logic grow into each
+other.
+
+The proposal is one vocabulary across both sides, dispatching differently
+on each. On the server a matcher describes an incoming request and the
+effect is the response to send. On the client a matcher describes a
+response that arrived and the effect is a callback to run against it.
+
+``` python
+client.when(HoldingRegisters).then(
+    lambda reply: alarm(reply) if reply.values[0] > LIMIT else None
+)
+
+client.read_holding_registers(address=100, count=3)
+```
+
+Useful client-side reactions include:
+
+-   escalate on a specific exception code
+-   re-read on a timeout, up to a bound
+-   alarm on a register value crossing a threshold
+-   record a transaction for later comparison
+
+Matching on response type lets `when(Response)` react to every shape
+while `when(ExceptionResponse)` reacts to one, needing no dispatch
+machinery beyond an isinstance test, provided the concrete response
+shapes share a base class.
+
+One naming question stays open. Section 13 spells the server effect
+`respond(...)`, which reads well where the effect is a response and badly
+where it is a callback. A single verb on both sides is the point of
+sharing a vocabulary, so either `then(...)` covers both cases or the two
+sides keep separate verbs and share the shape only.
+
+## 28. Transport-Layer Stimulus
+
+An implementation can be correct at the PDU layer and wrong below it.
+The common defects there are byte-stream defects: treating one read as
+one frame, mishandling a declared length, or reading a graceful close as
+an abort. Exercising those needs stimulus below the PDU, which the same
+when/then vocabulary could express.
+
+A real use case, not just a test convenience: a transparent
+serial-to-Ethernet device server (Moxa NPort, Lantronix and similar)
+forwards a serial byte stream onto a TCP socket without parsing it. At
+9600 baud the bytes of one RTU frame arrive spread over milliseconds, so
+the device server emits them across several TCP segments. A client that
+treats one read as one frame works on a LAN against a PLC and fails
+behind that device server, and that is the defect this stimulus exists
+to find.
+
+What decides the cost is not the vocabulary but the layer an event lives
+at, because that decides whether the event is observable from the socket
+API at all.
+
+### Stream events
+
+Fully reachable, and the richest of the three. Fragmentation already
+exists in the wire layer. Coalescing is the more commonly broken
+direction: two frames arriving in one segment, where an implementation
+reading a fixed buffer parses the first and discards the tail. Also
+useful are a declared length larger than the body followed by silence, a
+length of zero, a length of 0xffff, and a byte-at-a-time trickle.
+
+Deliberate fragmentation needs `TCP_NODELAY` on the sending side.
+Otherwise Nagle coalesces the fragments back into one segment, and the
+test passes without exercising the thing it names.
+
+### Close events
+
+Mostly reachable. A half-close via `shutdown(SHUT_WR)` sends FIN while
+the read side stays open, testing whether a peer still delivers in-flight
+responses or treats FIN as a dead connection. A FIN mid-frame tests
+whether a truncated frame is reported as a close or as a protocol error.
+`SO_LINGER` set to zero sends RST instead, testing whether a peer
+distinguishes an abort from a graceful close. Simultaneous close, FIN
+retransmission and FIN_WAIT_2 behaviour stay out of reach.
+
+Remote sites meet these cases without anyone injecting them. A cellular
+router or a VPN with a NAT idle timeout drops a quiet Modbus session, and
+the peer learns of it as a FIN or an RST on its next poll rather than as
+a clean shutdown.
+
+### Handshake events
+
+The thinnest of the three. Withholding `accept()` fills the backlog so
+that further SYNs go unanswered, testing connect timeout and retry.
+Binding without listening makes the kernel answer with RST, testing the
+connection-refused path. Accepting and immediately resetting tests a
+handshake that succeeds and then aborts.
+
+Everything shaped like a crafted SYN-ACK -- a chosen initial sequence
+number, window, MSS or delay -- is unreachable from the socket API. What
+reaching it costs is not a packet library but a state machine: answering
+a SYN directly means owning sequence numbers, retransmission and
+teardown, which is a TCP implementation rather than a handler. Such an
+engine would sit behind the same vocabulary, run on a bench with
+elevated privileges, and gate nothing.
+
+### What stimulus does not supply
+
+Producing stimulus is the cheap half. The expected response has to be
+traced to the specifications under `docs/specs/`, and no amount of
+transport control supplies it. A suite asserting that a peer agrees with
+this library measures interoperability rather than correctness.
